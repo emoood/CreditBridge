@@ -1,0 +1,96 @@
+"""Bounded tool-calling loop. The model finishes by calling submit_result (Ollama's MLX runner has no
+structured `format`; see docs/decisions.md). Every final result is validated locally with Pydantic."""
+import json
+from dataclasses import dataclass, field
+from typing import Any
+
+from pydantic import BaseModel, ValidationError
+
+from ..devlog import events
+from ..providers.base import LLMProvider, LLMRequest
+from .tools.base import ToolContext, ToolRegistry
+
+SUBMIT = "submit_result"
+
+
+@dataclass
+class AgentOutcome:
+    status: str  # OK | NEEDS_HUMAN_REVIEW
+    output: BaseModel | None = None
+    error: str | None = None
+    llm_calls: int = 0
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    flags: list[str] = field(default_factory=list)
+
+
+def _submit_tool(model: type[BaseModel]) -> dict:
+    return {"type": "function", "function": {
+        "name": SUBMIT, "description": "Submit your final structured result. Call exactly once to finish.",
+        "parameters": model.model_json_schema()}}
+
+
+def _try_content_json(content: str, model: type[BaseModel]) -> BaseModel | None:
+    try:
+        s, e = content.index("{"), content.rindex("}") + 1
+        return model.model_validate(json.loads(content[s:e]))
+    except (ValueError, ValidationError):
+        return None
+
+
+async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, *, system: str,
+                            user: str, final_model: type[BaseModel], max_tool_rounds: int, stage: str) -> AgentOutcome:
+    messages: list[dict[str, Any]] = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    out = AgentOutcome("NEEDS_HUMAN_REVIEW")
+    meta = {"course": ctx.source_course_id}
+    submit = _submit_tool(final_model)
+    repaired = False
+    rounds = 0
+
+    async def call(tools):
+        out.llm_calls += 1
+        return await provider.complete(LLMRequest(messages, tools, stage, meta))
+
+    while True:
+        final_turn = rounds >= max_tool_rounds
+        tools = [submit] if final_turn else registry.visible_tools(ctx.role) + [submit]
+        resp = await call(tools)
+        sub = next((c for c in resp.tool_calls if c.name == SUBMIT), None)
+        if sub:
+            try:
+                out.output, out.status = final_model.model_validate(sub.arguments), "OK"
+                return out
+            except ValidationError as e:
+                err = "; ".join(f"{'.'.join(map(str, x['loc']))}: {x['msg']}" for x in e.errors())
+                events.emit("error", where="schema_validation", stage=stage, error=err, **meta)
+                if repaired:
+                    out.error = f"INVALID_OUTPUT: {err}"
+                    return out
+                repaired = True
+                messages += [{"role": "assistant", "content": "", "tool_calls": [{"function": {"name": SUBMIT, "arguments": sub.arguments}}]},
+                             {"role": "tool", "tool_name": SUBMIT, "content": json.dumps({"ok": False, "error": err})}]
+                out.flags.append("REPAIR_ATTEMPTED")
+                continue
+        if not resp.tool_calls:
+            parsed = _try_content_json(resp.content, final_model)
+            if parsed:
+                out.output, out.status = parsed, "OK"
+                out.flags.append("FINAL_FROM_CONTENT")
+                return out
+            if repaired:
+                out.error = "NO_VALID_FINAL_RESULT"
+                return out
+            repaired = True
+            out.flags.append("REPAIR_ATTEMPTED")
+            messages += [{"role": "assistant", "content": resp.content},
+                         {"role": "user", "content": "Finish now by calling submit_result with the required fields."}]
+            continue
+        if final_turn:  # tools requested after budget exhausted
+            out.error = "TOOL_BUDGET_EXCEEDED"
+            return out
+        rounds += 1
+        messages.append({"role": "assistant", "content": resp.content or "",
+                         "tool_calls": [{"function": {"name": c.name, "arguments": c.arguments}} for c in resp.tool_calls]})
+        for c in resp.tool_calls:
+            r = await registry.execute(c, ctx)
+            out.tool_calls.append({"name": c.name, "arguments": c.arguments, "ok": r.ok})
+            messages.append({"role": "tool", "tool_name": c.name, "content": r.to_message()})

@@ -1,0 +1,290 @@
+{
+  "catalog_version": "aud-inspired-demo-catalog-2026-10-22",
+  "label": "AUD-inspired demo catalog, not official university data",
+  "courses": [
+    {
+      "code": "CS101",
+      "title": "Programming Fundamentals",
+      "level": 100,
+      "credits": 3,
+      "restricted_type": null,
+      "description": "Introductory programming in Python for students with no prior experience.",
+      "outcomes": [
+        {
+          "id": "tgt-CS101-o1",
+          "text": "Write Python programs using variables, conditionals and loops."
+        },
+        {
+          "id": "tgt-CS101-o2",
+          "text": "Decompose problems into functions and call them correctly."
+        },
+        {
+          "id": "tgt-CS101-o3",
+          "text": "Use lists and dictionaries to store and process data."
+        },
+        {
+          "id": "tgt-CS101-o4",
+          "text": "Read and write text files from a program."
+        },
+        {
+          "id": "tgt-CS101-o5",
+          "text": "Test and debug small programs systematically."
+        }
+      ],
+      "document_id": "tgt-doc-CS101",
+      "page": 1
+    },
+    {
+      "code": "CS102",
+      "title": "Introduction to Computing Concepts",
+      "level": 100,
+      "credits": 3,
+      "restricted_type": null,
+      "description": "Survey of computing: hardware, networks, ethics and productivity software. No programming required.",
+      "outcomes": [
+        {
+          "id": "tgt-CS102-o1",
+          "text": "Describe the main components of a computer system."
+        },
+        {
+          "id": "tgt-CS102-o2",
+          "text": "Explain how networks and the internet work at a high level."
+        },
+        {
+          "id": "tgt-CS102-o3",
+          "text": "Discuss ethical and societal issues in computing."
+        },
+        {
+          "id": "tgt-CS102-o4",
+          "text": "Use spreadsheet and presentation software effectively."
+        }
+      ],
+      "document_id": "tgt-doc-CS102",
+      "page": 1
+    },
+    {
+      "code": "STA201",
+      "title": "Applied Statistics",
+      "level": 200,
+      "credits": 3,
+      "restricted_type": null,
+      "description": "Statistical methods for applied problems including regression.",
+      "outcomes": [
+        {
+          "id": "tgt-STA201-o1",
+          "text": "Summarise data with descriptive statistics and graphs."
+        },
+        {
+          "id": "tgt-STA201-o2",
+          "text": "Work with common probability distributions."
+        },
+        {
+          "id": "tgt-STA201-o3",
+          "text": "Construct and interpret confidence intervals."
+        },
+        {
+          "id": "tgt-STA201-o4",
+          "text": "Carry out hypothesis tests for means and proportions."
+        },
+        {
+          "id": "tgt-STA201-o5",
+          "text": "Fit and interpret simple and multiple linear regression models."
+        }
+      ],
+      "document_id": "tgt-doc-STA201",
+      "page": 1
+    },
+    {
+      "code": "MTH201",
+      "title": "Calculus II",
+      "level": 200,
+      "credits": 3,
+      "restricted_type": null,
+      "description": "Integration techniques, sequences and series.",
+      "outcomes": [
+        {
+          "id": "tgt-MTH201-o1",
+          "text": "Apply techniques of integration."
+        },
+        {
+          "id": "tgt-MTH201-o2",
+          "text": "Evaluate improper integrals."
+        },
+        {
+          "id": "tgt-MTH201-o3",
+          "text": "Test infinite series for convergence."
+        },
+        {
+          "id": "tgt-MTH201-o4",
+          "text": "Represent functions with power series."
+        }
+      ],
+      "document_id": "tgt-doc-MTH201",
+      "page": 1
+    },
+    {
+      "code": "ENG102",
+      "title": "Academic Writing",
+      "level": 100,
+      "credits": 3,
+      "restricted_type": null,
+      "description": "Writing and research skills for university coursework.",
+      "outcomes": [
+        {
+          "id": "tgt-ENG102-o1",
+          "text": "Develop a clear thesis and structure an academic argument."
+        },
+        {
+          "id": "tgt-ENG102-o2",
+          "text": "Locate and evaluate scholarly sources."
+        },
+        {
+          "id": "tgt-ENG102-o3",
+          "text": "Cite sources correctly and avoid plagiarism."
+        },
+        {
+          "id": "tgt-ENG102-o4",
+          "text": "Revise writing for clarity and style."
+        }
+      ],
+      "document_id": "tgt-doc-ENG102",
+      "page": 1
+    },
+    {
+      "code": "CS310",
+      "title": "Data Structures and Algorithms",
+      "level": 300,
+      "credits": 3,
+      "restricted_type": null,
+      "description": "Core data structures and algorithm analysis.",
+      "outcomes": [
+        {
+          "id": "tgt-CS310-o1",
+          "text": "Implement arrays, linked lists, stacks and queues."
+        },
+        {
+          "id": "tgt-CS310-o2",
+          "text": "Implement and analyse trees and hash tables."
+        },
+        {
+          "id": "tgt-CS310-o3",
+          "text": "Implement sorting and searching algorithms."
+        },
+        {
+          "id": "tgt-CS310-o4",
+          "text": "Analyse running time using Big-O notation."
+        },
+        {
+          "id": "tgt-CS310-o5",
+          "text": "Apply graph traversal algorithms."
+        }
+      ],
+      "document_id": "tgt-doc-CS310",
+      "page": 1
+    },
+    {
+      "code": "CS330",
+      "title": "Database Systems",
+      "level": 300,
+      "credits": 3,
+      "restricted_type": null,
+      "description": "Relational database design and implementation.",
+      "outcomes": [
+        {
+          "id": "tgt-CS330-o1",
+          "text": "Model data with the relational model and relational algebra."
+        },
+        {
+          "id": "tgt-CS330-o2",
+          "text": "Write SQL queries including joins and aggregation."
+        },
+        {
+          "id": "tgt-CS330-o3",
+          "text": "Normalise relational schemas to third normal form."
+        },
+        {
+          "id": "tgt-CS330-o4",
+          "text": "Explain transactions, concurrency control and recovery."
+        },
+        {
+          "id": "tgt-CS330-o5",
+          "text": "Explain indexing and query processing basics."
+        }
+      ],
+      "document_id": "tgt-doc-CS330",
+      "page": 1
+    },
+    {
+      "code": "CS340",
+      "title": "Data Warehousing and Business Intelligence",
+      "level": 300,
+      "credits": 3,
+      "restricted_type": null,
+      "description": "Design of data warehouses and analytical reporting.",
+      "outcomes": [
+        {
+          "id": "tgt-CS340-o1",
+          "text": "Explain data warehouse architecture and dimensional modelling."
+        },
+        {
+          "id": "tgt-CS340-o2",
+          "text": "Design ETL processes to load a warehouse."
+        },
+        {
+          "id": "tgt-CS340-o3",
+          "text": "Build OLAP cubes and analytical dashboards."
+        },
+        {
+          "id": "tgt-CS340-o4",
+          "text": "Evaluate data quality for reporting."
+        }
+      ],
+      "document_id": "tgt-doc-CS340",
+      "page": 1
+    },
+    {
+      "code": "CS450",
+      "title": "Capstone Project",
+      "level": 400,
+      "credits": 3,
+      "restricted_type": "capstone",
+      "description": "Two-semester team software project. Restricted: capstone courses are not eligible for transfer credit.",
+      "outcomes": [
+        {
+          "id": "tgt-CS450-o1",
+          "text": "Deliver a substantial software project as a team."
+        },
+        {
+          "id": "tgt-CS450-o2",
+          "text": "Manage requirements, planning and risk."
+        },
+        {
+          "id": "tgt-CS450-o3",
+          "text": "Present and defend the final product."
+        }
+      ],
+      "document_id": "tgt-doc-CS450",
+      "page": 1
+    },
+    {
+      "code": "CS499",
+      "title": "Internship",
+      "level": 400,
+      "credits": 3,
+      "restricted_type": "internship",
+      "description": "Supervised industry placement. Restricted: internships are not eligible for transfer credit.",
+      "outcomes": [
+        {
+          "id": "tgt-CS499-o1",
+          "text": "Complete a supervised industry placement."
+        },
+        {
+          "id": "tgt-CS499-o2",
+          "text": "Reflect on professional practice in a written report."
+        }
+      ],
+      "document_id": "tgt-doc-CS499",
+      "page": 1
+    }
+  ]
+}

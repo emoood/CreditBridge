@@ -1,0 +1,13 @@
+{
+  "label": "SYNTHETIC DEMO DATA - not real student records, not official AUD data",
+  "generated_by": "fixtures/generate_demo_v1.py",
+  "files": {
+    "transcript_en.pdf": "synthetic digital transcript",
+    "transcript_ar_scan.pdf": "synthetic bilingual scan (rasterised, skew+noise)",
+    "syllabi/*.pdf": "synthetic source syllabi; ENGL101 deliberately absent",
+    "catalog.json": "AUD-inspired demo catalog, not official university data",
+    "expected_results.json": "hand-authored expectations"
+  },
+  "institution": "Gulf Example University (synthetic)",
+  "real_data": false
+}

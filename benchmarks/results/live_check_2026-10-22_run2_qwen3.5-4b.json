@@ -1,0 +1,112 @@
+{
+ "course": "COMP101",
+ "scenario": "1_clear_match",
+ "intended": "CS101",
+ "matcher": "POTENTIAL_MATCH",
+ "target": "CS101",
+ "m_calls": 2,
+ "m_tools": [
+  "find_source_syllabus",
+  "get_target_course",
+  "get_target_course",
+  "get_target_course"
+ ],
+ "m_flags": [],
+ "reviewer": "SUPPORTED_FOR_HUMAN_REVIEW",
+ "r_flags": [],
+ "objections": [],
+ "hard_fail": [],
+ "secs": 30.8
+}
+{
+ "course": "STAT210",
+ "scenario": "2_second_plausible_missing_outcome",
+ "intended": "STA201",
+ "matcher": "POTENTIAL_MATCH",
+ "target": "STA201",
+ "m_calls": 4,
+ "m_tools": [
+  "find_source_syllabus",
+  "get_target_course",
+  "get_target_course",
+  "get_target_course"
+ ],
+ "m_flags": [],
+ "reviewer": "CHALLENGED",
+ "r_flags": [],
+ "objections": [
+  "The matcher cited only 4 of 5 target course outcomes, omitting tgt-STA201-o5 (Fit and interpret simple and multiple linear regression models). The source course STAT210 has no excerpt covering regression models, representing a critical gap in coverage."
+ ],
+ "hard_fail": [],
+ "secs": 39.8
+}
+{
+ "course": "COMP220",
+ "scenario": "3_upper_level_grade_fail",
+ "intended": "CS310",
+ "matcher": "POTENTIAL_MATCH",
+ "target": "CS310",
+ "m_calls": 2,
+ "m_tools": [
+  "find_source_syllabus",
+  "get_target_course",
+  "get_target_course",
+  "get_target_course"
+ ],
+ "m_flags": [],
+ "reviewer": "CHALLENGED",
+ "r_flags": [],
+ "objections": [
+  "Grade C+ does not meet minimum B requirement - AUD_GRADE_UPPER rule failed"
+ ],
+ "hard_fail": [
+  "AUD_GRADE_UPPER"
+ ],
+ "secs": 26.9
+}
+{
+ "course": "SENG490",
+ "scenario": "4_restricted_type",
+ "intended": "CS450",
+ "matcher": "POTENTIAL_MATCH",
+ "target": "CS450",
+ "m_calls": 4,
+ "m_tools": [
+  "find_source_syllabus",
+  "get_target_course",
+  "get_target_course"
+ ],
+ "m_flags": [],
+ "reviewer": "CHALLENGED",
+ "r_flags": [],
+ "objections": [
+  "Target course 'Capstone Project' is ineligible for transfer credit as its type 'capstone' is restricted by policy, regardless of content similarity."
+ ],
+ "hard_fail": [
+  "AUD_RESTRICTED_COURSE_TYPES"
+ ],
+ "secs": 20.0
+}
+{
+ "course": "INFS230",
+ "scenario": "5_title_trap",
+ "intended": "CS330",
+ "matcher": "POTENTIAL_MATCH",
+ "target": "CS340",
+ "m_calls": 2,
+ "m_tools": [
+  "find_source_syllabus",
+  "get_target_course",
+  "get_target_course",
+  "get_target_course"
+ ],
+ "m_flags": [],
+ "reviewer": "NEEDS_HUMAN_REVIEW",
+ "r_flags": [
+  "TOOL_BUDGET_EXCEEDED"
+ ],
+ "objections": [],
+ "hard_fail": [],
+ "secs": 39.1
+}
+LLM calls: 22 avg s: 7.12

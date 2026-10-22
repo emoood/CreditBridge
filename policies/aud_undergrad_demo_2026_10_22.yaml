@@ -1,0 +1,11 @@
+policy_version_id: aud-undergrad-demo-2026-10-22
+source_url: https://www.aud.edu/university-overview/policies/academic-policies/general-academic-policies-and-procedures/
+retrieved: 2026-10-22
+verified_by_staff: false   # interpretations NOT verified by AUD staff
+min_level: 100
+min_grade_lower: C      # AUD-equivalent 100/200
+min_grade_upper: B      # AUD-equivalent 300/400 (exception context unknown => review)
+max_transfer_fraction: "0.50"
+restricted_types: [capstone, senior_project, portfolio, internship, study_tour]
+# Grade order, best to worst. Assumption: "at least C" means C or better; C- is below C.
+grade_scale: ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"]
