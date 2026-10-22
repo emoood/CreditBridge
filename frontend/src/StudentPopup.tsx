@@ -18,7 +18,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const evaluating = !!data && (['CONFIRMED', 'EVALUATION_IN_PROGRESS'].includes(data.app.status) || data.evalJob?.status === 'RUNNING' || data.evalJob?.status === 'QUEUED');
-  const built = useMemo(() => data ? build(data.app, data.results, data.pending, include, evaluating) : null, [data, include, evaluating]);
+  const built = useMemo(() => data ? build(data.app, data.results, data.pending, include, evaluating, data.states) : null, [data, include, evaluating]);
   const jobs = data ? [data.readJob, data.evalJob] : [];
   const status = data && built ? appStatus(data.app, built, jobs) : null;
   const reload = async () => { await refresh(); onChanged(); };
@@ -87,7 +87,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
       {built.notEvaluated.length > 0 && <details className="noteval" open={notEvalOpen} onToggle={e => setNotEvalOpen((e.target as HTMLDetailsElement).open)}>
         <summary>{notEvalOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Not evaluated ({built.notEvaluated.length})</summary>
         <ul>{built.notEvaluated.map(i => <li key={i.key + i.rowId}><span><strong>{i.title}</strong> <span className="muted">· {i.reason}</span></span>
-          {i.canInclude ? <button className="link-btn" onClick={() => setInclude(i.rowId, true)}>Include</button> : <span className="muted">cannot be mapped</span>}</li>)}</ul></details>}
+          {i.canInclude ? <button className="link-btn" disabled={busy} onClick={() => i.state ? run(() => api.include(appId, i.rowId, role)) : setInclude(i.rowId, true)}>Include</button> : <span className="muted">cannot be mapped</span>}</li>)}</ul></details>}
     </div>}
 
     {!reading && !gate && <footer className="pop-foot">

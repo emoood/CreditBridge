@@ -14,3 +14,4 @@
 - [ ] Hand-written ground truth from the admissions officer (past decisions)
 - [x] Field-test changes: reviewer advisory only (no revision round), matcher rounds 6, precedent tool only when precedents exist, title-only suggestions for subjects without a syllabus, UI fixes
 - [x] Field test on a real scanned transcript (demo1): results and failures in docs/decisions.md; nothing tuned to pass it
+- [x] Code-first path: relevance gate, batch mapping lookup (dummy table), row state, usage ledger + trace, Case agent with tools, one-row resume (not yet run with a real model)

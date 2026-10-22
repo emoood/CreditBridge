@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertCircle, Check, X } from 'lucide-react';
-import { api, type CaseResult, type Decision } from './api';
+import { api, type CaseResult, type Decision, type DraftedRequest, type Finding, type RowStateInfo } from './api';
 import { Pill } from './ui';
 
 const RULE_TONE: Record<string, string> = { PASS: 'green', FAIL: 'red', NEEDS_REVIEW: 'amber', NEEDS_HUMAN_VERIFICATION: 'amber', NOT_APPLICABLE: 'neutral' };
@@ -13,6 +13,7 @@ export function Evidence({ appId, r, role, onChanged, onClose }: { appId: string
     <div className="evidence-head"><div><small>EVIDENCE</small><h3>{r.course.title}</h3><p className="muted">Grade {r.course.grade || '—'} · {head}</p></div>
       <button className="icon-button" onClick={onClose} aria-label="Close evidence"><X size={18} /></button></div>
     <div className="evidence-body">
+      {r.row_state && <CaseBlock appId={appId} r={r} s={r.row_state} role={role} onChanged={onChanged} />}
       {r.review && r.review.status === 'CHALLENGED' && <div className="block objection-block"><h4>Reviewer objects <Pill tone="amber">{(r.review.objections ?? []).length} objection{r.review.objections.length === 1 ? '' : 's'}</Pill></h4>
         {(r.review.objections ?? []).map((o, i) => <div className="objection" key={i}><p>{o.text}</p>{o.excerpts.map(e => <blockquote key={e.id}><small>{e.id}</small>{e.text}</blockquote>)}</div>)}
         {(r.review.notes ?? []).length > 0 && <div className="minor"><small>Minor remarks from the reviewer</small><ul>{(r.review.notes ?? []).map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
@@ -34,6 +35,35 @@ export function Evidence({ appId, r, role, onChanged, onClose }: { appId: string
     </div>
     <DecisionBar appId={appId} r={r} role={role} onChanged={onChanged} />
   </aside>;
+}
+
+function CaseBlock({ appId, r, s, role, onChanged }: { appId: string; r: CaseResult; s: RowStateInfo; role: string; onChanged: () => void }) {
+  const f: Finding | null = r.case?.finding ?? s.finding;
+  const reqs: DraftedRequest[] = r.case?.requests ?? s.requests;
+  const missing = s.condition_result?.status === 'MISSING' ? s.condition_result.missing : [];
+  const [vals, setVals] = useState<Record<string, string>>({}); const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const open = reqs.filter(q => q.status !== 'RECEIVED');
+  async function send() {
+    setBusy(true); setErr(null);
+    try { const facts: Record<string, unknown> = {}; for (const [k, v] of Object.entries(vals)) if (v.trim()) facts[k] = Number.isNaN(Number(v)) ? v.trim() : Number(v);
+      await api.evidence(appId, s.row_id, role, facts, file); setVals({}); setFile(null); onChanged(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  }
+  return <div className="block case-block"><h4>Case finding <Pill tone={s.status === 'Mapped' ? 'green' : s.status === 'Waiting on document' ? 'blue' : 'amber'}>{s.status}</Pill></h4>
+    <p>{f?.headline ?? s.reason}</p>
+    {s.mapping && <p className="muted">Mapping to {s.mapping.aud_code} (version {s.mapping.version}, {s.mapping.status.toLowerCase()}){s.mapping.condition ? ` · condition: ${s.mapping.condition.type.replace(/_/g, ' ')} ${JSON.stringify(s.mapping.condition.value)}` : ''}</p>}
+    {s.condition_result && s.condition_result.status !== 'MET' && <p className="muted">Condition check: {s.condition_result.reason}</p>}
+    {f && f.missing_evidence.length > 0 && <><small className="lbl">Missing evidence</small><ul>{f.missing_evidence.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+    {f && f.gaps.length > 0 && <><small className="lbl">Gaps</small><ul>{f.gaps.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+    {f && f.candidates.length > 0 && <><small className="lbl">Candidates the agent proposes</small><ul>{f.candidates.map((c, i) => <li key={i}><strong>{c.aud_code}</strong> {c.why}</li>)}</ul></>}
+    {f && f.review_package.length > 0 && <><small className="lbl">Review package</small><ul>{f.review_package.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+    {reqs.length > 0 && <><small className="lbl">Requests (drafts, nothing is sent)</small>{reqs.map(q => <div className="req" key={q.id}><strong>{q.what}</strong><span className="muted"> · {q.status.toLowerCase()} · to the {q.to}</span><br /><span className="muted">{q.why}</span></div>)}</>}
+    {(open.length > 0 || missing.length > 0) && <div className="evidence-form"><small className="lbl">Add the evidence</small>
+      {missing.map(m => <label key={m.field}>{m.field.replace(/_/g, ' ')} <input value={vals[m.field] ?? ''} onChange={e => setVals({ ...vals, [m.field]: e.target.value })} placeholder={m.evidence} /></label>)}
+      <label>Document (optional) <input type="file" onChange={e => setFile(e.target.files?.[0] ?? null)} /></label>
+      <button className="secondary-button" disabled={busy || (!file && !Object.values(vals).some(v => v.trim()))} onClick={send}>{busy ? 'Re-checking…' : 'Submit evidence and re-check this course'}</button>
+      {err && <div className="eval-error"><AlertCircle size={15} /> {err}</div>}</div>}
+  </div>;
 }
 
 function DecisionBar({ appId, r, role, onChanged }: { appId: string; r: CaseResult; role: string; onChanged: () => void }) {

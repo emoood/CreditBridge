@@ -155,3 +155,18 @@ Effect on demo1: about 9 of 31 rows no longer cost model calls (3 Islamic A took
 - New enforced rule `AUD_NON_TRANSFERABLE_AREA` (policy `non_transferable_departments: [ENGL]`): English courses never take transfer credit. Such courses are never offered as search candidates and any pick in them is BLOCKED_BY_RULE.
 - Not built yet, waiting for the logic: transfer covers only beginner-level major-general courses (Calculus I only, physics or biology for engineering students) plus general electives, with a per-course allow-list.
   Today the retriever only prefers 100-200 level courses; nothing stops a pick outside the future allow-list.
+
+## 2026-10-23 First working path: code-first evaluation with a Case agent
+Replaces "the model evaluates every subject". Flow after the officer confirms the extraction (`case_agent: true`, the default; replays and `CASE_AGENT=false` keep the older path):
+1. **Relevance gate** (code, `policies/curricula.yaml`): only externally examined qualifications accepted for the curriculum (AP, A/AS Level, Edexcel Level 3, IB; set per curriculum in University Setup, a file for now) are evaluated.
+   The rest are "Not evaluated" with a reason and a one-click include (`POST /rows/{id}/include`, persisted, works that row only). School-specific subjects stay not evaluated and cannot be included.
+2. **Batch mapping lookup** (code): one query against the local dummy `course_mappings` table (`policies/dummy_mappings.yaml`: course, AUD equivalent, credits, optional condition, version, status) keyed by the curriculum database subject code.
+   Conditions: `min_grade` (from the transcript), `min_exam_score` and `exam_variant` (need evidence). Policy rules run on the mapped target. Mapped = active mapping, condition met, no rule failure.
+   No mapping, unmet or unprovable condition, stale mapping, or a rule failure = **Needs you**.
+3. **Row state** (`row_states`): status, kind, reason, mapping snapshot, condition verdict, finding, drafted requests and collected facts per row, so work pauses and resumes for just that row.
+4. **Usage ledger** (`usage_ledger`: every model call, seconds, tokens, cost; local models cost $0) and **trace** (`trace_events`: every Case-agent tool action and the code steps), served at `GET /applications/{id}/activity` and shown in the activity drawer.
+5. **Case agent** (`agents/case_agent.py`, prompt `case_v1`): works only "Needs you" rows. Tools: `read_mapping`, `read_source_excerpts`, `read_target_excerpts`, `check_policy`, `propose_candidates`, `draft_request`, `set_row_state`.
+   Missing evidence -> says exactly what, drafts a request (nothing is sent), sets "Waiting on document" (refused without an open request). Unmapped -> `propose_candidates` runs the existing matcher + advisory reviewer
+   (refused for rows that have a mapping), then states gaps and a short review package. It can never set "Mapped" (only the code lookup can) and has no approval path. Output is a finding.
+   Resume: `POST /rows/{id}/evidence` (facts such as `{"exam_score": 5}` and/or a file) marks the open requests received and queues a one-row job: the code re-checks the condition first (often settling the row with no model call), else the agent runs on that row only.
+Not run against a real model yet (by request); tests use fake providers. The mapping table is a placeholder: its AUD codes and conditions are made up for the demo.

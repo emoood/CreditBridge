@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, type AppInfo, type CaseResult, type Institution, type Job } from './api';
+import { api, type AppInfo, type CaseResult, type Institution, type Job, type RowStateInfo } from './api';
 import { isBusy } from './model';
 
-export type AppData = { app: AppInfo; results: CaseResult[]; pending: { key: string; status: string; error_code: string }[]; readJob: Job | null; evalJob: Job | null };
+export type AppData = { app: AppInfo; states: Record<string, RowStateInfo>; results: CaseResult[]; pending: { key: string; status: string; error_code: string }[]; readJob: Job | null; evalJob: Job | null };
 
 export async function loadApp(id: string): Promise<AppData> {
   const [app, r] = await Promise.all([api.application(id), api.results(id)]);
   const [readJob, evalJob] = await Promise.all([app.reading_job_id ? api.job(app.reading_job_id) : null, app.evaluation_job_id ? api.job(app.evaluation_job_id) : null]);
-  return { app, results: r.results, pending: r.pending_units ?? [], readJob, evalJob };
+  return { app, states: r.states ?? {}, results: r.results, pending: r.pending_units ?? [], readJob, evalJob };
 }
 
 /** One application, refreshed every 1.5 s while the backend is working on it. */

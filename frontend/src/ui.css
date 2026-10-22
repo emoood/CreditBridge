@@ -85,3 +85,4 @@
 .xtable td.lowcell{background:#fff1c9}
 .xtable td:nth-child(2){min-width:230px}
 .xtable tr.nocur td{color:#8b97aa}.xtable tr.nocur .cell{color:#8b97aa}.xtable tr.nocur .unrec{color:#8b97aa;font-weight:600}.xtable td.lowcell{background:#f1f4f9!important}
+.case-block{border:1px solid #cfe0fa;background:#f5f9ff;border-radius:10px;padding:10px 12px}.case-block ul{margin:3px 0 6px 16px;padding:0;font-size:12.5px}.lbl{display:block;font-size:9.5px;letter-spacing:.9px;font-weight:800;color:#8a98ae;text-transform:uppercase;margin-top:6px}.req{font-size:12.5px;margin:4px 0}.evidence-form{display:flex;flex-direction:column;gap:6px;margin-top:8px}.evidence-form label{font-size:12px;display:flex;flex-direction:column;gap:2px}.evidence-form input{border:1px solid #dbe3f0;border-radius:6px;padding:6px 8px}.trace{list-style:none;margin:0;padding:0;font-size:11.5px}.trace li{padding:3px 0;border-bottom:1px solid #eef2f8}.trace li.bad{color:#9c2f28}

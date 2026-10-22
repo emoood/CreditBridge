@@ -18,6 +18,7 @@ export type CaseResult = {
   replay?: { label: string; recorded_at: string; model: string; recorded_duration_s: number; recorded_llm_calls: number };
   syllabus_requests: { missing_fields: string[]; status: string }[];
   decision: (Decision & { stale?: boolean }) | null; version: number;
+  row_state?: RowStateInfo; mapping?: { version: string | null; condition: unknown; condition_result: RowStateInfo['condition_result'] }; case?: { finding: Finding | null; requests: DraftedRequest[]; calls: number };
 };
 export type Unit = { stage: string; key: string; status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED_RETRYABLE' | 'SKIPPED'; attempts: number; method: string; error_code: string; duration_s: number };
 export type Job = { id: string; app_id?: string; phase?: 'READING' | 'EVALUATION'; status: 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED' | 'INTERRUPTED'; stage?: string; current_unit?: string;
@@ -25,6 +26,13 @@ export type Job = { id: string; app_id?: string; phase?: 'READING' | 'EVALUATION
   courses: Record<string, string>; errors: Record<string, string>; route: string; model: string;
   llm_calls: number; activity: { ts: number; kind: string; course?: string; tool?: string; stage?: string; role?: string; ok?: boolean; duration_s?: number }[] };
 export type Institution = { institution: string; transfer_credits: number; display: { mark: boolean; school_credits: boolean; aud_credits: boolean; grade_year: boolean } };
+export type Finding = { headline: string; needs?: string; missing_evidence: string[]; gaps: string[]; candidates: { aud_code: string; why: string }[]; review_package: string[]; flags?: string[] };
+export type DraftedRequest = { id: string; what: string; why: string; to: string; status: 'DRAFT' | 'SENT' | 'RECEIVED' };
+export type RowStateInfo = { row_id: string; status: 'Mapped' | 'Needs you' | 'Waiting on document' | 'Not evaluated'; kind: string; reason: string; can_include: boolean; included_override: boolean;
+  mapping: { aud_code: string; aud_credits: number; version: string; status: string; condition: { type: string; value: unknown; evidence?: string } | null } | null;
+  condition_result: { status: string; reason: string; missing: { field: string; evidence: string }[] } | null; finding: Finding | null; requests: DraftedRequest[]; facts: Record<string, unknown> };
+export type Activity = { usage: { calls: number; seconds: number; prompt_tokens: number; output_tokens: number; cost_usd: number; models: string[]; by_stage: Record<string, { calls: number; seconds: number }> };
+  trace: { at: string; row_id: string; actor: string; name: string; args: Record<string, unknown>; ok: boolean; detail: string }[] };
 export type Subject = { id: string; name: string; code: string; qualification: string };
 export type Candidate = Subject & { score: number };
 export type Row = { id: string; code: string; title: string; title_ar: string; credits: string; grade: string; term: string; page: number; evidence_ref: string;
@@ -56,9 +64,13 @@ export const api = {
   previewUrl: (id: string, page: number) => `/api/v1/applications/${id}/preview/${page}`,
   qualifications: () => fetch('/api/v1/curriculum/qualifications').then(j<{ qualifications: string[]; available: boolean; error: string | null }>),
   subjects: (q: string, qualification: string) => fetch(`/api/v1/curriculum/subjects?q=${encodeURIComponent(q)}&qualification=${encodeURIComponent(qualification)}&limit=15`.replace('&qualification=&', '&')).then(j<Subject[]>),
-  results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null; pending_units?: { key: string; status: string; error_code: string }[]; status?: string }>),
+  results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null; pending_units?: { key: string; status: string; error_code: string }[]; status?: string; states?: Record<string, RowStateInfo> }>),
   confirm: (id: string, role: string) => fetch(`/api/v1/applications/${id}/confirm`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({}) }).then(j<{ job_id: string; already_confirmed: boolean }>),
   resume: (jobId: string, role: string) => fetch(`/api/v1/jobs/${jobId}/resume`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
+  include: (id: string, row: string, role: string) => fetch(`/api/v1/applications/${id}/rows/${row}/include`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
+  evidence: (id: string, row: string, role: string, facts: Record<string, unknown>, file?: File | null) => { const f = new FormData(); f.append('facts', JSON.stringify(facts)); if (file) f.append('file', file);
+    return fetch(`/api/v1/applications/${id}/rows/${row}/evidence`, { method: 'POST', headers: { 'X-Role': role, 'X-Actor': 'Admissions officer' }, body: f }).then(j<{ job_id: string }>); },
+  activity: (id: string) => fetch(`/api/v1/applications/${id}/activity`).then(j<Activity>),
   institution: () => fetch('/api/v1/config/institution').then(j<Institution>),
   recordings: () => fetch('/api/v1/recordings').then(j<Recording[]>),
   saveRecording: (appId: string, name: string, role: string) => fetch('/api/v1/recordings', { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ app_id: appId, name }) }).then(j<Recording>),

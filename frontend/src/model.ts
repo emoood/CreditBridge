@@ -1,7 +1,7 @@
 // Maps the backend's statuses and data onto the officer-facing vocabulary. Pure functions, no backend changes.
 // Row vocabulary:  Mapped | Needs you | Waiting on document | Not evaluated
 // Application vocabulary: Processing | Needs you | Waiting on document | Ready
-import type { AppInfo, CaseResult, Job, Row } from './api';
+import type { AppInfo, CaseResult, Job, Row, RowStateInfo } from './api';
 
 export type RowStatus = 'Mapped' | 'Needs you' | 'Waiting on document' | 'Not evaluated';
 export type AppStatus = 'Processing' | 'Needs you' | 'Waiting on document' | 'Ready';
@@ -20,6 +20,7 @@ export type Item = {
   objections: number;     // reviewer objections shown as a badge
   canInclude: boolean;    // a "Not evaluated" row the officer may bring in
   decided: 'ACCEPTED' | 'DECLINED' | 'MORE_INFORMATION_REQUESTED' | null;
+  state?: RowStateInfo;   // the backend's verdict for this row, when the Case-agent path produced one
 };
 
 // Stand-in until the new lookup exists: a subject without a syllabus is worth waiting for only if it looks like an advanced course.
@@ -60,7 +61,7 @@ export function classify(row: Row | null, result: CaseResult | null, included: b
 
 export type Built = { items: Item[]; relevant: Item[]; needsYou: Item[]; notEvaluated: Item[]; counts: { mapped: number; needsYou: number; waiting: number; notEvaluated: number; total: number } };
 
-export function build(app: AppInfo, results: CaseResult[], pending: { key: string }[], include: Set<string>, evaluating: boolean): Built {
+export function build(app: AppInfo, results: CaseResult[], pending: { key: string }[], include: Set<string>, evaluating: boolean, states: Record<string, RowStateInfo> = {}): Built {
   const rows = app.rows ?? [];
   const bySid = new Map(results.map(r => [r.course.code, r]));
   const failed = new Set(pending.map(p => p.key));
@@ -69,7 +70,7 @@ export function build(app: AppInfo, results: CaseResult[], pending: { key: strin
   for (const row of rows) {
     const res = row.source_id ? bySid.get(row.source_id) ?? null : null;
     if (res) used.add(res.course.code);
-    items.push(classify(row, res, include.has(row.id), failed, evaluating));
+    items.push(withState(classify(row, res, include.has(row.id), failed, evaluating), states[row.id]));
   }
   for (const r of results) if (!used.has(r.course.code)) items.push(classify(null, r, include.has(r.course.code), failed, evaluating)); // demo fixtures have no source ids
   const rank: Record<RowStatus, number> = { 'Needs you': 0, Mapped: 1, 'Waiting on document': 2, 'Not evaluated': 3 };
@@ -78,6 +79,17 @@ export function build(app: AppInfo, results: CaseResult[], pending: { key: strin
   const count = (s: RowStatus) => items.filter(i => i.status === s).length;
   return { items, relevant, needsYou: items.filter(i => i.status === 'Needs you'), notEvaluated: items.filter(i => i.status === 'Not evaluated'),
     counts: { mapped: count('Mapped'), needsYou: count('Needs you'), waiting: count('Waiting on document'), notEvaluated: count('Not evaluated'), total: items.length } };
+}
+
+/** When the backend decided this row (gate, mapping lookup, Case agent), its status wins; the older result-based mapping is the fallback. */
+function withState(i: Item, s: RowStateInfo | undefined): Item {
+  if (!s) return i;
+  const waiting = s.status === 'Waiting on document';
+  const needs = s.status === 'Needs you';
+  const headline = s.finding?.headline;
+  return { ...i, state: s, status: s.status, reason: s.reason || i.reason, canInclude: s.status === 'Not evaluated' && s.can_include,
+    finding: needs ? (headline ?? s.reason) : i.finding,
+    action: needs ? (i.action ?? { kind: 'open', label: 'Open evidence' }) : waiting ? { kind: 'open', label: 'See request' } : undefined };
 }
 
 const BUSY = ['READING', 'CONFIRMED', 'EVALUATION_IN_PROGRESS'];
