@@ -124,7 +124,7 @@ def needs_reread(checked: dict[str, Any]) -> bool:
 
 def is_non_course(r: dict[str, Any]) -> bool:
     """A course row has a grade (mark or letter) or credits. Anything else (headings, grading-scale legends, notes) is not a course."""
-    return r.get("mark") is None and not r.get("letter") and r.get("credits") is None
+    return r.get("mark") is None and (r.get("letter") or "").strip().lower() in ("", "null", "none") and r.get("credits") is None  # the model sometimes writes the word "null"
 
 
 def drop_non_courses(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:

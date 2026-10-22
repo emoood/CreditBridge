@@ -117,3 +117,17 @@ async def test_intake_survives_a_failed_reread_and_still_flags_the_cell():
     ctx = await run_intake_agent(FakeLLMProvider(script), R.repo, R.retriever, "APP-X", blocks, {"p1b1": (1, (0, 50))}, lambda pg, dpi: Image.new("RGB", (400, 400), "white"), scale, 3)
     q = blocks["p1b1"]["rows"][0]["questions"]
     assert q and q[0]["field"] == "grade" and ctx.budget == 2   # one re-read spent, nothing accepted, the exact cell has a question
+
+
+def test_block_checks_ignore_headings_and_compare_a_total_with_the_whole_term_not_just_one_block():
+    scale = gc.load_scale()
+    heading = {"subject": "Subject", "mark": None, "letter": "null", "points": None, "credits": None}
+    row = lambda s, c: {"subject": s, "mark": 90, "letter": "A-", "points": 3.7, "credits": c}
+    b1 = {"rows": [heading, row("A", 1.0), row("B", 1.0)], "totals": {}}
+    b2 = {"rows": [row("C", 0.5)], "totals": {"term_credits": 2.5, "term_quality_points": 9.25, "term_gpa": 3.7}}
+    blocks = {"p1b1": b1, "p1b2": b2}
+    assert xc.failures_in(blocks, "p1b1", scale) == []          # the heading row is not a course row
+    assert xc.failures_in(blocks, "p1b2", scale) == []          # 1.0 + 1.0 + 0.5 = 2.5: the total matches the term, though this block alone has 0.5
+    assert [f["check"] for f in xc.block_failures(b2, scale)] == ["credit_total", "grade_point_total", "gpa_total"] or xc.block_failures(b2, scale)  # alone it would raise a false alarm
+    b2["totals"]["term_credits"] = 3.5
+    assert [f["check"] for f in xc.failures_in(blocks, "p1b2", scale)] == ["credit_total"]   # a genuine mismatch is still caught

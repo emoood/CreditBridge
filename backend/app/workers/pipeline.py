@@ -106,7 +106,7 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
                 blocks_meta.append({"key": u.unit_key, "status": u.status})
             if s.intake_agent:  # re-read only blocks that still fail a check, a few times per transcript; sheets that pass never reach it
                 blocks = {u.unit_key: u.result for u in store.units_of(db, job.id) if u.stage == "read" and u.status == "DONE" and u.result}
-                if any(xc.block_failures(b, scale) for b in blocks.values()):
+                if any(xc.failures_in(blocks, k, scale) for k in blocks):
                     job.stage = "recheck"
                     db.commit()
                     used = job.summary.get("rechecks_used", 0)

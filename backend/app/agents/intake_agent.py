@@ -37,10 +37,10 @@ class IntakeContext(ToolContext):
     questions: int = 0
 
 
-def accept_rechecked(old: dict[str, Any], new: dict[str, Any], scale: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def accept_rechecked(old: dict[str, Any], new: dict[str, Any], scale: dict[str, Any], prior: list[dict[str, Any]] | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Take a value from the new reading only for a row whose checks now pass (and a total only if it now passes). Returns (block, changes)."""
     merged, changes = copy.deepcopy(old), []
-    bad_old = {f["row"] for f in xc.block_failures(old, scale) if f["row"] is not None}
+    bad_old = {f["row"] for f in xc.block_failures(old, scale, prior) if f["row"] is not None}
     new_rows = new.get("rows", [])
     for i in bad_old:
         o = old["rows"][i]
@@ -53,7 +53,7 @@ def accept_rechecked(old: dict[str, Any], new: dict[str, Any], scale: dict[str, 
             if new_rows[cand].get(k) != o.get(k):
                 changes.append({"row": o.get("subject"), "field": k, "from": o.get(k), "to": new_rows[cand].get(k)})
         merged["rows"][i] = {**new_rows[cand]}
-    if any(f["row"] is None for f in xc.block_failures(old, scale)) and not any(f["row"] is None for f in xc.block_failures(new, scale)):
+    if any(f["row"] is None for f in xc.block_failures(old, scale, prior)) and not any(f["row"] is None for f in xc.block_failures(new, scale, prior)):
         for k, v in new.get("totals", {}).items():
             if v != old.get("totals", {}).get(k):
                 changes.append({"row": "(totals)", "field": k, "from": old.get("totals", {}).get(k), "to": v})
@@ -61,7 +61,7 @@ def accept_rechecked(old: dict[str, Any], new: dict[str, Any], scale: dict[str, 
     for r in merged["rows"]:  # refresh the per-row flags from the checks
         c = gc.check_row(r, scale)
         r["flags"], r["uncertain"] = c.flags, c.uncertain
-    merged["flags"] = [f"{(r.get('subject') or '?')[:30]}: {f}" for r in merged["rows"] for f in r["flags"]] + [f["detail"] for f in xc.block_failures(merged, scale) if f["row"] is None]
+    merged["flags"] = [f"{(r.get('subject') or '?')[:30]}: {f}" for r in merged["rows"] for f in r["flags"]] + [f["detail"] for f in xc.block_failures(merged, scale, prior) if f["row"] is None]
     return merged, changes
 
 
@@ -78,7 +78,7 @@ class GetBlockFailures(AgentTool):
     async def execute(self, args: KeyArgs, ctx: IntakeContext):
         if args.block not in ctx.blocks:
             raise ToolError(f"Unknown block '{args.block}'.")
-        return xc.block_failures(ctx.blocks[args.block], ctx.scale)
+        return xc.failures_in(ctx.blocks, args.block, ctx.scale)
 
 
 class RereadArgs(BaseModel):
@@ -95,7 +95,7 @@ class RereadBlock(AgentTool):
     async def execute(self, args: RereadArgs, ctx: IntakeContext):
         if args.block not in ctx.blocks:
             raise ToolError(f"Unknown block '{args.block}'.")
-        if not xc.block_failures(ctx.blocks[args.block], ctx.scale):
+        if not xc.failures_in(ctx.blocks, args.block, ctx.scale):
             raise ToolError("This block has no failing check; there is nothing to re-read.")
         if ctx.budget <= 0:
             raise ToolError("The re-read budget for this transcript is used up. Flag the remaining cells instead.")
@@ -105,11 +105,11 @@ class RereadBlock(AgentTool):
         img = await asyncio.to_thread(ctx.render, page, dpi)
         b64 = vr.crop_png_b64(img, span, dpi / get_settings().vision_dpi)
         new = vr.check_block(await vr.read_block(ctx.provider, b64, args.block, hint=args.focus), ctx.scale)
-        merged, changes = accept_rechecked(ctx.blocks[args.block], new, ctx.scale)
+        merged, changes = accept_rechecked(ctx.blocks[args.block], new, ctx.scale, xc.prior_rows(ctx.blocks, args.block))
         ctx.blocks[args.block].clear()
         ctx.blocks[args.block].update(merged)
         ctx.changes += [{"block": args.block, **c} for c in changes]
-        left = xc.block_failures(merged, ctx.scale)
+        left = xc.failures_in(ctx.blocks, args.block, ctx.scale)
         return {"accepted_changes": changes, "still_failing": left, "rechecks_left": ctx.budget}
 
 
@@ -130,7 +130,7 @@ class FlagCell(AgentTool):
         b = ctx.blocks.get(args.block)
         if b is None:
             raise ToolError(f"Unknown block '{args.block}'.")
-        if not any(f["row"] == args.row and f["field"] == args.field for f in xc.block_failures(b, ctx.scale)):
+        if not any(f["row"] == args.row and f["field"] == args.field for f in xc.failures_in(ctx.blocks, args.block, ctx.scale)):
             raise ToolError("That cell does not fail a check, so it cannot be flagged.")
         attach_question(b, args.row, args.field, args.question)
         ctx.questions += 1
@@ -159,8 +159,8 @@ class TracedIntakeRegistry(ToolRegistry):
 def template_questions(ctx: IntakeContext) -> int:
     """Whatever still fails and was not flagged by the agent gets one specific question from code, so no failing cell is left unexplained."""
     n = 0
-    for b in ctx.blocks.values():
-        for f in xc.block_failures(b, ctx.scale):
+    for key, b in ctx.blocks.items():
+        for f in xc.failures_in(ctx.blocks, key, ctx.scale):
             if f["row"] is None:
                 continue
             if not any(q["field"] == f["field"] for q in b["rows"][f["row"]].get("questions", [])):
@@ -172,7 +172,7 @@ def template_questions(ctx: IntakeContext) -> int:
 async def run_intake_agent(provider: LLMProvider, repo, retriever, app_id: str, blocks: dict[str, dict[str, Any]], spans: dict[str, Any], render, scale: dict[str, Any],
                            budget: int) -> IntakeContext:
     ctx = IntakeContext(repo, retriever, "intake", app_id, app_id=app_id, provider=provider, blocks=blocks, spans=spans, render=render, scale=scale, budget=budget)
-    failing = {k: [f"{f['field']}: {f['detail']}" for f in xc.block_failures(b, scale)] for k, b in blocks.items() if xc.block_failures(b, scale)}
+    failing = {k: [f"{f['field']}: {f['detail']}" for f in xc.failures_in(blocks, k, scale)] for k in blocks if xc.failures_in(blocks, k, scale)}
     if failing:
         import json
         try:
