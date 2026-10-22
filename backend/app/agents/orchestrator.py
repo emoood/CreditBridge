@@ -2,7 +2,10 @@
 The reviewer is advisory: its objections are shown next to the pick and never fed back to the matcher.
 Fixed, auditable workflow around the two agents. Nothing here can approve credit."""
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
+
+import yaml
 
 from ..devlog import events
 from ..providers.base import LLMProvider
@@ -74,6 +77,23 @@ async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetr
     events.emit("stage", stage="case_done", course=source_code, triage=t.category)
     return CaseResult(source_code, match, review, rules, t, case, calls,
                       getattr(provider, "name", ""), getattr(provider, "model", ""), flags=flags)
+
+
+SCHOOL_SPECIFIC_FILE = Path(__file__).resolve().parents[3] / "policies" / "school_specific_subjects.yaml"
+
+
+def is_school_specific(title: str) -> bool:
+    """Subjects that exist only in the school system (religion, Arabic, PE, ...): never mapped, never sent to the model."""
+    t = (title or "").lower()
+    return any(p.lower() in t for p in yaml.safe_load(SCHOOL_SPECIFIC_FILE.read_text())["patterns"])
+
+
+def school_specific_case(repo: DemoRepo, source_code: str) -> CaseResult:
+    from .matching_agent import MatchResult
+    case = CaseFile()
+    match = MatchResult("POTENTIAL_GENERAL_ELECTIVE", flags=["SCHOOL_SPECIFIC_NOT_MAPPED"], case=case)
+    t = Triage("POTENTIAL_GE", ["School-specific subject: not mapped to a university course. The officer decides whether it counts as a general elective."], 1)
+    return CaseResult(source_code, match, None, [], t, case, flags=match.flags)
 
 
 def no_evidence_case(repo: DemoRepo, source_code: str) -> CaseResult:

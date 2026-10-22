@@ -5,7 +5,7 @@ import time
 import uuid
 from typing import Any
 
-from ..agents.orchestrator import no_evidence_case, run_case
+from ..agents.orchestrator import is_school_specific, no_evidence_case, run_case, school_specific_case
 from ..config import get_settings
 from ..db.models import Application, Job
 from ..db.session import app_session
@@ -191,13 +191,15 @@ async def run_evaluation(job_id: str, provider: LLMProvider) -> None:
             t0 = time.time()
             try:
                 outcomes: list[dict[str, Any]] = []
-                if app.kind == "upload" and row.get("subject"):
+                if app.kind == "upload" and row.get("subject") and not is_school_specific(row.get("title") or ""):
                     outcomes = await asyncio.to_thread(curriculum.outcomes, row["subject"]["id"])
                 if app.kind == "upload":
                     title = row.get("title") or (row["subject"]["name"] if row.get("subject") else "") or "Untitled subject"
                     R.repo.add_source(u.unit_key, title, str(row.get("credits") or ""), row.get("grade") or "", row.get("term") or "",
                                       row.get("title_ar") or "", outcomes, app.id)
-                if app.kind == "upload" and not outcomes and not s.title_only_suggestions:
+                if app.kind == "upload" and is_school_specific(row.get("title") or ""):
+                    case = school_specific_case(R.repo, u.unit_key)  # no model call, no mapping: flagged for the officer
+                elif app.kind == "upload" and not outcomes and not s.title_only_suggestions:
                     case = no_evidence_case(R.repo, u.unit_key)  # unrecognized: no model call, never guessed
                 else:
                     case = await run_case(provider, R.repo, R.retriever, u.unit_key, R.precedent, s.matcher_max_tool_rounds, s.reviewer_max_tool_rounds)

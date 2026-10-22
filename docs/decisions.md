@@ -140,3 +140,9 @@ Not yet tried: a stronger model for the matcher/reviewer (LM Studio or a larger 
 6. **Recorded run / replay.** `data/recordings/<name>/` (gitignored): recording.json (rows, reading summary, every subject's full result with citations and excerpt text, timings, model, date, traces) + the scan.
    Replay loads it at the officer gate (the gate still applies) and fills each subject from the recording with `is_replay: true` and `replay.label = "Replay of recorded run, <date>, <model>"`; a subject can be named `live`, then
    the model runs it now and it carries no label. A replayed result is used only if the row's title and linked curriculum subject still match the recording; an officer-edited row falls back to live.
+
+## 2026-10-22 School-specific subjects are not mapped (product owner decision)
+Moral Education, Physical Education, Islamic and Arabic A (and UAE Social Studies, my addition) exist only in the school system; university requirements differ, so they cannot be mapped.
+Transfer credit covers beginner-level major courses and general electives, and electives need an officer check. These subjects now skip the model entirely and come back as POTENTIAL_GENERAL_ELECTIVE
+(flag `SCHOOL_SPECIFIC_NOT_MAPPED`, amber, officer decides). The list is `policies/school_specific_subjects.yaml` (substring match on the transcript title; edit freely).
+Effect on demo1: about 9 of 31 rows no longer cost model calls (3 Islamic A took 24-33 s each before).

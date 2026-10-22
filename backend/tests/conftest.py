@@ -30,7 +30,7 @@ OUTCOMES = [{"text": "Interpret derivatives as rates of change.", "page": 3, "ki
 FALL = [{"subject": "AP Calculus AB", "mark": 94, "letter": "A", "points": 4.0, "credits": 1.0},
         {"subject": "AP English Language and Composition", "mark": 88, "letter": "B+", "points": 3.3, "credits": 1.0},
         {"subject": "AP Psychology", "mark": 95, "letter": "A", "points": 4.0, "credits": 0.5},
-        {"subject": "Islamic Studies", "mark": 90, "letter": "A-", "points": 3.7, "credits": 0.5}]
+        {"subject": "Film Appreciation", "mark": 90, "letter": "A-", "points": 3.7, "credits": 0.5}]
 SPRING = [{"subject": "AP Computer Science A", "mark": 91, "letter": "A-", "points": 3.7, "credits": 1.0},
           {"subject": "AP Statistics", "mark": 85, "letter": "B", "points": 3.0, "credits": 1.0},
           {"subject": "AP Art History", "mark": 82, "letter": "B-", "points": 2.7, "credits": 0.5}]

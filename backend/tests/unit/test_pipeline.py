@@ -108,7 +108,7 @@ async def test_unrecognized_subject_gets_title_only_suggestions_never_a_match(en
     up = await read_to_gate(env)
     rows = (await env.client.get(f"/api/v1/applications/{up['id']}")).json()["rows"]
     unrec = [r for r in rows if not r["subject"]]
-    assert [r["title"] for r in unrec] == ["Islamic Studies"] and unrec[0]["curriculum_status"] == "NEEDS_SYLLABUS"
+    assert [r["title"] for r in unrec] == ["Film Appreciation"] and unrec[0]["curriculum_status"] == "NEEDS_SYLLABUS"
     # a hostile model: claims a full match, cites things, and proposes 5 courses (one invented, one twice)
     hostile = {"recommendation": "POTENTIAL_MATCH", "target_course_id": "CS101", "evidence_strength": "STRONG",
                                  "supported_outcomes": [{"source_excerpt_id": "x", "target_excerpt_id": "tgt-CS101-o1", "explanation": "same"}],
@@ -119,7 +119,7 @@ async def test_unrecognized_subject_gets_title_only_suggestions_never_a_match(en
     await env.worker.idle()
     res = (await env.client.get(f"/api/v1/applications/{up['id']}/results")).json()
     by = {r["course"]["title"]: r for r in res["results"]}
-    r = by["Islamic Studies"]
+    r = by["Film Appreciation"]
     assert r["match"]["status"] == "NEEDS_SYLLABUS" and r["triage"]["category"] == "NEEDS_EVIDENCE"  # never a match, never ready
     assert r["match"]["target"] is None and r["match"]["supported_outcomes"] == [] and r["review"] is None
     sug = r["match"]["title_only_suggestions"]
@@ -279,3 +279,29 @@ async def test_replay_with_nothing_live_makes_no_model_call_and_a_changed_row_fa
     bad = await env.client.post("/api/v1/recordings/t2/replay", json={"live": ["No Such Subject"]}, headers=ADMIN)
     assert bad.status_code == 422
     assert (await env.client.post("/api/v1/recordings/nope/replay", json={}, headers=ADMIN)).status_code == 404
+
+
+async def test_school_specific_subjects_are_flagged_for_the_officer_and_never_reach_the_model(env, monkeypatch, tmp_path):
+    from backend.app.agents import orchestrator
+    f = tmp_path / "s.yaml"
+    f.write_text("patterns:\n  - film appreciation\n")
+    monkeypatch.setattr(orchestrator, "SCHOOL_SPECIFIC_FILE", f)
+    up = await read_to_gate(env)
+    rows = (await env.client.get(f"/api/v1/applications/{up['id']}")).json()["rows"]
+    idx = [r["title"] for r in rows].index("Film Appreciation") + 1
+    await confirm(env, up["id"])
+    await env.worker.idle()
+    res = (await env.client.get(f"/api/v1/applications/{up['id']}/results")).json()
+    r = next(x for x in res["results"] if x["course"]["title"] == "Film Appreciation")
+    assert r["match"]["status"] == "POTENTIAL_GENERAL_ELECTIVE" and r["triage"]["category"] == "POTENTIAL_GE"
+    assert "SCHOOL_SPECIFIC_NOT_MAPPED" in r["match"]["flags"] and r["match"]["target"] is None and r["match"]["title_only_suggestions"] == []
+    assert r["llm_calls"] == 0 and not any(u == r["course"]["code"] for _, u in env.model.calls) and idx
+    assert orchestrator.is_school_specific("Moral Education") is False  # patched list only; the shipped list is tested below
+
+
+def test_shipped_list_covers_the_named_school_specific_subjects():
+    from backend.app.agents.orchestrator import is_school_specific
+    for t in ("Moral Education", "Physical Education", "Islamic A", "Arabic A", "UAE Social Studies"):
+        assert is_school_specific(t), t
+    for t in ("AP Biology", "AP Calculus AB", "Computer Science Principles", "English 12"):
+        assert not is_school_specific(t), t
