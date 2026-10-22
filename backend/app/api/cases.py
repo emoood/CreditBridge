@@ -58,10 +58,10 @@ def include_row(app_id: str, row_id: str, x_role: str | None = Header(default=No
 
 
 @router.post("/applications/{app_id}/rows/{row_id}/evidence")
-async def add_evidence(app_id: str, row_id: str, facts: str = Form("{}"), file: UploadFile | None = File(None),  # noqa: B008
+async def add_evidence(app_id: str, row_id: str, facts: str = Form("{}"), note: str = Form(""), file: UploadFile | None = File(None),  # noqa: B008
                        x_role: str | None = Header(default=None), x_actor: str | None = Header(default=None)):
-    """The officer supplies what a drafted request asked for (e.g. {"exam_score": 5}, optionally with the document).
-    Open requests are marked received and ONLY this row is worked again."""
+    """The officer hands a "Needs your input" row back with evidence: facts (e.g. {"exam_score": 5}), a typed note ("this is AP Physics C Mechanics"),
+    and/or a document. Open requests are marked received and ONLY this row is worked again."""
     if x_role != DECIDER_ROLE:
         raise HTTPException(403, "Only an admissions officer can add evidence")
     try:
@@ -78,14 +78,15 @@ async def add_evidence(app_id: str, row_id: str, facts: str = Form("{}"), file: 
             raise HTTPException(400, str(e)) from e
     with app_session() as db:
         app, st = _need_row(db, app_id, row_id)
-        if not new and not doc:
-            raise HTTPException(422, "Provide at least one fact or a document")
+        if not new and not doc and not note.strip():
+            raise HTTPException(422, "Provide a note, a fact or a document")
+        notes = [*((st.facts or {}).get("_notes", [])), *([{"at": store.now().isoformat(), "by": x_actor or "officer", "text": note.strip()[:600], "document": bool(doc)}] if note.strip() else [])]
         reqs = [{**r, "status": "RECEIVED", **({"document": {"filename": doc["filename"], "sha256": doc["sha256"]}} if doc else {})} if r["status"] in ("DRAFT", "SENT") else r
                 for r in (st.requests or [])]
-        mp.save_state(db, app_id, row_id, facts={**(st.facts or {}), **new}, requests=reqs, status=mp.NEEDS, reason="Evidence received; re-checking")
+        mp.save_state(db, app_id, row_id, facts={**(st.facts or {}), **new, **({"_notes": notes} if notes else {})}, requests=reqs, status=mp.CONDITIONAL, reason="Evidence received; re-checking")
         job = _row_job(db, app, row_id)
-        store.audit(db, app_id, x_actor or "officer", "evidence_added", row_id, facts=sorted(new), document=bool(doc))  # values are not logged
-        usage.trace(app_id, row_id, "code", "evidence_received", {"facts": sorted(new), "document": bool(doc)})
+        store.audit(db, app_id, x_actor or "officer", "evidence_added", row_id, facts=sorted(new), document=bool(doc), note=bool(note.strip()))  # values are not logged
+        usage.trace(app_id, row_id, "code", "note_or_evidence_received", {"facts": sorted(new), "document": bool(doc), "note": bool(note.strip())})
         job_id = job.id
     worker.enqueue(job_id)
     return {"job_id": job_id}

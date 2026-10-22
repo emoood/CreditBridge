@@ -56,7 +56,8 @@ def start_unit(db: Session, job: Job, u: JobUnit, method: str = "") -> None:
 
 def finish_unit(db: Session, u: JobUnit, status: str, result: dict | None = None, error: str = "", method: str | None = None) -> None:
     u.status, u.error_code, u.finished_at = status, error, now()
-    u.duration_s = round((u.finished_at - u.started_at).total_seconds(), 2) if u.started_at else 0.0
+    started = u.started_at if (u.started_at and u.started_at.tzinfo) else (u.started_at.replace(tzinfo=UTC) if u.started_at else None)  # SQLite drops the zone
+    u.duration_s = round((u.finished_at - started).total_seconds(), 2) if started else 0.0
     if method is not None:
         u.method = method
     if result is not None:

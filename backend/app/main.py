@@ -10,6 +10,7 @@ from .api.cases import router as cases_router
 from .api.common import seed_demo
 from .api.evaluation import router as evaluation_router
 from .api.intake import router as intake_router
+from .api.officer import router as officer_router
 from .api.recordings import router as recordings_router
 from .config import get_settings
 from .db.session import app_session, init_app_db
@@ -39,6 +40,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http
 app.include_router(intake_router)
 app.include_router(evaluation_router)
 app.include_router(cases_router)
+app.include_router(officer_router)
 app.include_router(recordings_router)
 
 

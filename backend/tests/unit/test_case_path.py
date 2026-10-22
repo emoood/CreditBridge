@@ -1,59 +1,26 @@
 """Small tests for the code-first path: gate, mapping lookup, conditions, row state, the Case agent's guards and resume. Fake model only."""
 import pytest
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from backend.app import runtime
 from backend.app.agents.case_agent import run_case_agent
 from backend.app.agents.tools.base import ToolRegistry
 from backend.app.agents.tools.case_tools import CASE_TOOLS, CaseContext
-from backend.app.config import get_settings
-from backend.app.db.models import CourseMapping, JobUnit, TraceEvent, UsageEntry
+from backend.app.db.models import JobUnit, TraceEvent, UsageEntry
 from backend.app.db.session import app_session
 from backend.app.providers.base import ToolCall
 from backend.app.providers.fake import FakeLLMProvider
 from backend.app.services import mapping as mp
 from backend.app.services.usage import MeteredProvider
-from backend.tests.conftest import ADMIN, read_to_gate
+from backend.tests.conftest import ADMIN, run_to_review, states
 
 pytestmark = pytest.mark.asyncio
-
-TEST_MAPPINGS = [  # demo-catalog codes, so the policy check can run in tests
-    {"subject_code": "AP-STAT", "aud_code": "STA201", "version": "t1", "status": "ACTIVE"},
-    {"subject_code": "AP-PSYC", "aud_code": "MTH201", "version": "t1", "status": "ACTIVE", "condition": {"type": "min_grade", "value": "B"}},
-    {"subject_code": "AP-CALC-AB", "aud_code": "MTH201", "version": "t1", "status": "ACTIVE", "condition": {"type": "min_exam_score", "value": 4, "evidence": "AP exam score report"}},
-    {"subject_code": "AP-CSA", "aud_code": "CS101", "version": "t0", "status": "STALE"},
-]
-
-
-@pytest.fixture
-def case_env(env, monkeypatch):
-    monkeypatch.setattr(get_settings(), "case_agent", True)
-    with app_session() as db:
-        db.execute(delete(CourseMapping))
-        db.add_all([CourseMapping(qualification="Advanced Placement", subject_name="", aud_credits=3, **m) for m in TEST_MAPPINGS])
-        db.commit()
-    return env
-
-
-async def run_to_review(env):
-    up = await read_to_gate(env)
-    await env.client.post(f"/api/v1/applications/{up['id']}/confirm", headers=ADMIN)
-    await env.worker.idle()
-    return up["id"]
-
-
-async def states(env, app_id):
-    res = (await env.client.get(f"/api/v1/applications/{app_id}/results")).json()
-    rows = (await env.client.get(f"/api/v1/applications/{app_id}")).json()["rows"]
-    by_title = {r["title"]: res["states"][r["id"]] for r in rows}
-    return by_title, rows, res
-
 
 async def test_gate_and_lookup_settle_rows_in_code_and_only_unsettled_rows_reach_the_model(case_env):
     app_id = await run_to_review(case_env)
     st, rows, res = await states(case_env, app_id)
     assert st["AP Statistics"]["status"] == "Mapped" and st["AP Psychology"]["status"] == "Mapped"   # no condition / condition met
-    assert st["AP Calculus AB"]["status"] == "Needs you" and st["AP Calculus AB"]["kind"] == "condition_missing"
+    assert st["AP Calculus AB"]["status"] == "Conditional" and st["AP Calculus AB"]["kind"] == "condition_missing"
     assert st["AP Computer Science A"]["kind"] == "stale" and st["AP English Language and Composition"]["kind"] == "unmapped"
     assert st["Film Appreciation"]["status"] == "Not evaluated" and st["Film Appreciation"]["can_include"]  # not in the curriculum database
     sids = {r["title"]: r["source_id"] for r in rows}
@@ -117,6 +84,6 @@ async def test_one_click_include_runs_a_not_evaluated_row_and_the_ledger_is_serv
     assert (await case_env.client.post(f"/api/v1/applications/{app_id}/rows/{film['id']}/include", headers=ADMIN)).status_code == 200
     await case_env.worker.idle()
     st, _, _ = await states(case_env, app_id)
-    assert st["Film Appreciation"]["status"] == "Needs you" and st["Film Appreciation"]["included_override"]
+    assert st["Film Appreciation"]["status"] == "No mapping" and st["Film Appreciation"]["included_override"]
     act = (await case_env.client.get(f"/api/v1/applications/{app_id}/activity")).json()
     assert act["usage"]["calls"] > 0 and act["usage"]["cost_usd"] == 0 and any(e["name"] == "lookup" for e in act["trace"])

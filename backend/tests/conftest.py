@@ -6,12 +6,13 @@ from pathlib import Path
 import httpx
 import pytest
 import pytest_asyncio
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, delete
 from sqlalchemy.pool import StaticPool
 
 from backend.app import runtime
 from backend.app.api.common import seed_demo
 from backend.app.config import get_settings
+from backend.app.db.models import CourseMapping
 from backend.app.db.session import app_session, init_app_db, set_app_engine
 from backend.app.main import app
 from backend.app.providers.base import LLMRequest, LLMResponse, ToolCall
@@ -125,3 +126,38 @@ async def read_to_gate(env):
 @pytest.fixture
 def admin():
     return ADMIN
+
+
+# ---- shared by the Case-agent path tests
+TEST_MAPPINGS = [  # demo-catalog codes, so the policy check can run in tests
+    {"subject_code": "AP-STAT", "aud_code": "STA201", "version": "t1", "status": "ACTIVE"},
+    {"subject_code": "AP-PSYC", "aud_code": "MTH201", "version": "t1", "status": "ACTIVE", "condition": {"type": "min_grade", "value": "B"}},
+    {"subject_code": "AP-CALC-AB", "aud_code": "MTH201", "version": "t1", "status": "ACTIVE", "condition": {"type": "min_exam_score", "value": 4, "evidence": "AP exam score report"}},
+    {"subject_code": "AP-CSA", "aud_code": "CS101", "version": "t0", "status": "STALE"},
+]
+
+
+@pytest.fixture
+def case_env(env, monkeypatch):
+    monkeypatch.setattr(get_settings(), "case_agent", True)
+    with app_session() as db:
+        db.execute(delete(CourseMapping))
+        db.add_all([CourseMapping(qualification="Advanced Placement", subject_name="", aud_credits=3, **m) for m in TEST_MAPPINGS])
+        db.commit()
+    return env
+
+
+async def run_to_review(env):
+    up = await read_to_gate(env)
+    await env.client.post(f"/api/v1/applications/{up['id']}/confirm", headers=ADMIN)
+    await env.worker.idle()
+    return up["id"]
+
+
+async def states(env, app_id):
+    res = (await env.client.get(f"/api/v1/applications/{app_id}/results")).json()
+    rows = (await env.client.get(f"/api/v1/applications/{app_id}")).json()["rows"]
+    by_title = {r["title"]: res["states"][r["id"]] for r in rows}
+    return by_title, rows, res
+
+

@@ -17,7 +17,7 @@ from .orchestrator import CaseResult
 from .tools.base import ToolRegistry  # noqa: F401  (re-exported type for callers)
 from .tools.case_tools import CASE_TOOLS, CaseContext, TracedRegistry
 
-PROMPT_VERSION = "case_v1"
+PROMPT_VERSION = "case_v2"
 PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
 
 
@@ -33,15 +33,17 @@ class CaseFinding(AgentOutput):
     gaps: list[str] = Field(default_factory=list)
     candidates: list[CaseCandidate] = Field(default_factory=list)
     review_package: list[str] = Field(default_factory=list)
+    questions_for_chair: list[str] = Field(default_factory=list)
 
 
-async def run_case_agent(provider: LLMProvider, repo, retriever, precedent, app_id: str, row: dict[str, Any], source_id: str) -> dict[str, Any]:
+async def run_case_agent(provider: LLMProvider, repo, retriever, precedent, app_id: str, row: dict[str, Any], source_id: str, mode: str = "work") -> dict[str, Any]:
     """Work one row. `provider` should be the metered provider so every call lands in the usage ledger."""
     ctx = CaseContext(repo, retriever, "case", source_id, precedent=precedent, app_id=app_id, row_id=row["id"], provider=provider)
     with app_session() as db:
         st = mp.get_state(db, app_id, row["id"])
         brief = {"row": {"title": row.get("title"), "grade": row.get("grade")}, "subject": row.get("subject"), "kind": st.kind if st else "", "reason": st.reason if st else "",
-                 "open_requests": [r for r in (st.requests if st else []) if r["status"] in ("DRAFT", "SENT")]}
+                 "open_requests": [r for r in (st.requests if st else []) if r["status"] in ("DRAFT", "SENT")],
+                 "mode": mode, "officer_notes": [n["text"] for n in ((st.facts or {}).get("_notes", []) if st else [])], "previous_finding": (st.finding if st else None)}
     outcome = await run_bounded_agent(provider, TracedRegistry(CASE_TOOLS), ctx, system=PROMPT, user=json.dumps(brief, ensure_ascii=False),
                                       final_model=CaseFinding, max_tool_rounds=get_settings().case_max_tool_rounds, stage="case")
     flags = list(outcome.flags)

@@ -2,6 +2,11 @@
 # Only externally examined qualifications are evaluated. Everything else is "Not evaluated" with a reason and a one-click include.
 # Names match the curriculum database's qualification names.
 default: AUD
+short_names:   # how a qualification is named under "N of M relevant"
+  Advanced Placement: AP
+  Cambridge International AS & A Level: A/AS Level
+  Pearson Edexcel Level 3 Advanced GCE: Edexcel A Level
+  International Baccalaureate: IB
 curricula:
   AUD:
     name: AUD undergraduate

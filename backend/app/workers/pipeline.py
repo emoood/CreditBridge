@@ -5,7 +5,9 @@ import time
 import uuid
 from typing import Any
 
+from ..agents.auditor_agent import run_auditor
 from ..agents.case_agent import run_case_agent
+from ..agents.intake_agent import run_intake_agent
 from ..agents.orchestrator import is_school_specific, no_evidence_case, run_case, school_specific_case
 from ..config import get_settings
 from ..db.models import Application, Job
@@ -13,6 +15,7 @@ from ..db.session import app_session
 from ..providers.base import LLMProvider
 from ..providers.guard import CallTimeout
 from ..runtime import rt
+from ..services import extraction_checks as xc
 from ..services import grade_checks as gc
 from ..services import mapping as mp
 from ..services import recording, usage
@@ -33,6 +36,7 @@ def _err_code(e: Exception) -> str:
 # --------------------------------------------------------------------------------------------- PHASE 1: READING
 async def run_reading(job_id: str, provider: LLMProvider) -> None:
     s = get_settings()
+    R = rt()
     with app_session() as db:
         job = db.get(Job, job_id)
         app = db.get(Application, job.app_id)
@@ -99,6 +103,20 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
                     best["page"] = pg
                     store.finish_unit(db, u, "DONE", best, method="vision_reread" if best["reread"] else "vision")
                 blocks_meta.append({"key": u.unit_key, "status": u.status})
+            if s.intake_agent:  # re-read only blocks that still fail a check, a few times per transcript; sheets that pass never reach it
+                blocks = {u.unit_key: u.result for u in store.units_of(db, job.id) if u.stage == "read" and u.status == "DONE" and u.result}
+                if any(xc.block_failures(b, scale) for b in blocks.values()):
+                    job.stage = "recheck"
+                    db.commit()
+                    used = job.summary.get("rechecks_used", 0)
+                    budget = max(0, s.intake_max_rechecks - used)
+                    ictx = await run_intake_agent(usage.MeteredProvider(provider, app.id, ""), R.repo, R.retriever, app.id, blocks,
+                                                  {f"p{p}b{b}": (p, sp) for p, b, sp in spans}, lambda pg, dpi: vr.render_pages(path, dpi)[pg - 1], scale, budget)
+                    for u in store.units_of(db, job.id):
+                        if u.unit_key in blocks:
+                            store.set_json(u, "result", blocks[u.unit_key])
+                    job.summary = {**job.summary, "rechecks_used": used + budget - ictx.budget, "intake_changes": ictx.changes}
+                    db.commit()
             done = [u.result for u in store.units_of(db, job.id) if u.stage == "read" and u.status == "DONE"]
             merged = gc_merge(done)
             blocks_meta = [{"key": u.unit_key, "status": u.status, "reread": bool(u.result and u.result.get("reread")),
@@ -117,7 +135,8 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
                          "credits": f"{r['credits']:g}" if r.get("credits") is not None else "", "grade": grade,
                          "mark": r.get("mark"), "points": r.get("points"), "term": r.get("term") or "", "page": r.get("page", 1),
                          "evidence_ref": "", "uncertain_fields": r.get("uncertain", []), "flags": r.get("flags", []),
-                         "subject": None, "candidates": [], "included": True, "corrected": False})
+                         "subject": None, "candidates": [], "included": True, "corrected": False,
+                         "questions": r.get("questions", [])})
         job.stage = "curriculum"
         db.commit()
         cur_units = store.plan_units(db, job, "curriculum", [r["id"] for r in rows], True)
@@ -135,7 +154,7 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         store.set_json(app, "rows", rows)
         store.set_json(app, "extracted_rows", rows)
         failed = [b for b in blocks_meta if b["status"] != "DONE"]
-        store.set_json(app, "extraction", {"method": method, "blocks": blocks_meta, "failed_blocks": len(failed), "flags": merged["flags"] + cur_flags,
+        store.set_json(app, "extraction", {"student_id": (app.extraction or {}).get("student_id", ""), "method": method, "blocks": blocks_meta, "failed_blocks": len(failed), "flags": merged["flags"] + cur_flags,
                                            "cumulative": merged["cumulative"], "scale": merged["scale"], "unrecognized": unrecognized,
                                            "dropped_non_course_rows": merged.get("dropped_rows", 0),
                                            "rows_found": len(rows)})
@@ -247,33 +266,34 @@ def _lookup_rows(db, app: Application, rows: list[dict[str, Any]]) -> dict[str, 
         verdict = mp.decide_row(r, maps.get((r.get("subject") or {}).get("code")), (old.facts if old else {}) or {}, bool(old and old.included_override), R.repo,
                                 school_specific=is_school_specific(r.get("title") or ""))
         waiting = old and old.status == mp.WAITING and any(q["status"] in ("DRAFT", "SENT") for q in (old.requests or []))
-        if waiting and verdict["status"] == mp.NEEDS:  # still waiting on the same document: keep the pause
+        if waiting and verdict["status"] in mp.WORKABLE:  # still waiting on the same document: keep the pause
             verdict = {**verdict, "status": mp.WAITING, "reason": old.reason}
         st = mp.save_state(db, app.id, r["id"], status=verdict["status"], kind=verdict["kind"], reason=verdict["reason"], can_include=verdict["can_include"],
                            mapping=verdict["mapping"], condition_result=verdict["condition_result"])
         if verdict["status"] == mp.MAPPED:
             mp.save_state(db, app.id, r["id"], finding=None)
         out[r["id"]] = mp.state_dict(st)
-    usage.trace(app.id, "", "code", "lookup", {"rows": len(rows), **{k: sum(1 for v in out.values() if v["status"] == k) for k in (mp.MAPPED, mp.NEEDS, mp.WAITING, mp.NOT_EVAL)}})
+    usage.trace(app.id, "", "code", "lookup", {"rows": len(rows), **{k: sum(1 for v in out.values() if v["status"] == k) for k in (mp.MAPPED, mp.CONDITIONAL, mp.NO_MAPPING, mp.WAITING, mp.NOT_EVAL)}})
     return out
 
 
-async def _work_unit(db, job: Job, app: Application, row: dict[str, Any], u, provider: LLMProvider) -> None:
+async def _work_unit(db, job: Job, app: Application, row: dict[str, Any], u, provider: LLMProvider, mode: str = "work") -> None:
     R = rt()
     state = mp.state_dict(mp.get_state(db, app.id, row["id"]))
     store.start_unit(db, job, u, "case")
     t0 = time.time()
     try:
         outcomes: list[dict[str, Any]] = []
-        if state["status"] == mp.NEEDS and row.get("subject"):
+        if (state["status"] in mp.WORKABLE or mode == "review_package") and row.get("subject"):
             outcomes = await asyncio.to_thread(curriculum.outcomes, row["subject"]["id"])
         title = row.get("title") or (row["subject"]["name"] if row.get("subject") else "") or "Untitled subject"
         R.repo.add_source(u.unit_key, title, str(row.get("credits") or ""), row.get("grade") or "", row.get("term") or "", row.get("title_ar") or "", outcomes, app.id)
         agent = None
         if state["status"] == mp.MAPPED:
             result, method = mapped_result(u.unit_key, row, state, uuid.uuid4().hex[:12]), "mapping"
-        elif state["status"] == mp.NEEDS:
-            agent = await run_case_agent(usage.MeteredProvider(provider, app.id, row["id"]), R.repo, R.retriever, R.precedent, app.id, row, u.unit_key)
+        elif state["status"] in mp.WORKABLE or (mode == "review_package" and state["status"] == mp.WAITING):
+            agent = await run_case_agent(usage.MeteredProvider(provider, app.id, row["id"]), R.repo, R.retriever, R.precedent, app.id, row, u.unit_key, mode)
+            db.expire_all()
             state = mp.state_dict(mp.get_state(db, app.id, row["id"]))  # the agent may have moved the row to Waiting on document
             result, method = case_result(u.unit_key, row, state, agent, time.time() - t0, uuid.uuid4().hex[:12]), "case_agent"
         else:
@@ -326,10 +346,32 @@ async def run_row(job_id: str, provider: LLMProvider) -> None:
             state = _lookup_rows(db, app, [row])[row["id"]]
             if state["status"] != mp.NOT_EVAL:
                 u = store.plan_units(db, job, "evaluate", [row["source_id"]], True)[0]
-                await _work_unit(db, job, app, row, u, provider)
+                await _work_unit(db, job, app, row, u, provider, job.summary.get("mode", "work"))
                 failed = u.status != "DONE"
         job.status, job.finished_at, job.stage = "DONE", store.now(), "done"
         job.flags = ["ROW_FAILED"] if failed else []
         app.status = "EVALUATION_PARTIAL" if failed else "REVIEW_READY"
         db.commit()
         store.audit(db, app.id, "system", "row_reworked", job.summary.get("row_id", ""), failed=failed)
+
+
+async def run_audit(job_id: str, provider: LLMProvider) -> None:
+    """Phase "AUDIT": the Auditor agent, only because a sheet check failed. Its report is stored for the officer; nothing is applied."""
+    R = rt()
+    with app_session() as db:
+        job = db.get(Job, job_id)
+        app = db.get(Application, job.app_id)
+        prev = app.status
+        job.status, job.started_at, job.route, job.model = "RUNNING", store.now(), getattr(provider, "name", ""), getattr(provider, "model", "")
+        app.status = "EVALUATION_IN_PROGRESS"
+        db.commit()
+        try:
+            report = await run_auditor(usage.MeteredProvider(provider, app.id, ""), R.repo, R.retriever, app.id)
+            store.set_json(app, "extraction", {**(app.extraction or {}), "audit": report})
+            job.flags = []
+        except Exception as e:  # noqa: BLE001
+            job.flags = [f"audit_failed:{_err_code(e)}"]
+        job.status, job.finished_at, job.stage = "DONE", store.now(), "done"
+        app.status = prev
+        db.commit()
+        store.audit(db, app.id, "system", "audit_finished", job.id, flags=job.flags)

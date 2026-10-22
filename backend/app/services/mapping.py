@@ -2,8 +2,8 @@
 
     relevance gate  ->  batch mapping lookup  ->  condition check  ->  policy check  ->  a row status
 
-Statuses: Mapped | Needs you | Waiting on document | Not evaluated.
-No mapping, an unmet or unprovable condition, a stale mapping, or a rule failure all mean "Needs you": the Case agent works those rows."""
+Statuses: Mapped | Conditional | No mapping | Waiting on document | Not evaluated.
+No mapping, an unmet or unprovable condition, a stale mapping, or a rule failure are unresolved: the Case agent works those rows (the officer sees them as "Needs your input")."""
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +16,8 @@ from ..services import policy_rules as pr
 from .triage import ENFORCED
 
 ROOT = Path(__file__).resolve().parents[3]
-MAPPED, NEEDS, WAITING, NOT_EVAL = "Mapped", "Needs you", "Waiting on document", "Not evaluated"
+MAPPED, CONDITIONAL, NO_MAPPING, WAITING, NOT_EVAL = "Mapped", "Conditional", "No mapping", "Waiting on document", "Not evaluated"
+WORKABLE = (NO_MAPPING, CONDITIONAL)  # the Case agent works these
 MET, UNMET, MISSING = "MET", "UNMET", "MISSING"
 
 
@@ -37,13 +38,24 @@ def relevance(row: dict[str, Any], curriculum: str | None = None) -> tuple[bool,
     return True, ""
 
 
+def selection_rule(rows: list[dict[str, Any]], curriculum: str | None = None) -> str:
+    """Why these rows are 'relevant', in words: e.g. 'AP courses, per AUD settings'."""
+    d = yaml.safe_load((ROOT / "policies" / "curricula.yaml").read_text())
+    accepted = accepted_qualifications(curriculum)
+    present = {(r.get("subject") or {}).get("qualification") for r in rows}
+    names = [d.get("short_names", {}).get(q, q) for q in accepted if q in present] or [d.get("short_names", {}).get(q, q) for q in accepted[:1]]
+    inst = yaml.safe_load((ROOT / "policies" / "institution.yaml").read_text()).get("institution", "")
+    return f"{' and '.join(names)} courses, per {inst} settings"
+
+
 # ------------------------------------------------------------------------------------------------------- mapping table
 def seed_mappings(db: Session) -> int:
     if db.scalar(select(CourseMapping.id).limit(1)) is not None:
         return 0
     data = yaml.safe_load((ROOT / "policies" / "dummy_mappings.yaml").read_text())["mappings"]
     for m in data:
-        db.add(CourseMapping(**{k: m.get(k) for k in ("qualification", "subject_code", "subject_name", "aud_code", "aud_credits", "condition", "version", "status", "note") if m.get(k) is not None}))
+        db.add(CourseMapping(**{"qualification": "Advanced Placement", "aud_credits": 3, "version": "dummy-2026-10", "status": "ACTIVE",
+                                **{k: v for k, v in m.items() if v is not None}}))
     db.commit()
     return len(data)
 
@@ -113,19 +125,19 @@ def decide_row(row: dict[str, Any], mapping: CourseMapping | None, facts: dict[s
     if not ok and not override:
         return {**out, "kind": "not_relevant", "reason": why, "can_include": True}
     if mapping is None:
-        return {**out, "status": NEEDS, "kind": "unmapped", "reason": "No mapping on file for this course"}
+        return {**out, "status": NO_MAPPING, "kind": "unmapped", "reason": "No mapping on file for this course"}
     out["mapping"] = mapping_dict(mapping)
     if mapping.status != "ACTIVE":
-        return {**out, "status": NEEDS, "kind": "stale", "reason": f"The mapping to {mapping.aud_code} is {mapping.status.lower()} (version {mapping.version}) and needs confirming"}
+        return {**out, "status": CONDITIONAL, "kind": "stale", "reason": f"The mapping to {mapping.aud_code} is {mapping.status.lower()} (version {mapping.version}) and needs confirming"}
     cond = check_condition(mapping.condition, row.get("grade"), facts)
     out["condition_result"] = cond
     if cond["status"] == UNMET:
-        return {**out, "status": NEEDS, "kind": "condition_unmet", "reason": cond["reason"]}
+        return {**out, "status": CONDITIONAL, "kind": "condition_unmet", "reason": cond["reason"]}
     if cond["status"] == MISSING:
-        return {**out, "status": NEEDS, "kind": "condition_missing", "reason": cond["reason"]}
+        return {**out, "status": CONDITIONAL, "kind": "condition_missing", "reason": cond["reason"]}
     fails = policy_fails(row.get("grade"), mapping.aud_code, repo)
     if fails:
-        return {**out, "status": NEEDS, "kind": "rule_blocked", "reason": "Blocked by policy: " + "; ".join(fails)}
+        return {**out, "status": CONDITIONAL, "kind": "rule_blocked", "reason": "Blocked by policy: " + "; ".join(fails)}
     return {**out, "status": MAPPED, "kind": "mapped", "reason": f"Mapped to {mapping.aud_code} (mapping {mapping.version})"}
 
 

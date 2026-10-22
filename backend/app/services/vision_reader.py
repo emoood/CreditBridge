@@ -91,8 +91,9 @@ def crop_png_b64(img: Image.Image, span: tuple[int, int], scale: float = 1.0) ->
     return base64.b64encode(buf.getvalue()).decode()
 
 
-async def read_block(provider: LLMProvider, image_b64: str, unit: str) -> BlockReading:
-    req = LLMRequest([{"role": "system", "content": PROMPT}, {"role": "user", "content": "Read this transcript block.", "images": [image_b64]}],
+async def read_block(provider: LLMProvider, image_b64: str, unit: str, hint: str | None = None) -> BlockReading:
+    ask = "Read this transcript block." + (f" A check failed on a previous reading: {hint} Look closely at that cell and copy exactly what is printed." if hint else "")
+    req = LLMRequest([{"role": "system", "content": PROMPT}, {"role": "user", "content": ask, "images": [image_b64]}],
                      [_tool()], "read", {"course": unit, "redact": True})
     resp = await provider.complete(req)
     call = next((c for c in resp.tool_calls if c.name == SUBMIT), None)

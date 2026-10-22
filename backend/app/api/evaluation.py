@@ -13,6 +13,7 @@ from ..db.models import Application, AuditEvent, Decision, Job, JobUnit, RowStat
 from ..db.session import app_session
 from ..devlog import events
 from ..runtime import reset_runtime, rt
+from ..services import actions as ac
 from ..services import mapping as mp
 from ..workers import store
 from ..workers.queue import worker
@@ -115,7 +116,8 @@ def get_results(app_id: str):
             counts[r["triage"]["category"]] = counts.get(r["triage"]["category"], 0) + 1
         job = db.get(Job, app.evaluation_job_id) if app.evaluation_job_id else None
         states = {s.row_id: mp.state_dict(s) for s in db.scalars(select(RowState).where(RowState.app_id == app_id))}
-        return {"states": states, "results": rows, "counts": counts, "pending_units": failed, "catalog": rt().repo.catalog_label,
+        actions = {a.row_id: ac.action_dict(a) for a in ac.latest(db, app_id).values()}
+        return {"states": states, "actions": actions, "selection_rule": mp.selection_rule(app.rows), "results": rows, "counts": counts, "pending_units": failed, "catalog": rt().repo.catalog_label,
                 "job": job_dict(db, job) if job else None, "status": app_summary(db, app)["status"]}
 
 

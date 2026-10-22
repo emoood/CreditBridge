@@ -1,15 +1,22 @@
-# DUMMY mapping table (course -> AUD equivalent). Seeded into the local course_mappings table when it is empty.
-# Replace with the real table later; the lookup only needs these columns. Condition types:
+# DUMMY mapping table (course -> AUD equivalent). The AUD codes are plausible picks from the real catalog but are NOT verified by AUD.
+# Seeded into the local course_mappings table when it is empty. Most courses map cleanly; two are true exceptions for the Case agent:
+# AP Calculus AB (conditional: needs an exam score) and AP Computer Science A (stale mapping). Condition types:
 #   min_grade        value: letter grade on the transcript (met/unmet from the transcript alone)
 #   min_exam_score   value: number; needs the exam score from a score report (evidence)
 #   exam_variant     value: list of accepted variants; needs the variant from the score report (evidence)
 mappings:
-  - {qualification: Advanced Placement, subject_code: AP-STAT, subject_name: Statistics, aud_code: QUAN 201, aud_credits: 3, version: dummy-2026-10, status: ACTIVE}
-  - {qualification: Advanced Placement, subject_code: AP-PSYC, subject_name: Psychology, aud_code: PSYC 201, aud_credits: 3, version: dummy-2026-10, status: ACTIVE,
-     condition: {type: min_grade, value: B}}
-  - {qualification: Advanced Placement, subject_code: AP-CALC-AB, subject_name: Calculus AB, aud_code: MATH 210, aud_credits: 3, version: dummy-2026-10, status: ACTIVE,
-     condition: {type: min_exam_score, value: 4, evidence: AP exam score report}}
-  - {qualification: Advanced Placement, subject_code: AP-BIO, subject_name: Biology, aud_code: BIOL 201, aud_credits: 3, version: dummy-2026-10, status: ACTIVE,
-     condition: {type: exam_variant, value: [Standard], evidence: AP exam score report}}
-  - {qualification: Advanced Placement, subject_code: AP-CSA, subject_name: Computer Science A, aud_code: COMP 101, aud_credits: 3, version: dummy-2025-09, status: STALE,
-     note: Written against the 2025-26 catalog; needs re-confirming.}
+  - {subject_code: AP-CALC-AB, subject_name: Calculus AB, aud_code: MATH 210, condition: {type: min_exam_score, value: 4, evidence: AP exam score report}}   # CONDITIONAL
+  - {subject_code: AP-CSA, subject_name: Computer Science A, aud_code: ENGG 140, status: STALE, version: dummy-2025-09, note: Written against the 2025-26 catalog; needs re-confirming.}   # STALE
+  - {subject_code: AP-CALC-BC, subject_name: Calculus BC, aud_code: MATH 210}
+  - {subject_code: AP-STAT, subject_name: Statistics, aud_code: QUAN 201}
+  - {subject_code: AP-PSYC, subject_name: Psychology, aud_code: PSYC 201, condition: {type: min_grade, value: B}}
+  - {subject_code: AP-BIO, subject_name: Biology, aud_code: BIOL 201}
+  - {subject_code: AP-CHEM, subject_name: Chemistry, aud_code: CHEM 201}
+  - {subject_code: AP-PHYS-1, subject_name: Physics 1, aud_code: PHYS 201}
+  - {subject_code: AP-PHYS-2, subject_name: Physics 2, aud_code: PHYS 202}
+  - {subject_code: AP-ECON-MICRO, subject_name: Microeconomics, aud_code: ECON 201}
+  - {subject_code: AP-ECON-MACRO, subject_name: Macroeconomics, aud_code: ECON 202}
+  - {subject_code: AP-ART-HIST, subject_name: Art History, aud_code: ARTS 200}
+  - {subject_code: AP-HUMAN-GEO, subject_name: Human Geography, aud_code: GEOG 101}
+  - {subject_code: AP-SPAN-LANG, subject_name: Spanish Language, aud_code: SPAN 201}
+  - {subject_code: AP-FREN-LANG, subject_name: French Language, aud_code: FREN 201}

@@ -31,6 +31,12 @@ def _state(ctx: CaseContext, db) -> RowState:
     return st
 
 
+def _state_facts(ctx: CaseContext) -> dict:
+    with app_session() as db:
+        st = mp.get_state(db, ctx.app_id, ctx.row_id)
+        return dict(st.facts or {}) if st else {}
+
+
 class TracedRegistry(ToolRegistry):
     """Every action the Case agent takes is logged to the trace shown in the activity drawer."""
 
@@ -51,7 +57,7 @@ class ReadMapping(AgentTool):
         with app_session() as db:
             st = _state(ctx, db)
             return {"row_status": st.status, "kind": st.kind, "reason": st.reason, "mapping": st.mapping, "condition_result": st.condition_result,
-                    "facts_on_file": st.facts, "requests": st.requests, "grade_on_transcript": ctx.repo.sources[ctx.source_course_id].grade}
+                    "facts_on_file": {k: v for k, v in (st.facts or {}).items() if not k.startswith("_")}, "officer_notes": (st.facts or {}).get("_notes", []), "requests": st.requests, "grade_on_transcript": ctx.repo.sources[ctx.source_course_id].grade}
 
 
 class ReadSourceExcerpts(AgentTool):
@@ -108,7 +114,9 @@ class ProposeCandidates(AgentTool):
         if ctx.proposal is not None:
             raise ToolError("Candidates were already proposed for this row.")
         s = get_settings()
-        res = await run_case(ctx.provider, ctx.repo, ctx.retriever, ctx.source_course_id, ctx.precedent, s.matcher_max_tool_rounds, s.reviewer_max_tool_rounds)
+        notes = [n["text"] for n in (_state_facts(ctx) or {}).get("_notes", [])]
+        res = await run_case(ctx.provider, ctx.repo, ctx.retriever, ctx.source_course_id, ctx.precedent, s.matcher_max_tool_rounds, s.reviewer_max_tool_rounds,
+                             note=" | ".join(notes)[:600] or None)
         ctx.proposal = res
         m, r = res.match.output, res.review
         return {"matcher_status": res.match.status, "candidate": m.target_course_id if m else None, "evidence_strength": m.evidence_strength if m else None,
@@ -142,7 +150,7 @@ class DraftRequest(AgentTool):
 
 
 class SetRowStateArgs(BaseModel):
-    status: Literal["Needs you", "Waiting on document", "Mapped"]
+    status: Literal["Conditional", "No mapping", "Waiting on document", "Mapped"]
     reason: str = Field(min_length=3, max_length=300)
 
 
@@ -159,7 +167,11 @@ class SetRowState(AgentTool):
             if args.status == "Waiting on document" and not open_reqs:
                 raise ToolError("Draft a request first: 'Waiting on document' needs an open request.")
             if args.status == "Mapped":
-                raise ToolError("Only the code lookup can mark a row Mapped (condition met and no rule failure). Keep it 'Needs you'.")
+                raise ToolError("Only the code lookup can mark a row Mapped (condition met and no rule failure). Keep it Conditional or No mapping.")
+            if args.status == "No mapping" and st.kind != "unmapped":
+                raise ToolError("This course has a mapping, so it cannot be 'No mapping'. Use 'Conditional'.")
+            if args.status == "Conditional" and st.kind == "unmapped":
+                raise ToolError("This course has no mapping, so it cannot be 'Conditional'. Use 'No mapping'.")
             mp.save_state(db, ctx.app_id, ctx.row_id, status=args.status, reason=args.reason)
             return {"status": args.status}
 

@@ -3,6 +3,7 @@ restart loses nothing: `recover()` marks jobs that were RUNNING as INTERRUPTED a
 DONE unit. Celery and Redis are deliberately not used."""
 import asyncio
 import contextlib
+import logging
 
 from sqlalchemy import select
 
@@ -10,7 +11,7 @@ from .. import runtime
 from ..db.models import Application, Job, JobUnit
 from ..db.session import app_session
 from . import store
-from .pipeline import run_evaluation, run_reading, run_row
+from .pipeline import run_audit, run_evaluation, run_reading, run_row
 
 
 class JobWorker:
@@ -44,7 +45,8 @@ class JobWorker:
                 await self.process(job_id)
             except asyncio.CancelledError:
                 raise
-            except Exception as e:  # noqa: BLE001  a crashed job must never kill the worker
+            except Exception as e:
+                logging.getLogger(__name__).exception("job %s crashed", job_id)
                 with app_session() as db:
                     job = db.get(Job, job_id)
                     if job and job.status != "DONE":
@@ -65,6 +67,8 @@ class JobWorker:
         provider = runtime.get_provider()
         if phase == "READING":
             await run_reading(job_id, provider)
+        elif phase == "AUDIT":
+            await run_audit(job_id, provider)
         elif phase == "CASE":
             await run_row(job_id, provider)
         else:

@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     vision_dpi: int = 200
     vision_reread_dpi: int = 300
     vision_max_block_px: int = 560
+    vision_recheck_dpi: int = 400  # the Intake agent's focused re-read of one block
+    intake_agent: bool = True
+    intake_max_rechecks: int = 3  # re-reads per transcript
+    intake_max_tool_rounds: int = 5
+    auditor_max_tool_rounds: int = 6
 
     ollama_mac_url: str = "http://127.0.0.1:11434"
     ollama_mac_dev_model: str = "qwen3.5:4b"

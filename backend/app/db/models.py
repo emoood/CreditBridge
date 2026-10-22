@@ -133,7 +133,7 @@ class RowState(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     app_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
     row_id: Mapped[str] = mapped_column(String(40))
-    status: Mapped[str] = mapped_column(String(24))  # Mapped | Needs you | Waiting on document | Not evaluated
+    status: Mapped[str] = mapped_column(String(24))  # Mapped | Conditional | No mapping | Waiting on document | Not evaluated
     kind: Mapped[str] = mapped_column(String(24), default="")  # not_relevant | mapped | unmapped | stale | condition_unmet | condition_missing | rule_blocked | ...
     reason: Mapped[str] = mapped_column(Text, default="")
     can_include: Mapped[bool] = mapped_column(default=False)
@@ -175,3 +175,20 @@ class UsageEntry(Base):
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)  # local models cost nothing; a hosted price table goes here later
+
+
+class RowAction(Base):
+    """Every officer action on a row (confirm, change, reject, no credit, send for review, batch confirm, correction) with who, when
+    and the ORIGINAL suggestion, so an audit can always show what the system proposed and what the officer did. Append-only."""
+    __tablename__ = "row_actions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    app_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    row_id: Mapped[str] = mapped_column(String(40), default="")  # "" for application-level actions (APPROVE)
+    action: Mapped[str] = mapped_column(String(20))  # CONFIRM CHANGE REJECT NO_CREDIT SEND_FOR_REVIEW CORRECT APPROVE
+    actor: Mapped[str] = mapped_column(String(80))
+    actor_role: Mapped[str] = mapped_column(String(30))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    original: Mapped[dict] = mapped_column(JSON, default=dict)  # the system's suggestion at that moment: aud_code, credits, status, mapping version
+    chosen: Mapped[dict] = mapped_column(JSON, default=dict)  # what the officer settled on: aud_code, credits (None = no credit)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    batch: Mapped[bool] = mapped_column(default=False)  # created by "Confirm all mapped"

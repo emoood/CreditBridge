@@ -44,7 +44,7 @@ def get_application(app_id: str):
 
 @router.post("/applications")
 async def create_application(file: UploadFile = File(...),  # noqa: B008
-                             student_label: str = Form(""), program: str = Form(""), qualification: str = Form(""),
+                             student_label: str = Form(""), student_id: str = Form(""), program: str = Form(""), qualification: str = Form(""),
                              x_role: str | None = Header(default=None)):
     """Store + hash the file, create the application and the reading job, return immediately. Reading happens in the worker."""
     data = await file.read()
@@ -54,7 +54,7 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         raise HTTPException(400, str(e)) from e
     with app_session() as db:
         app = Application(id=f"APP-{uuid.uuid4().hex[:8].upper()}", kind="upload", student=student_label.strip() or "Uploaded transcript",
-                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={})
+                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={"student_id": student_id.strip()})
         job = Job(id=uuid.uuid4().hex[:12], app_id=app.id, phase="READING", status="QUEUED")
         db.add_all([app, job])
         db.commit()
@@ -62,6 +62,24 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         out = {**app_summary(db, app), "job_id": job.id}
     worker.enqueue(out["job_id"])
     return out
+
+
+class StudentPatch(BaseModel):
+    name: str | None = None
+    student_id: str | None = None
+
+
+@router.patch("/applications/{app_id}/student")
+def patch_student(app_id: str, body: StudentPatch):
+    """Name and ID shown in the header (synthetic data only in this prototype)."""
+    with app_session() as db:
+        app = get_app(db, app_id)
+        if body.name is not None:
+            app.student = body.name.strip()[:160] or "Uploaded transcript"
+        if body.student_id is not None:
+            store.set_json(app, "extraction", {**(app.extraction or {}), "student_id": body.student_id.strip()[:40]})
+        db.commit()
+        return app_summary(db, app)
 
 
 class RowPatch(BaseModel):

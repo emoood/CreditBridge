@@ -46,7 +46,8 @@ class CaseResult:
 
 
 async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetriever, source_code: str,
-                   precedent: PrecedentStore | None = None, matcher_rounds: int = 6, reviewer_rounds: int = 6) -> CaseResult:
+                   precedent: PrecedentStore | None = None, matcher_rounds: int = 6, reviewer_rounds: int = 6,
+                   note: str | None = None) -> CaseResult:
     case, prec = CaseFile(), precedent or PrecedentStore()
     # lookup_precedent costs the model a turn and returns nothing until real officer decisions exist: leave it out until then
     registry = ToolRegistry([t for t in ALL_TOOLS if t.name != "lookup_precedent" or prec.items])
@@ -55,7 +56,7 @@ async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetr
         return ToolContext(repo, retriever, role, source_code, case=case, precedent=prec)
 
     events.emit("stage", stage="case_start", course=source_code)
-    match = await run_matching(provider, registry, ctx("matcher"), matcher_rounds)
+    match = await run_matching(provider, registry, ctx("matcher"), matcher_rounds, note)
     calls = match.agent.llm_calls if match.agent else 0
     rules: list[pr.RuleResult] = []
     review: ReviewResult | None = None
