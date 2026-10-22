@@ -19,7 +19,7 @@ OUT = Path(__file__).parent / "demo_v3"
 OUT.mkdir(exist_ok=True)
 BANDS = yaml.safe_load((Path(__file__).parents[1] / "policies" / "school_grade_scales.yaml").read_text())["scales"]["synthetic_us_4_0"]["bands"]
 SCALE_LINE = "Grading scale: A 93-100 = 4.0 | A- 90-92 = 3.7 | B+ 87-89 = 3.3 | B 83-86 = 3.0 | B- 80-82 = 2.7 | C+ 77-79 = 2.3 | C 73-76 = 2.0"
-STUDENTS = {"A": ("Maya Okonkwo", "SYN-1001"), "B": ("Daniel Ferreira", "SYN-1002"), "C": ("Sofia Lindqvist", "SYN-1003")}
+STUDENTS = {"A": ("Maya Okonkwo", "SYN-1001"), "B": ("Daniel Ferreira", "SYN-1002"), "C": ("Sofia Lindqvist", "SYN-1003"), "A2": ("Rania Haddad", "SYN-1004")}
 
 
 def band(mark):
@@ -120,22 +120,35 @@ def image_pdf(stem: str, who: str, degrade: bool = False) -> dict:
 
 
 TERM_A1, TERM_A2 = "Fall 2025 (Yr 11)", "Spring 2026 (Yr 11)"
-a = text_pdf(OUT / "transcript_a_live_demo.pdf", "A", [
+A_TERMS = [
     (TERM_A1, [("AP Calculus AB", "A", 1.0), ("AP Psychology", "A", 1.0), ("AP Biology", "A-", 1.0), ("AP Microeconomics", "A-", 0.5), ("Moral Education", "A", 0.5)]),
     (TERM_A2, [("AP Computer Science A", "A-", 1.0), ("AP Statistics", "B+", 1.0), ("AP Chemistry", "B+", 1.0), ("AP Physics 1", "B", 1.0),
-               ("AP Art History", "B", 0.5), ("AP Human Geography", "A", 0.5)])])
-b = image_pdf("transcript_b_intake", "B")
-c = text_pdf(OUT / "transcript_c_copy_error.pdf", "C", [
+               ("AP Art History", "B", 0.5), ("AP Human Geography", "A", 0.5)])]
+C_TERMS = [
     ("Fall 2025 (Yr 12)", [("AP Statistics", "B+", 1.0), ("AP Psychology", "A-", 1.0), ("AP Biology", "B+", 1.0), ("AP Chemistry", "A-", 1.0), ("AP Physics 1", "B", 1.0)]),
-    ("Spring 2026 (Yr 12)", [("AP Physics 2", "B+", 1.0), ("AP Microeconomics", "A", 0.5), ("AP Macroeconomics", "A-", 0.5), ("AP Human Geography", "B+", 0.5)])])
-(OUT / "expected.json").write_text(json.dumps({
-    "label": "SYNTHETIC DEMO DATA: invented students, hand-derived from the generator, not from any model output. Mapping codes are PLACEHOLDER data.",
-    "A_live_demo": {**a, "file": "transcript_a_live_demo.pdf", "text_layer": True,
-                    "expected_statuses": {"AP Calculus AB": "Conditional (needs an AP exam score of at least 4)", "AP Computer Science A": "Conditional (stale mapping)",
-                                          "Moral Education": "Not evaluated (school-specific)", "everything else": "Mapped"}},
-    "B_intake": {**b, "file": "transcript_b_intake.pdf / .png", "text_layer": False},
-    "C_copy_error": {**c, "file": "transcript_c_copy_error.pdf", "text_layer": True, "demo": "enable the 'planted for demo' switch after confirming; the sheet checks must fail on one row"},
-}, indent=1))
-(OUT / "students.json").write_text(json.dumps({k: {"name": v[0], "student_id": v[1]} for k, v in STUDENTS.items()}, indent=1))
-(OUT / "provenance.json").write_text(json.dumps({"synthetic": True, "generator": "fixtures/generate_demo_v3.py", "never_uploaded": ["transcript_a_live_demo.pdf"]}, indent=1))
-print("wrote", OUT)
+    ("Spring 2026 (Yr 12)", [("AP Physics 2", "B+", 1.0), ("AP Microeconomics", "A", 0.5), ("AP Macroeconomics", "A-", 0.5), ("AP Human Geography", "B+", 0.5)])]
+
+
+def main(force: bool = False) -> None:
+    """Writes A, B and C only if they do not exist yet (A must stay untouched for the live demo); --force rewrites all of them."""
+    exp_path = OUT / "expected.json"
+    old = json.loads(exp_path.read_text()) if exp_path.exists() else {}
+    a = old.get("A_live_demo") if (OUT / "transcript_a_live_demo.pdf").exists() and not force else text_pdf(OUT / "transcript_a_live_demo.pdf", "A", A_TERMS)
+    b = old.get("B_intake") if (OUT / "transcript_b_intake.pdf").exists() and not force else image_pdf("transcript_b_intake", "B")
+    c = old.get("C_copy_error") if (OUT / "transcript_c_copy_error.pdf").exists() and not force else text_pdf(OUT / "transcript_c_copy_error.pdf", "C", C_TERMS)
+    old.update({
+        "label": "SYNTHETIC DEMO DATA: invented students, hand-derived from the generator, not from any model output. Mapping codes are PLACEHOLDER data.",
+        "A_live_demo": {**a, "file": "transcript_a_live_demo.pdf", "text_layer": True,
+                        "expected_statuses": {"AP Calculus AB": "Conditional (needs an AP exam score of at least 4)", "AP Computer Science A": "Conditional (stale mapping)",
+                                              "Moral Education": "Not evaluated (school-specific)", "everything else": "Mapped"}},
+        "B_intake": {**b, "file": "transcript_b_intake.pdf / .png", "text_layer": False},
+        "C_copy_error": {**c, "file": "transcript_c_copy_error.pdf", "text_layer": True, "demo": "enable the 'planted for demo' switch after confirming; the sheet checks must fail on one row"}})
+    exp_path.write_text(json.dumps(old, indent=1))
+    (OUT / "students.json").write_text(json.dumps({k: {"name": v[0], "student_id": v[1]} for k, v in STUDENTS.items()}, indent=1))
+    (OUT / "provenance.json").write_text(json.dumps({"synthetic": True, "generator": "fixtures/generate_demo_v3.py", "never_uploaded": ["transcript_a_live_demo.pdf"]}, indent=1))
+    print("wrote", OUT)
+
+
+if __name__ == "__main__":
+    import sys
+    main("--force" in sys.argv)

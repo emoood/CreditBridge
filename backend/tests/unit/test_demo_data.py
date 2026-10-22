@@ -72,3 +72,12 @@ async def test_demo_switch_is_refused_when_demo_mode_is_off(case_env, monkeypatc
     app_id = await run_to_review(case_env)
     monkeypatch.setattr(get_settings(), "demo_mode", False)
     assert (await case_env.client.post(f"/api/v1/applications/{app_id}/demo/plant-copy-error", json={"on": True}, headers=ADMIN)).status_code == 404
+
+
+def test_a2_is_a_different_student_with_the_same_courses_and_a_is_a_distinct_file():
+    exp = json.loads((V3 / "expected.json").read_text())
+    a, a2 = exp["A_live_demo"], exp["A2_batch"]
+    assert [(r["subject"], r["letter"]) for r in a["rows"]] == [(r["subject"], r["letter"]) for r in a2["rows"]]
+    assert a["student"] != a2["student"] and a["student_id"] != a2["student_id"]
+    assert (V3 / "transcript_a_live_demo.pdf").read_bytes() != (V3 / "transcript_a2_batch.pdf").read_bytes()
+    assert [r.title for r in extract_transcript(str(V3 / "transcript_a2_batch.pdf"), "demo").rows] == [r["subject"] for r in a2["rows"]]

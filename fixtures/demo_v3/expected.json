@@ -223,5 +223,87 @@
   "file": "transcript_c_copy_error.pdf",
   "text_layer": true,
   "demo": "enable the 'planted for demo' switch after confirming; the sheet checks must fail on one row"
+ },
+ "A2_batch": {
+  "student": "Rania Haddad",
+  "student_id": "SYN-1004",
+  "rows": [
+   {
+    "subject": "AP Calculus AB",
+    "letter": "A",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "AP Psychology",
+    "letter": "A",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "AP Biology",
+    "letter": "A-",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "AP Microeconomics",
+    "letter": "A-",
+    "credits": 0.5,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "Moral Education",
+    "letter": "A",
+    "credits": 0.5,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "AP Computer Science A",
+    "letter": "A-",
+    "credits": 1.0,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Statistics",
+    "letter": "B+",
+    "credits": 1.0,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Chemistry",
+    "letter": "B+",
+    "credits": 1.0,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Physics 1",
+    "letter": "B",
+    "credits": 1.0,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Art History",
+    "letter": "B",
+    "credits": 0.5,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Human Geography",
+    "letter": "A",
+    "credits": 0.5,
+    "term": "Spring 2026 (Yr 11)"
+   }
+  ],
+  "scale_line": "Grading scale: A 93-100 = 4.0 | A- 90-92 = 3.7 | B+ 87-89 = 3.3 | B 83-86 = 3.0 | B- 80-82 = 2.7 | C+ 77-79 = 2.3 | C 73-76 = 2.0",
+  "file": "transcript_a2_batch.pdf",
+  "text_layer": true,
+  "same_courses_as": "transcript_a_live_demo.pdf",
+  "expected_statuses": {
+   "AP Calculus AB": "Conditional (needs an AP exam score of at least 4)",
+   "AP Computer Science A": "Conditional (stale mapping)",
+   "Moral Education": "Not evaluated (school-specific)",
+   "everything else": "Mapped"
+  }
  }
 }

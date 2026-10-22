@@ -9,7 +9,7 @@ Rollback point: tag `pre-overnight` = `3801f36` (the last commit before this run
 | Pre: push unpushed commits, tag `pre-overnight` | done | `3801f36` (tag) |
 | 0. Delete the degraded B recording and files | done | `4711876` |
 | 1. Local model speed set-up | done | `5b8693f` |
-| 2. Transcript A2 (A untouched) | next | |
+| 2. Transcript A2 (A untouched) | done | (this commit) |
 | 3. Planted misread switch, Intake re-reads failed blocks, term-total questions | | |
 | 4. Real runs of A2, B (switch on), C | | |
 | 5. Replay mode, live/replay per application | | |
@@ -26,5 +26,10 @@ Deleted `data/recordings/demo_b_intake_degraded`, `fixtures/demo_v3/transcript_b
 - Measured on this Mac: model already resident, warm call 0.3 s.
 - Tests: defaults, provider wiring, warm-up never raises when the server is down (`test_speed_setup.py`).
 
+## Part 2: Transcript A2
+`fixtures/demo_v3/transcript_a2_batch.pdf`: same 11 rows and grades as Transcript A, different invented student (Rania Haddad, SYN-1004), text layer, printed grading scale. Made by `fixtures/generate_demo_v3_a2.py`; the main generator now never rewrites A, B or C unless `--force`.
+Transcript A is byte-identical to before (sha256 `7e57a9f0f260...`) and has **no application record** (checked in the local database by its hash: 0 applications).
+Test: A2 has the same courses as A, a different student, and parses to the expected rows.
+
 ## Next
-Part 2.
+Part 3.
