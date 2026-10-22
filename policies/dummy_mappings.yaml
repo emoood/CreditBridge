@@ -1,0 +1,15 @@
+# DUMMY mapping table (course -> AUD equivalent). Seeded into the local course_mappings table when it is empty.
+# Replace with the real table later; the lookup only needs these columns. Condition types:
+#   min_grade        value: letter grade on the transcript (met/unmet from the transcript alone)
+#   min_exam_score   value: number; needs the exam score from a score report (evidence)
+#   exam_variant     value: list of accepted variants; needs the variant from the score report (evidence)
+mappings:
+  - {qualification: Advanced Placement, subject_code: AP-STAT, subject_name: Statistics, aud_code: QUAN 201, aud_credits: 3, version: dummy-2026-10, status: ACTIVE}
+  - {qualification: Advanced Placement, subject_code: AP-PSYC, subject_name: Psychology, aud_code: PSYC 201, aud_credits: 3, version: dummy-2026-10, status: ACTIVE,
+     condition: {type: min_grade, value: B}}
+  - {qualification: Advanced Placement, subject_code: AP-CALC-AB, subject_name: Calculus AB, aud_code: MATH 210, aud_credits: 3, version: dummy-2026-10, status: ACTIVE,
+     condition: {type: min_exam_score, value: 4, evidence: AP exam score report}}
+  - {qualification: Advanced Placement, subject_code: AP-BIO, subject_name: Biology, aud_code: BIOL 201, aud_credits: 3, version: dummy-2026-10, status: ACTIVE,
+     condition: {type: exam_variant, value: [Standard], evidence: AP exam score report}}
+  - {qualification: Advanced Placement, subject_code: AP-CSA, subject_name: Computer Science A, aud_code: COMP 101, aud_credits: 3, version: dummy-2025-09, status: STALE,
+     note: Written against the 2025-26 catalog; needs re-confirming.}

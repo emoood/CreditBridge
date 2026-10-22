@@ -10,7 +10,7 @@ from .. import runtime
 from ..db.models import Application, Job, JobUnit
 from ..db.session import app_session
 from . import store
-from .pipeline import run_evaluation, run_reading
+from .pipeline import run_evaluation, run_reading, run_row
 
 
 class JobWorker:
@@ -65,6 +65,8 @@ class JobWorker:
         provider = runtime.get_provider()
         if phase == "READING":
             await run_reading(job_id, provider)
+        elif phase == "CASE":
+            await run_row(job_id, provider)
         else:
             await run_evaluation(job_id, provider)
 

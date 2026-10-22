@@ -108,3 +108,70 @@ class AuditEvent(Base):
     event: Mapped[str] = mapped_column(String(60))
     object: Mapped[str] = mapped_column(String(80), default="")
     details: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class CourseMapping(Base):
+    """Dummy mapping table (course -> AUD equivalent), seeded from policies/dummy_mappings.yaml. The real table replaces it later;
+    the lookup code only reads this shape. A condition (min grade, exam variant, exam score, ...) is optional."""
+    __tablename__ = "course_mappings"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    qualification: Mapped[str] = mapped_column(String(80), default="")
+    subject_code: Mapped[str] = mapped_column(String(60), index=True)  # curriculum database subject code, e.g. AP-CALC-AB
+    subject_name: Mapped[str] = mapped_column(String(160), default="")
+    aud_code: Mapped[str] = mapped_column(String(40))
+    aud_credits: Mapped[int] = mapped_column(Integer, default=3)
+    condition: Mapped[dict | None] = mapped_column(JSON)  # {"type": "min_grade|min_exam_score|exam_variant", "value": ..., "evidence": "..."}
+    version: Mapped[str] = mapped_column(String(30), default="")
+    status: Mapped[str] = mapped_column(String(10), default="ACTIVE")  # ACTIVE | STALE | DRAFT
+    note: Mapped[str] = mapped_column(Text, default="")
+
+
+class RowState(Base):
+    """One row's working state: its status in the officer vocabulary, why, pending requests and the facts collected so far.
+    Persisted so work can pause (waiting on a document) and resume for just this row."""
+    __tablename__ = "row_states"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    app_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    row_id: Mapped[str] = mapped_column(String(40))
+    status: Mapped[str] = mapped_column(String(24))  # Mapped | Needs you | Waiting on document | Not evaluated
+    kind: Mapped[str] = mapped_column(String(24), default="")  # not_relevant | mapped | unmapped | stale | condition_unmet | condition_missing | rule_blocked | ...
+    reason: Mapped[str] = mapped_column(Text, default="")
+    can_include: Mapped[bool] = mapped_column(default=False)
+    included_override: Mapped[bool] = mapped_column(default=False)  # the officer's one-click include
+    mapping: Mapped[dict | None] = mapped_column(JSON)  # snapshot of the mapping used (id, version, aud_code, condition)
+    condition_result: Mapped[dict | None] = mapped_column(JSON)
+    finding: Mapped[dict | None] = mapped_column(JSON)  # the Case agent's finding for the officer
+    requests: Mapped[list[Any]] = mapped_column(JSON, default=list)  # drafted requests; nothing is sent
+    facts: Mapped[dict] = mapped_column(JSON, default=dict)  # evidence entered by the officer, e.g. {"exam_score": 5}
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (UniqueConstraint("app_id", "row_id", name="uq_row_state"),)
+
+
+class TraceEvent(Base):
+    """Every action by the Case agent (and the code steps around it), for the activity drawer. No raw transcript text."""
+    __tablename__ = "trace_events"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    app_id: Mapped[str] = mapped_column(String(40), index=True)
+    row_id: Mapped[str] = mapped_column(String(40), default="")
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    actor: Mapped[str] = mapped_column(String(20))  # case_agent | code
+    name: Mapped[str] = mapped_column(String(60))
+    args: Mapped[dict] = mapped_column(JSON, default=dict)
+    ok: Mapped[bool] = mapped_column(default=True)
+    detail: Mapped[str] = mapped_column(Text, default="")
+
+
+class UsageEntry(Base):
+    """Usage ledger: one row per model call."""
+    __tablename__ = "usage_ledger"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    app_id: Mapped[str] = mapped_column(String(40), index=True)
+    row_id: Mapped[str] = mapped_column(String(40), default="")
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    stage: Mapped[str] = mapped_column(String(30), default="")
+    provider: Mapped[str] = mapped_column(String(40), default="")
+    model: Mapped[str] = mapped_column(String(80), default="")
+    seconds: Mapped[float] = mapped_column(Float, default=0.0)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)  # local models cost nothing; a hosted price table goes here later

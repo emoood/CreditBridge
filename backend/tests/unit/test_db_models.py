@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, inspect
 
 from backend.app.db.models import Base
 
-EXPECTED = {"applications", "jobs", "job_units", "decisions", "audit_events"}
+EXPECTED = {"applications", "jobs", "job_units", "decisions", "audit_events", "course_mappings", "row_states", "trace_events", "usage_ledger"}
 
 
 def test_schema_creates_on_sqlite_and_has_expected_tables():

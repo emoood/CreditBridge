@@ -1,0 +1,12 @@
+# Which qualifications each curriculum accepts for credit evaluation (set per curriculum in University Setup; this file stands in for it).
+# Only externally examined qualifications are evaluated. Everything else is "Not evaluated" with a reason and a one-click include.
+# Names match the curriculum database's qualification names.
+default: AUD
+curricula:
+  AUD:
+    name: AUD undergraduate
+    accepted_qualifications:
+      - Advanced Placement
+      - Cambridge International AS & A Level
+      - Pearson Edexcel Level 3 Advanced GCE
+      - International Baccalaureate

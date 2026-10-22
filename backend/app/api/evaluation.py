@@ -9,10 +9,11 @@ from sqlalchemy import delete, select
 
 from ..agents.precedent import Precedent
 from ..config import get_settings
-from ..db.models import Application, AuditEvent, Decision, Job, JobUnit, iso
+from ..db.models import Application, AuditEvent, Decision, Job, JobUnit, RowState, TraceEvent, UsageEntry, iso
 from ..db.session import app_session
 from ..devlog import events
 from ..runtime import reset_runtime, rt
+from ..services import mapping as mp
 from ..workers import store
 from ..workers.queue import worker
 from .common import DECIDER_ROLE, app_summary, get_app, job_dict, seed_demo
@@ -113,7 +114,8 @@ def get_results(app_id: str):
         for r in rows:
             counts[r["triage"]["category"]] = counts.get(r["triage"]["category"], 0) + 1
         job = db.get(Job, app.evaluation_job_id) if app.evaluation_job_id else None
-        return {"results": rows, "counts": counts, "pending_units": failed, "catalog": rt().repo.catalog_label,
+        states = {s.row_id: mp.state_dict(s) for s in db.scalars(select(RowState).where(RowState.app_id == app_id))}
+        return {"states": states, "results": rows, "counts": counts, "pending_units": failed, "catalog": rt().repo.catalog_label,
                 "job": job_dict(db, job) if job else None, "status": app_summary(db, app)["status"]}
 
 
@@ -177,7 +179,7 @@ def reset():
     with app_session() as db:
         if _active(db):
             raise HTTPException(409, "A job is queued or running")
-        for model in (JobUnit, Decision, AuditEvent, Job, Application):
+        for model in (RowState, TraceEvent, UsageEntry, JobUnit, Decision, AuditEvent, Job, Application):
             db.execute(delete(model))
         db.commit()
     reset_runtime()

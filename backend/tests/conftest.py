@@ -81,6 +81,7 @@ async def env(monkeypatch):
     init_app_db()
     with app_session() as db:
         seed_demo(db)
+    monkeypatch.setattr(get_settings(), "case_agent", False)  # the older tests exercise the model-evaluates-everything path; new tests turn this on
     monkeypatch.setattr(get_settings(), "catalog", "demo")  # tests use the small synthetic catalog, never the real one
     runtime.reset_runtime()
     model = ScriptedModel()

@@ -57,3 +57,62 @@ def serialize(r: CaseResult, row: dict[str, Any], secs: float, result_id: str) -
         "syllabus_requests": [q for q in S.repo.syllabus_requests if q["course_id"] == r.source_course_id][-1:],
         "is_replay": False,
     }
+
+
+# ------------------------------------------------------------------------------------------ results for the Case-agent path
+def _rules_for(row: dict[str, Any], aud_code: str | None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """(enforced rule results, staff checklist) for a row's grade against a target; same code the pipeline uses."""
+    from ..services.triage import ENFORCED
+    p = pr.Policy.load()
+    t = rt().repo.targets.get(aud_code or "")
+    enforced: list[dict[str, Any]] = []
+    if t:
+        facts = pr.CourseFacts(row.get("grade"), t["level"], t["restricted_type"], True, t.get("department") or t["code"].split()[0])
+        enforced = [{"rule_id": x.rule_id, "status": x.status, "reason": x.reason, "source_url": x.policy_source_url}
+                    for x in pr.evaluate_course(p, facts) if x.rule_id in ENFORCED and x.status != "NOT_APPLICABLE"]
+    staff = [{"rule_id": x.rule_id, "status": x.status, "reason": x.reason} for x in pr.evaluate_course(p, pr.CourseFacts(None, None, None, False))
+             if x.rule_id not in STATIC_ONLY]
+    return enforced, staff
+
+
+def _skeleton(sid: str, row: dict[str, Any], result_id: str, category: str, reasons: list[str], priority: int, match: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
+    return {"result_id": result_id, "course": course_row(sid, row), "triage": {"category": category, "reasons": reasons, "priority": priority},
+            "match": {"evidence_strength": None, "supported_outcomes": [], "missing_or_weaker_outcomes": [], "concerns": [], "title_only_suggestions": [], **match},
+            "review": None, "rules": [], "staff_checklist": [], "case_file": {"subject": {}, "queries": [], "search_hits": {}, "targets_read": {}, "excerpts_read": {},
+                                                                                "notes": [], "rule_checks": [], "precedents_seen": [], "requests": []},
+            "llm_calls": 0, "provider": "", "model": "", "prompt_versions": {}, "duration_s": 0.0, "agent_flags": [], "syllabus_requests": [],
+            "is_replay": False, "row_state": state}
+
+
+def mapped_result(sid: str, row: dict[str, Any], state: dict[str, Any], result_id: str) -> dict[str, Any]:
+    """A row the mapping table settled: no model was used. The officer still accepts or declines."""
+    m = state["mapping"]
+    t = rt().repo.targets.get(m["aud_code"]) or {"code": m["aud_code"], "title": m["aud_code"], "level": 0, "credits": m["aud_credits"]}
+    r = _skeleton(sid, row, result_id, "READY_TO_ACCEPT", [state["reason"]], 4,
+                  {"status": "POTENTIAL_MATCH", "target": {"code": t["code"], "title": t["title"], "level": t["level"], "credits": m["aud_credits"], "basis": f"mapping table {m['version']}"},
+                   "flags": ["FROM_MAPPING_TABLE"]}, state)
+    r["rules"], r["staff_checklist"] = _rules_for(row, m["aud_code"])
+    r["mapping"] = {"version": m["version"], "condition": m["condition"], "condition_result": state.get("condition_result")}
+    return r
+
+
+def case_result(sid: str, row: dict[str, Any], state: dict[str, Any], agent: dict[str, Any] | None, secs: float, result_id: str) -> dict[str, Any]:
+    """A row the Case agent worked (or that is waiting on a document). The finding is for the officer; nothing is approved."""
+    proposal = agent.get("proposal") if agent else None
+    if proposal is not None:
+        r = serialize(proposal, row, secs, result_id)
+        r["row_state"] = state
+    else:
+        waiting = state["status"] == "Waiting on document"
+        r = _skeleton(sid, row, result_id, "NEEDS_EVIDENCE" if waiting else "NEEDS_ATTENTION", [state["reason"]], 2 if waiting else 1,
+                      {"status": "NEEDS_SYLLABUS" if waiting else "NEEDS_MORE_EVIDENCE", "target": None, "flags": [f"CASE:{state['kind']}"]}, state)
+        if state.get("mapping"):
+            r["rules"], r["staff_checklist"] = _rules_for(row, state["mapping"]["aud_code"])
+        r["mapping"] = {"version": (state.get("mapping") or {}).get("version"), "condition": (state.get("mapping") or {}).get("condition"),
+                        "condition_result": state.get("condition_result")}
+    if state["status"] == "Waiting on document":
+        r["triage"] = {"category": "NEEDS_EVIDENCE", "reasons": [state["reason"]], "priority": 2}
+    r["case"] = {"finding": state.get("finding"), "requests": state.get("requests", []), "calls": (agent or {}).get("llm_calls", 0)}
+    r["llm_calls"] = max(r.get("llm_calls", 0), (agent or {}).get("llm_calls", 0))
+    r["duration_s"] = round(secs, 1)
+    return r

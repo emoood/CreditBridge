@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     matcher_max_tool_rounds: int = 6
     title_only_suggestions: bool = True  # for subjects with no syllabus: up to 3 candidate courses from the title, marked unverified
     reviewer_max_tool_rounds: int = 6
+    case_max_tool_rounds: int = 6
+    case_agent: bool = True  # the code-first path (gate, mapping lookup, Case agent). False = the older model evaluation of every subject
     llm_context_tokens: int = 8192
     agent_protocol: str = "native"  # native (runtime tool calls) | json_action (constrained JSON actions parsed by our code)
     llm_temperature: float = 0.0

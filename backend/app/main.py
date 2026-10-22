@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+from .api.cases import router as cases_router
 from .api.common import seed_demo
 from .api.evaluation import router as evaluation_router
 from .api.intake import router as intake_router
@@ -14,6 +15,7 @@ from .config import get_settings
 from .db.session import app_session, init_app_db
 from .devlog import events
 from .providers.router import build_provider
+from .services.mapping import seed_mappings
 from .workers.queue import recover, worker
 
 
@@ -22,6 +24,7 @@ async def lifespan(_app: FastAPI):
     init_app_db()
     with app_session() as db:
         seed_demo(db)
+        seed_mappings(db)
     recover(worker)  # RUNNING jobs -> INTERRUPTED; QUEUED jobs are queued again
     worker.start()
     yield
@@ -35,6 +38,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http
 
 app.include_router(intake_router)
 app.include_router(evaluation_router)
+app.include_router(cases_router)
 app.include_router(recordings_router)
 
 

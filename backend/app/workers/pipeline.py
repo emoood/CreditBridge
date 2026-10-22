@@ -5,6 +5,7 @@ import time
 import uuid
 from typing import Any
 
+from ..agents.case_agent import run_case_agent
 from ..agents.orchestrator import is_school_specific, no_evidence_case, run_case, school_specific_case
 from ..config import get_settings
 from ..db.models import Application, Job
@@ -13,13 +14,14 @@ from ..providers.base import LLMProvider
 from ..providers.guard import CallTimeout
 from ..runtime import rt
 from ..services import grade_checks as gc
-from ..services import recording
+from ..services import mapping as mp
+from ..services import recording, usage
 from ..services import vision_reader as vr
 from ..services.curriculum import curriculum
 from ..services.extraction import extract_transcript
 from ..services.linking import autolink
 from . import store
-from .results import serialize
+from .results import case_result, mapped_result, serialize
 
 NOT_DONE = ("PENDING", "RUNNING", "FAILED_RETRYABLE")
 
@@ -154,7 +156,8 @@ def _has_text_layer(path: str) -> bool:
 
 
 # ------------------------------------------------------------------------------------------ PHASE 2: EVALUATION
-async def run_evaluation(job_id: str, provider: LLMProvider) -> None:
+async def run_evaluation_legacy(job_id: str, provider: LLMProvider) -> None:
+    """The older path: the matcher and reviewer evaluate every subject. Used for replays of recorded runs and when case_agent is off."""
     s = get_settings()
     R = rt()
     with app_session() as db:
@@ -210,20 +213,123 @@ async def run_evaluation(job_id: str, provider: LLMProvider) -> None:
                 store.finish_unit(db, u, "FAILED_RETRYABLE", error=_err_code(e))
                 store.audit(db, app.id, "system", "case_failed", u.unit_key, error=_err_code(e))
 
-        # ---- triage worklist, built in code
-        job.stage, job.current_unit = "triage", ""
-        all_units = [u for u in store.units_of(db, job.id) if u.stage == "evaluate"]
-        counts: dict[str, int] = {}
-        for u in all_units:
-            if u.status == "DONE" and u.result:
-                c = u.result["triage"]["category"]
-                counts[c] = counts.get(c, 0) + 1
-        failed = [u.unit_key for u in all_units if u.status != "DONE"]
-        order = sorted((u for u in all_units if u.result), key=lambda u: u.result["triage"]["priority"])
-        job.summary = {**job.summary, "triage_counts": counts, "worklist": [u.unit_key for u in order], "failed": failed}
-        app.status = "EVALUATION_PARTIAL" if failed else "REVIEW_READY"
-        job.status, job.finished_at = "DONE", store.now()
-        job.flags = ["SUBJECTS_FAILED"] if failed else []
-        db.commit()
-        store.audit(db, app.id, "system", "review_ready" if not failed else "evaluation_partial", job.id, counts=counts, failed=len(failed))
+        _finish_evaluation(db, job, app)
 
+
+def _finish_evaluation(db, job: Job, app: Application) -> None:
+    """Triage worklist, built in code, and the final job/application status."""
+    job.stage, job.current_unit = "triage", ""
+    all_units = [u for u in store.units_of(db, job.id) if u.stage == "evaluate"]
+    counts: dict[str, int] = {}
+    for u in all_units:
+        if u.status == "DONE" and u.result:
+            c = u.result["triage"]["category"]
+            counts[c] = counts.get(c, 0) + 1
+    failed = [u.unit_key for u in all_units if u.status != "DONE"]
+    order = sorted((u for u in all_units if u.result), key=lambda u: u.result["triage"]["priority"])
+    job.summary = {**job.summary, "triage_counts": counts, "worklist": [u.unit_key for u in order], "failed": failed}
+    app.status = "EVALUATION_PARTIAL" if failed else "REVIEW_READY"
+    job.status, job.finished_at = "DONE", store.now()
+    job.flags = ["SUBJECTS_FAILED"] if failed else []
+    db.commit()
+    store.audit(db, app.id, "system", "review_ready" if not failed else "evaluation_partial", job.id, counts=counts, failed=len(failed))
+
+
+
+# ------------------------------------------------------------------------------- PHASE 2 (default): gate, lookup, Case agent
+def _lookup_rows(db, app: Application, rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Code only: the relevance gate and the batch mapping lookup for the given rows. Saves each row's state."""
+    R = rt()
+    maps = mp.lookup_many(db, [r["subject"]["code"] for r in rows if r.get("subject")])
+    out: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        old = mp.get_state(db, app.id, r["id"])
+        verdict = mp.decide_row(r, maps.get((r.get("subject") or {}).get("code")), (old.facts if old else {}) or {}, bool(old and old.included_override), R.repo,
+                                school_specific=is_school_specific(r.get("title") or ""))
+        waiting = old and old.status == mp.WAITING and any(q["status"] in ("DRAFT", "SENT") for q in (old.requests or []))
+        if waiting and verdict["status"] == mp.NEEDS:  # still waiting on the same document: keep the pause
+            verdict = {**verdict, "status": mp.WAITING, "reason": old.reason}
+        st = mp.save_state(db, app.id, r["id"], status=verdict["status"], kind=verdict["kind"], reason=verdict["reason"], can_include=verdict["can_include"],
+                           mapping=verdict["mapping"], condition_result=verdict["condition_result"])
+        if verdict["status"] == mp.MAPPED:
+            mp.save_state(db, app.id, r["id"], finding=None)
+        out[r["id"]] = mp.state_dict(st)
+    usage.trace(app.id, "", "code", "lookup", {"rows": len(rows), **{k: sum(1 for v in out.values() if v["status"] == k) for k in (mp.MAPPED, mp.NEEDS, mp.WAITING, mp.NOT_EVAL)}})
+    return out
+
+
+async def _work_unit(db, job: Job, app: Application, row: dict[str, Any], u, provider: LLMProvider) -> None:
+    R = rt()
+    state = mp.state_dict(mp.get_state(db, app.id, row["id"]))
+    store.start_unit(db, job, u, "case")
+    t0 = time.time()
+    try:
+        outcomes: list[dict[str, Any]] = []
+        if state["status"] == mp.NEEDS and row.get("subject"):
+            outcomes = await asyncio.to_thread(curriculum.outcomes, row["subject"]["id"])
+        title = row.get("title") or (row["subject"]["name"] if row.get("subject") else "") or "Untitled subject"
+        R.repo.add_source(u.unit_key, title, str(row.get("credits") or ""), row.get("grade") or "", row.get("term") or "", row.get("title_ar") or "", outcomes, app.id)
+        agent = None
+        if state["status"] == mp.MAPPED:
+            result, method = mapped_result(u.unit_key, row, state, uuid.uuid4().hex[:12]), "mapping"
+        elif state["status"] == mp.NEEDS:
+            agent = await run_case_agent(usage.MeteredProvider(provider, app.id, row["id"]), R.repo, R.retriever, R.precedent, app.id, row, u.unit_key)
+            state = mp.state_dict(mp.get_state(db, app.id, row["id"]))  # the agent may have moved the row to Waiting on document
+            result, method = case_result(u.unit_key, row, state, agent, time.time() - t0, uuid.uuid4().hex[:12]), "case_agent"
+        else:
+            result, method = case_result(u.unit_key, row, state, None, 0.0, uuid.uuid4().hex[:12]), "waiting"
+        store.finish_unit(db, u, "DONE", result, method=method)
+        store.audit(db, app.id, "system", "row_worked", u.unit_key, status=state["status"], method=method)
+    except Exception as e:  # noqa: BLE001  one failed row never blocks the others
+        store.finish_unit(db, u, "FAILED_RETRYABLE", error=_err_code(e))
+        store.audit(db, app.id, "system", "case_failed", u.unit_key, error=_err_code(e))
+
+
+async def run_evaluation(job_id: str, provider: LLMProvider) -> None:
+    with app_session() as db:
+        job = db.get(Job, job_id)
+        app = db.get(Application, job.app_id)
+        legacy = not (get_settings().case_agent and app.kind == "upload" and not (app.extraction or {}).get("replay"))
+    if legacy:
+        return await run_evaluation_legacy(job_id, provider)
+    with app_session() as db:
+        job = db.get(Job, job_id)
+        app = db.get(Application, job.app_id)
+        job.status, job.started_at, job.route, job.model = "RUNNING", store.now(), getattr(provider, "name", ""), getattr(provider, "model", "")
+        job.stage = "lookup"
+        db.commit()
+        reset = not job.summary.get("resumed")
+        rows = [dict(r) for r in app.rows]
+        states = _lookup_rows(db, app, rows)
+        todo = [r for r in rows if r.get("source_id") and states[r["id"]]["status"] != mp.NOT_EVAL]
+        units = store.plan_units(db, job, "evaluate", [r["source_id"] for r in todo], reset)
+        sid_row = {r["source_id"]: r for r in todo}
+        store.audit(db, app.id, "system", "evaluation_started", job.id, rows=len(rows), to_work=len(todo), resumed=not reset)
+        for u in units:
+            if u.status != "DONE":
+                await _work_unit(db, job, app, sid_row[u.unit_key], u, provider)
+        job.stage, job.current_unit = "triage", ""
+        _finish_evaluation(db, job, app)
+
+
+async def run_row(job_id: str, provider: LLMProvider) -> None:
+    """Phase "CASE": re-work ONE row after an include or after evidence arrived. Everything else is left alone."""
+    with app_session() as db:
+        job = db.get(Job, job_id)
+        app = db.get(Application, job.app_id)
+        row = next((dict(r) for r in app.rows if r["id"] == job.summary.get("row_id")), None)
+        job.status, job.started_at, job.route, job.model = "RUNNING", store.now(), getattr(provider, "name", ""), getattr(provider, "model", "")
+        app.status = "EVALUATION_IN_PROGRESS"
+        db.commit()
+        failed = False
+        if row and row.get("source_id"):
+            state = _lookup_rows(db, app, [row])[row["id"]]
+            if state["status"] != mp.NOT_EVAL:
+                u = store.plan_units(db, job, "evaluate", [row["source_id"]], True)[0]
+                await _work_unit(db, job, app, row, u, provider)
+                failed = u.status != "DONE"
+        job.status, job.finished_at, job.stage = "DONE", store.now(), "done"
+        job.flags = ["ROW_FAILED"] if failed else []
+        app.status = "EVALUATION_PARTIAL" if failed else "REVIEW_READY"
+        db.commit()
+        store.audit(db, app.id, "system", "row_reworked", job.summary.get("row_id", ""), failed=failed)
