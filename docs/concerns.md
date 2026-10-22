@@ -32,6 +32,12 @@ User decision 2026-10-22: do not spend time on security hardening now. Track her
 - App state is in a local PostgreSQL database `creditbridge` (not Supabase). Anyone running the app needs it created (`createdb creditbridge`); `scripts/start.sh` checks this.
 - The school grade scale used for cross-checks is a synthetic assumption; a real school's scale may differ and cause false flags.
 - A trailing footer block can fail to read (harmless, flagged `BLOCKS_FAILED`); the UI warning wording could confuse an officer.
-- Evaluation of one transcript takes 6-10 minutes with the 4B model; use a recorded run for live demos (not built yet).
-- The matcher/reviewer still disagree too often on thin evidence; withdrawn-after-challenge cases need an officer.
+- Evaluation of one transcript takes 6-10+ minutes with the 4B model; use a recorded run (built: README, data/recordings) for live demos.
+- The reviewer now only advises (no revision round). It still raises noise objections (policy-engine results, credit counts) despite the prompt; officers see them next to the pick.
 - Real transcripts must never be committed: `data/` is gitignored; demo1.pdf/demo2.pdf were moved to `data/demo_inputs/`.
+
+## Added 2026-10-22 (field test, see docs/decisions.md)
+- matching_v4 still tells the matcher to call lookup_precedent, which is no longer registered until precedents exist; harmless but wastes a turn. Fix in the next prompt version (not edited per instruction).
+- The synthetic grade scale has no numeric marks, so every real numeric mark (e.g. 98) makes AUD_GRADE_LOWER say NEEDS_REVIEW; the reviewer then repeats it as an objection and every match shows "a policy rule needs human review".
+- Title-only suggestions include weak guesses (a fallback course, a capstone). They are labelled unverified and cannot be accepted, but they are noise.
+- Recordings and field-test output live in data/ (gitignored). They hold a real student's transcript: keep them local.

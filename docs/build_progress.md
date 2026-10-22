@@ -8,7 +8,9 @@
 - [x] Background processing: local PostgreSQL state, in-process worker, phase 1 reading (vision) -> officer gate -> phase 2 evaluation, resume, recovery
 - [x] API <-> UI contract test; UI: upload progress, verification table with cross-check flags, confirm gate, resume, progressive results
 - [x] scripts/start.sh + preflight + README test script
-- [ ] Recorded real run + replay label (so a live demo never depends on the model)
+- [x] Recorded real run + replay label (data/recordings, local; Replay of recorded run, <date>, <model>; 1-2 subjects can run live)
 - [ ] Browser check of the screens (types and build only so far)
 - [ ] Tune agent quality on the real catalog (see docs/decisions.md for measured model comparisons)
 - [ ] Hand-written ground truth from the admissions officer (past decisions)
+- [x] Field-test changes: reviewer advisory only (no revision round), matcher rounds 6, precedent tool only when precedents exist, title-only suggestions for subjects without a syllabus, UI fixes
+- [x] Field test on a real scanned transcript (demo1): results and failures in docs/decisions.md; nothing tuned to pass it
