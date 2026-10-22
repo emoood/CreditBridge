@@ -103,9 +103,9 @@ export function curriculumOf(app: AppInfo, results: CaseResult[]): string {
   return [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? (app.kind === 'demo' ? 'Demo fixtures' : '—');
 }
 
-export function toCsv(items: Item[]): string {
+export function toCsv(items: Item[], showCredits = false, credits = 3): string {
   const q = (s: string | number | null | undefined) => `"${String(s ?? '').replace(/"/g, '""')}"`;
-  const head = ['Source course', 'Grade', 'AUD code', 'AUD title', 'AUD credits', 'Status', 'Decision', 'Reviewer objections', 'Reason'];
-  const lines = items.map(i => [i.title, i.grade, i.result?.match.target?.code, i.result?.match.target?.title, i.result?.match.target?.credits, i.status, i.decided ?? '', i.objections, i.reason].map(q).join(','));
+  const head = ['Source course', 'Grade', 'AUD code', 'AUD title', ...(showCredits ? ['AUD credits'] : []), 'Status', 'Decision', 'Reviewer objections', 'Reason'];
+  const lines = items.map(i => [i.title, i.grade, i.result?.match.target?.code, i.result?.match.target?.title, ...(showCredits ? [i.result?.match.target ? credits : ''] : []), i.status, i.decided ?? '', i.objections, i.reason].map(q).join(','));
   return [head.map(q).join(','), ...lines].join('\n');
 }

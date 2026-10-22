@@ -61,11 +61,11 @@ def _target(ctx: ToolContext, code: str) -> dict:
 def enforced_rules(ctx: ToolContext, target_code: str) -> list[pr.RuleResult]:
     """The deterministic rule results for this subject against a target. Same code the pipeline uses."""
     t, sc = _target(ctx, target_code), ctx.repo.sources[ctx.source_course_id]
-    facts = pr.CourseFacts(sc.grade, t["level"], t["restricted_type"], True)
+    facts = pr.CourseFacts(sc.grade, t["level"], t["restricted_type"], True, t.get("department") or t["code"].split()[0])
     return [r for r in pr.evaluate_course(pr.Policy.load(), facts) if r.rule_id in ENFORCED]
 
 
-ENFORCED = {"AUD_MIN_LEVEL", "AUD_GRADE_LOWER", "AUD_GRADE_UPPER", "AUD_RESTRICTED_COURSE_TYPES", "AUD_MAX_50_PERCENT"}
+ENFORCED = {"AUD_NON_TRANSFERABLE_AREA", "AUD_MIN_LEVEL", "AUD_GRADE_LOWER", "AUD_GRADE_UPPER", "AUD_RESTRICTED_COURSE_TYPES", "AUD_MAX_50_PERCENT"}
 
 
 class FindSourceSyllabus(AgentTool):

@@ -20,13 +20,14 @@ class Policy:
     max_transfer_fraction: Decimal
     restricted_types: list[str]
     grade_scale: list[str]
+    non_transferable_departments: list[str] = field(default_factory=list)
 
     @classmethod
     def load(cls, path: Path = POLICY_PATH) -> "Policy":
         d = yaml.safe_load(path.read_text())
         return cls(d["policy_version_id"], d["source_url"], d["min_level"], d["min_grade_lower"],
                    d["min_grade_upper"], Decimal(str(d["max_transfer_fraction"])),
-                   d["restricted_types"], d["grade_scale"])
+                   d["restricted_types"], d["grade_scale"], [x.upper() for x in d.get("non_transferable_departments", [])])
 
 
 @dataclass
@@ -35,6 +36,7 @@ class CourseFacts:
     target_level: int | None = None  # AUD-equivalent level, e.g. 100, 200, 300, 400
     target_restricted_type: str | None = None  # verified type; None means unknown
     target_type_verified: bool = False
+    target_department: str | None = None  # subject area of the AUD course, e.g. ENGL
 
 
 @dataclass
@@ -102,6 +104,15 @@ def check_restricted(p: Policy, f: CourseFacts) -> RuleResult:
     return _res(p, "AUD_RESTRICTED_COURSE_TYPES", PASS, "Target course is not a restricted type.")
 
 
+def check_transferable_area(p: Policy, f: CourseFacts) -> RuleResult:
+    if f.target_department is None:
+        return _res(p, "AUD_NON_TRANSFERABLE_AREA", REVIEW, "Target subject area unknown.")
+    d = f.target_department.upper()
+    if d in p.non_transferable_departments:
+        return _res(p, "AUD_NON_TRANSFERABLE_AREA", FAIL, f"{d} courses never take transfer credit.", department=d)
+    return _res(p, "AUD_NON_TRANSFERABLE_AREA", PASS, f"{d} courses can take transfer credit.", department=d)
+
+
 def check_aggregate_cap(p: Policy, program_credits: Decimal | None, already_transferred: Decimal | None,
                         proposed: Decimal | None) -> RuleResult:
     if program_credits is None or already_transferred is None or proposed is None or program_credits <= 0:
@@ -125,7 +136,7 @@ STATIC_FLAGS = {
 
 
 def evaluate_course(p: Policy, f: CourseFacts) -> list[RuleResult]:
-    results = [check_min_level(p, f), check_grade_lower(p, f), check_grade_upper(p, f), check_restricted(p, f)]
+    results = [check_min_level(p, f), check_grade_lower(p, f), check_grade_upper(p, f), check_restricted(p, f), check_transferable_area(p, f)]
     results += [_res(p, rid, st, why) for rid, (st, why) in STATIC_FLAGS.items()]
     return results
 

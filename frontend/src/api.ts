@@ -24,6 +24,7 @@ export type Job = { id: string; app_id?: string; phase?: 'READING' | 'EVALUATION
   flags?: string[]; units?: Unit[]; summary?: { triage_counts?: Record<string, number>; worklist?: string[]; failed?: string[] }; timings?: { total_secs: number | null; per_stage_secs: Record<string, number> };
   courses: Record<string, string>; errors: Record<string, string>; route: string; model: string;
   llm_calls: number; activity: { ts: number; kind: string; course?: string; tool?: string; stage?: string; role?: string; ok?: boolean; duration_s?: number }[] };
+export type Institution = { institution: string; transfer_credits: number; display: { mark: boolean; school_credits: boolean; aud_credits: boolean; grade_year: boolean } };
 export type Subject = { id: string; name: string; code: string; qualification: string };
 export type Candidate = Subject & { score: number };
 export type Row = { id: string; code: string; title: string; title_ar: string; credits: string; grade: string; term: string; page: number; evidence_ref: string;
@@ -58,6 +59,7 @@ export const api = {
   results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null; pending_units?: { key: string; status: string; error_code: string }[]; status?: string }>),
   confirm: (id: string, role: string) => fetch(`/api/v1/applications/${id}/confirm`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({}) }).then(j<{ job_id: string; already_confirmed: boolean }>),
   resume: (jobId: string, role: string) => fetch(`/api/v1/jobs/${jobId}/resume`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
+  institution: () => fetch('/api/v1/config/institution').then(j<Institution>),
   recordings: () => fetch('/api/v1/recordings').then(j<Recording[]>),
   saveRecording: (appId: string, name: string, role: string) => fetch('/api/v1/recordings', { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ app_id: appId, name }) }).then(j<Recording>),
   replay: (name: string, live: string[], role: string) => fetch(`/api/v1/recordings/${encodeURIComponent(name)}/replay`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ live }) }).then(j<AppInfo>),

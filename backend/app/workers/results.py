@@ -5,7 +5,7 @@ from ..agents.orchestrator import CaseResult
 from ..runtime import rt
 from ..services import policy_rules as pr
 
-STATIC_ONLY = {"AUD_MIN_LEVEL", "AUD_GRADE_LOWER", "AUD_GRADE_UPPER", "AUD_RESTRICTED_COURSE_TYPES"}
+STATIC_ONLY = {"AUD_NON_TRANSFERABLE_AREA", "AUD_MIN_LEVEL", "AUD_GRADE_LOWER", "AUD_GRADE_UPPER", "AUD_RESTRICTED_COURSE_TYPES"}
 
 
 def _excerpt(i: str) -> dict[str, str]:

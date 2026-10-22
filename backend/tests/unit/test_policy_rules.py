@@ -55,3 +55,23 @@ def test_evaluate_course_includes_static_flags_and_hard_fail():
     ids = {x.rule_id for x in r}
     assert {"AUD_MIN_LEVEL", "AUD_GRADE_UPPER", "AUD_RESTRICTED_COURSE_TYPES", "AUD_INSTITUTION_RECOGNITION"} <= ids
     assert pr.has_hard_fail(r)
+
+
+def test_english_courses_never_take_transfer_credit():
+    assert P.non_transferable_departments == ["ENGL"]
+    assert pr.check_transferable_area(P, pr.CourseFacts(target_department="ENGL")).status == pr.FAIL
+    assert pr.check_transferable_area(P, pr.CourseFacts(target_department="engl")).status == pr.FAIL
+    assert pr.check_transferable_area(P, pr.CourseFacts(target_department="MATH")).status == pr.PASS
+    assert pr.check_transferable_area(P, pr.CourseFacts()).status == pr.REVIEW  # unknown area is never a pass
+    assert pr.has_hard_fail(pr.evaluate_course(P, pr.CourseFacts("A", 100, None, True, "ENGL")))
+
+
+def test_retriever_never_offers_a_non_transferable_area_and_triage_blocks_a_pick():
+    from backend.app.services.catalog_retriever import CatalogRetriever
+    from backend.app.services.triage import triage
+    cat = [{"code": "ENGL 101", "title": "Composition", "description": "writing essays", "outcomes": [], "level": 100},
+           {"code": "MATH 210", "title": "Calculus I", "description": "limits and derivatives writing", "outcomes": [], "level": 200}]
+    assert [c.course_id for c in CatalogRetriever(cat, ["ENGL"]).search("writing essays")] == ["MATH 210"]
+    assert "ENGL 101" in [c.course_id for c in CatalogRetriever(cat).search("writing essays")]
+    rules = pr.evaluate_course(P, pr.CourseFacts("A", 100, None, True, "ENGL"))
+    assert triage("POTENTIAL_MATCH", "STRONG", "SUPPORTED_FOR_HUMAN_REVIEW", rules, False, []).category == "BLOCKED_BY_RULE"

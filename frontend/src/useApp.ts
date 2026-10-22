@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, type AppInfo, type CaseResult, type Job } from './api';
+import { api, type AppInfo, type CaseResult, type Institution, type Job } from './api';
 import { isBusy } from './model';
 
 export type AppData = { app: AppInfo; results: CaseResult[]; pending: { key: string; status: string; error_code: string }[]; readJob: Job | null; evalJob: Job | null };
@@ -22,6 +22,14 @@ export function useApp(id: string | null) {
   const busy = !!data && isBusy(data.app, [data.readJob, data.evalJob]);
   useEffect(() => { if (!busy) return; const t = setInterval(refresh, 1500); return () => clearInterval(t); }, [busy, refresh]);
   return { data, error, refresh, busy };
+}
+
+const NOTHING: Institution = { institution: '', transfer_credits: 3, display: { mark: false, school_credits: false, aud_credits: false, grade_year: false } };
+/** What this institution wants shown (policies/institution.yaml). Everything optional is hidden until the file says otherwise. */
+export function useInstitution(): Institution {
+  const [inst, setInst] = useState<Institution>(NOTHING);
+  useEffect(() => { api.institution().then(setInst).catch(() => undefined); }, []);
+  return inst;
 }
 
 /** Per-application "include" choices live in the browser only for now (the backend gate comes later). */

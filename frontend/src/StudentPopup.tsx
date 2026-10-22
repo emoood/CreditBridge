@@ -6,10 +6,11 @@ import { Evidence } from './Evidence';
 import { ExtractionCheck } from './ExtractionCheck';
 import { appStatus, build, curriculumOf, toCsv, type Item } from './model';
 import { AppPill, RowPill } from './ui';
-import { useApp, useInclude } from './useApp';
+import { useApp, useInclude, useInstitution } from './useApp';
 
 export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: { appId: string; role: string; quals: string[]; qual: string; onClose: () => void; onChanged: () => void }) {
   const { data, error, refresh } = useApp(appId);
+  const inst = useInstitution();
   const [include, setInclude] = useInclude(appId);
   const [evidenceKey, setEvidenceKey] = useState<string | null>(null);
   const [activity, setActivity] = useState(false);
@@ -47,7 +48,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
     await run(async () => { for (const i of approvable) await api.decide(appId, i.result!.course.code, role, 'ACCEPTED', '', i.result!.version); });
   }
   function exportCsv() {
-    const url = URL.createObjectURL(new Blob([toCsv(built!.relevant)], { type: 'text/csv' }));
+    const url = URL.createObjectURL(new Blob([toCsv(built!.relevant, inst.display.aud_credits, inst.transfer_credits)], { type: 'text/csv' }));
     const a = document.createElement('a'); a.href = url; a.download = `creditbridge-${appId}.csv`; a.click(); URL.revokeObjectURL(url);
   }
 
@@ -64,7 +65,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
       <button className="link-btn" onClick={() => run(() => api.resume(interrupted.id, role))}>Resume</button></div>}
 
     {reading && <ReadingProgress done={(readJob?.units ?? []).filter(u => u.stage === 'read' && u.status === 'DONE').length} total={(readJob?.units ?? []).filter(u => u.stage === 'read').length} stage={readJob?.stage} />}
-    {gate && <ExtractionCheck app={app} quals={quals} qual={qual} role={role} onChanged={reload} />}
+    {gate && <ExtractionCheck display={inst.display} app={app} quals={quals} qual={qual} role={role} onChanged={reload} />}
     {demoIdle && <div className="pad"><p className="muted">The demo fixtures have not been evaluated yet.</p><button className="primary-button" disabled={busy} onClick={() => run(() => api.evaluate(appId, role))}><Play size={16} /> Run AI evaluation</button></div>}
     {evaluating && <p className="muted pad"><Loader2 size={14} className="spin" /> Evaluating: {results.length} course{results.length === 1 ? '' : 's'} done so far. Results appear as they finish.</p>}
 
@@ -73,10 +74,10 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
         <button className="link-btn" onClick={() => setNotEvalOpen(true)}>Adjust</button>
         <span className="muted push">{built.counts.mapped} mapped · {built.counts.needsYou} need you · {built.counts.waiting} waiting on a document</span></div>
 
-      {built.relevant.length > 0 && <table className="ctable"><thead><tr><th>Source course</th><th>Grade</th><th>AUD equivalent</th><th>Credits</th><th>Status</th></tr></thead>
+      {built.relevant.length > 0 && <table className="ctable"><thead><tr><th>Source course</th><th>Grade</th><th>AUD equivalent</th>{inst.display.aud_credits && <th>Credits</th>}<th>Status</th></tr></thead>
         <tbody>{built.relevant.map(i => <tr key={i.key} className={`${evidenceKey === i.key ? 'sel' : ''} ${i.result ? 'click' : ''}`} onClick={() => i.result && setEvidenceKey(i.result.course.code)}>
           <td><strong>{i.title}</strong></td><td>{i.grade || '—'}</td>
-          <td>{equivalent(i)}</td><td>{i.result?.match.status === 'POTENTIAL_MATCH' ? i.result.match.target?.credits ?? '—' : '—'}</td>
+          <td>{equivalent(i)}</td>{inst.display.aud_credits && <td>{i.result?.match.status === 'POTENTIAL_MATCH' ? inst.transfer_credits : '—'}</td>}
           <td className="status-cell"><RowPill s={i.status} />{i.objections > 0 && <span className="obj-badge" title="The reviewer objects. Open the row for the full text.">{i.objections} objection{i.objections === 1 ? '' : 's'}</span>}{i.decided === 'ACCEPTED' && <span className="ok-mark">accepted</span>}</td></tr>)}</tbody></table>}
 
       {built.needsYou.length > 0 && <section className="needs"><h4>Needs your input <span className="count">{built.needsYou.length}</span></h4>

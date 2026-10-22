@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, Check, Loader2, Plus, X } from 'lucide-react';
-import { api, type AppInfo, type Row, type Subject } from './api';
+import { api, type AppInfo, type Institution, type Row, type Subject } from './api';
 
 /** Step before the worklist view: the scan beside the table, only low-confidence cells highlighted, one Confirm button. */
-export function ExtractionCheck({ app, quals, qual, role, onChanged }: { app: AppInfo; quals: string[]; qual: string; role: string; onChanged: () => void }) {
+export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: { display: Institution['display']; app: AppInfo; quals: string[]; qual: string; role: string; onChanged: () => void }) {
   const [page, setPage] = useState(1);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,8 +29,8 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged }: { app: Ap
       <div className="scan"><div className="scan-tabs">{Array.from({ length: app.document?.page_count ?? 1 }, (_, i) => <button key={i} className={page === i + 1 ? 'on' : ''} onClick={() => setPage(i + 1)}>Page {i + 1}</button>)}</div>
         {app.document ? <img src={api.previewUrl(app.id, page)} alt={`Transcript page ${page}`} /> : <p className="muted">No scan is stored for this application.</p>}</div>
       <div className="vtable-wrap">
-        <table className="xtable"><thead><tr><th /><th>Course (as written)</th><th>Mark</th><th>Grade</th><th>Credits</th><th>Term</th><th>Curriculum subject</th><th /></tr></thead>
-          <tbody>{rows.map(r => <XRow key={r.id} appId={app.id} r={r} quals={quals} qual={qual} wrap={wrap} />)}</tbody></table>
+        <table className="xtable"><thead><tr><th /><th>Course (as written)</th><th>Grade</th>{display.mark && <th>Mark</th>}{display.school_credits && <th>Credits</th>}{display.grade_year && <th>Grade year</th>}<th>Curriculum course</th><th /></tr></thead>
+          <tbody>{rows.map(r => <XRow key={r.id} appId={app.id} r={r} quals={quals} qual={qual} wrap={wrap} display={display} />)}</tbody></table>
         {rows.length === 0 && <div className="empty-state">No courses were recognised. Add rows manually.</div>}
         <div className="verify-actions">
           <button className="link-btn" onClick={() => wrap(() => api.addRow(app.id))}><Plus size={13} /> Add a course</button>
@@ -43,7 +43,7 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged }: { app: Ap
 }
 
 type Field = 'title' | 'credits' | 'grade' | 'term';
-function XRow({ appId, r, quals, qual, wrap }: { appId: string; r: Row; quals: string[]; qual: string; wrap: (f: () => Promise<unknown>) => Promise<void> }) {
+function XRow({ appId, r, quals, qual, wrap, display }: { display: Institution['display']; appId: string; r: Row; quals: string[]; qual: string; wrap: (f: () => Promise<unknown>) => Promise<void> }) {
   const [picker, setPicker] = useState(false);
   const flagged = (r.flags?.length ?? 0) > 0;
   const cell = (k: Field, low: boolean, w?: number) =>
@@ -53,14 +53,14 @@ function XRow({ appId, r, quals, qual, wrap }: { appId: string; r: Row; quals: s
     <tr className={r.included ? '' : 'off'}>
       <td><input type="checkbox" checked={r.included} aria-label="Include" onChange={e => wrap(() => api.patchRow(appId, r.id, { included: e.target.checked }))} /></td>
       <td>{cell('title', r.uncertain_fields.includes('title'))}{flagged && <small className="rowflag" title={r.flags?.join('\n')}>Check: {r.flags?.[0]}</small>}</td>
-      <td className={`num ${flagged ? 'lowtext' : ''}`}>{r.mark ?? ''}</td>
       <td>{cell('grade', r.uncertain_fields.includes('grade') || flagged, 56)}</td>
-      <td>{cell('credits', r.uncertain_fields.includes('credits'), 56)}</td>
-      <td>{cell('term', r.uncertain_fields.includes('term'), 90)}</td>
-      <td className={r.subject ? 'subj' : 'subj lowcell'}>{r.subject ? <span className="subj-chosen"><strong>{r.subject.name}</strong><small>{r.subject.qualification}</small></span> : <span className="unrec">Not in the curriculum</span>}
+      {display.mark && <td className={`num ${flagged ? 'lowtext' : ''}`}>{r.mark ?? ''}</td>}
+      {display.school_credits && <td>{cell('credits', r.uncertain_fields.includes('credits'), 56)}</td>}
+      {display.grade_year && <td>{cell('term', r.uncertain_fields.includes('term'), 90)}</td>}
+      <td className={r.subject ? 'subj' : 'subj lowcell'}>{r.subject ? <span className="subj-chosen"><strong>{r.subject.code}</strong><small>{r.subject.qualification}{r.subject.name.trim().toLowerCase() !== (r.title || '').trim().toLowerCase() ? ` · ${r.subject.name}` : ''}</small></span> : <span className="unrec">Not in the curriculum</span>}
         <button className="link-btn" onClick={() => setPicker(!picker)}>{r.subject ? 'Change' : 'Choose'}</button></td>
       <td><button className="icon-button" aria-label="Remove row" onClick={() => wrap(() => api.deleteRow(appId, r.id))}><X size={14} /></button></td></tr>
-    {picker && <tr><td colSpan={8}><Picker r={r} quals={quals} qual={qual} onPick={id => { setPicker(false); wrap(() => api.patchRow(appId, r.id, { subject_id: id })); }} /></td></tr>}
+    {picker && <tr><td colSpan={5 + (display.mark ? 1 : 0) + (display.school_credits ? 1 : 0) + (display.grade_year ? 1 : 0)}><Picker r={r} quals={quals} qual={qual} onPick={id => { setPicker(false); wrap(() => api.patchRow(appId, r.id, { subject_id: id })); }} /></td></tr>}
   </>;
 }
 

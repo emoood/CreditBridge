@@ -46,6 +46,15 @@ async def health():
             "provider": {"ok": p.ok, "name": p.provider, "model": p.model, "detail": p.detail}}
 
 
+@app.get("/api/v1/config/institution")
+async def institution():
+    """Display and transfer settings for this institution (policies/institution.yaml)."""
+    from pathlib import Path
+
+    import yaml
+    return yaml.safe_load((Path(__file__).resolve().parents[2] / "policies" / "institution.yaml").read_text())
+
+
 @app.get("/api/v1/config/runtime")
 async def runtime():
     s = get_settings()

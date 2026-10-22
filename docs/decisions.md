@@ -147,3 +147,11 @@ Transfer credit covers beginner-level major courses and general electives, and e
 (flag `SCHOOL_SPECIFIC_NOT_MAPPED`, grey, bottom of the list): not mapped, and NOT flagged as a general elective either. A general elective is a different thing:
 a non-school-specific subject whose university equivalent would be higher level (e.g. a school statistics course, since any probability/statistics course here is upper level) can be flagged POTENTIAL_GENERAL_ELECTIVE by the matcher. The list is `policies/school_specific_subjects.yaml` (substring match on the transcript title; edit freely).
 Effect on demo1: about 9 of 31 rows no longer cost model calls (3 Islamic A took 24-33 s each before).
+
+## 2026-10-23 Display config and the first transfer rule (product owner)
+- `policies/institution.yaml` controls what the officer UI shows (another institution edits this file): mark, school credits, AUD credits (shows `transfer_credits`, 3 for AUD) and grade year (the row's `term` field, hidden for now) are all off.
+  They stay in the data and the CSV export includes AUD credits only when enabled. Served by `GET /api/v1/config/institution`.
+- The extraction table shows course, grade and the curriculum course CODE (from the curriculum database, e.g. AP-CALC-AB) with the subject name only when it differs from the transcript title.
+- New enforced rule `AUD_NON_TRANSFERABLE_AREA` (policy `non_transferable_departments: [ENGL]`): English courses never take transfer credit. Such courses are never offered as search candidates and any pick in them is BLOCKED_BY_RULE.
+- Not built yet, waiting for the logic: transfer covers only beginner-level major-general courses (Calculus I only, physics or biology for engineering students) plus general electives, with a per-course allow-list.
+  Today the retriever only prefers 100-200 level courses; nothing stops a pick outside the future allow-list.

@@ -7,12 +7,13 @@ from .providers.base import LLMProvider
 from .providers.router import build_provider
 from .services.catalog_retriever import CatalogRetriever
 from .services.demo_repo import DemoRepo
+from .services.policy_rules import Policy
 
 
 class Runtime:
     def __init__(self) -> None:
         self.repo = DemoRepo(catalog=get_settings().catalog)
-        self.retriever = CatalogRetriever(list(self.repo.targets.values()))
+        self.retriever = CatalogRetriever(list(self.repo.targets.values()), Policy.load().non_transferable_departments)
         self.precedent = PrecedentStore()
 
 

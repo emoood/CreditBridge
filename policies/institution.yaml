@@ -1,0 +1,10 @@
+# Per-institution display and transfer settings. Another university copies this file and changes the values.
+institution: AUD
+# What a transferred school course normally becomes at this institution (AUD: a 3-credit course). Used only if credits are shown or exported.
+transfer_credits: 3
+# What the officer UI shows. Everything stays in the data either way; flip a flag to show it.
+display:
+  mark: false          # numeric mark read from the transcript
+  school_credits: false  # credits the school gave the course (not comparable with university credits)
+  aud_credits: false   # shows transfer_credits above next to the AUD equivalent
+  grade_year: false    # the grade/year the course was taken in (read into each row's "term" field); wanted later
