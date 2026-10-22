@@ -41,7 +41,9 @@ def serialize(r: CaseResult, row: dict[str, Any], secs: float, result_id: str) -
         "match": {"status": r.match.status, "target": target, "evidence_strength": m.evidence_strength if m else None,
                   "supported_outcomes": [{"subject": _excerpt(o.source_excerpt_id), "target": _excerpt(o.target_excerpt_id),
                                           "explanation": o.explanation} for o in (m.supported_outcomes if m else [])],
-                  "missing_or_weaker_outcomes": m.missing_or_weaker_outcomes if m else [], "concerns": m.concerns if m else [],
+                  "missing_or_weaker_outcomes": m.missing_or_weaker_outcomes if m else [],
+                  "title_only_suggestions": [{"target": _target(t.target_course_id), "reason": t.reason, "basis": "TITLE_ONLY_UNVERIFIED"}
+                                             for t in (m.title_only_suggestions if m else [])], "concerns": m.concerns if m else [],
                   "flags": r.match.flags},
         "review": None if not r.review else {
             "status": r.review.status, "flags": r.review.flags,

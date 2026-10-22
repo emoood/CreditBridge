@@ -47,6 +47,7 @@ class ScriptedModel:
         self.hang_for: set[str] = set()
         self.fail_for: set[str] = set()
         self.delay = 0.0
+        self.agent_args: dict[str, dict] = {}  # per-unit canned submit_result arguments
         self.active = self.max_active = 0
 
     async def health(self):
@@ -68,7 +69,7 @@ class ScriptedModel:
                 n = sum(1 for s, _ in self.calls if s == "read") - 1
                 rows = self.read_script[n] if n < len(self.read_script) else []
                 return LLMResponse("", [ToolCall("1", "submit_block", {"rows": rows, **({"term_credits": 3.0} if rows is FALL else {})})], self.name, self.model, 0.0)
-            return LLMResponse("", [ToolCall("1", "submit_result", {"recommendation": "NO_DEFENSIBLE_MATCH"})], self.name, self.model, 0.0)
+            return LLMResponse("", [ToolCall("1", "submit_result", self.agent_args.get(unit, {"recommendation": "NO_DEFENSIBLE_MATCH"}))], self.name, self.model, 0.0)
         finally:
             self.active -= 1
 

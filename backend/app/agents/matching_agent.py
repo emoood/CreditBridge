@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..config import get_settings
 from ..domain.schemas import MatchOutput
 from ..providers.base import LLMProvider
 from .case_file import CaseFile
@@ -38,6 +39,19 @@ async def run_matching(provider: LLMProvider, registry: ToolRegistry, ctx: ToolC
             for c in cands:
                 ctx.case.search_hits[c.course_id] = c.score
     user = f"Subject to evaluate: {sc.id} - {sc.title}. Investigate and submit your result.{hint}"
+    title_only = not sc.syllabus_doc_id and get_settings().title_only_suggestions
+    if title_only:
+        cands = ctx.retriever.search(sc.title, subject_title=sc.title)
+        hint = ("\nCatalog search by title suggests these courses (title relevance only):\n"
+                + "\n".join(f"- {c.course_id}: {repo.targets[c.course_id]['title']} (level {repo.targets[c.course_id]['level']})" for c in cands)) if cands else ""
+        user = (f"Subject to evaluate: {sc.id} - {sc.title}. Level or term on the transcript: {sc.term or 'not stated'}.\n"
+                "SPECIAL CASE: NO syllabus or learning outcomes are on file for this subject, so you cannot compare outcomes and must NOT "
+                "claim a match. Submit recommendation NEEDS_MORE_EVIDENCE with no target_course_id and no supported_outcomes. Instead fill "
+                "title_only_suggestions with up to 3 AUD courses that look plausible from the subject's TITLE and LEVEL alone, each with a "
+                "one-line reason. Use course codes that exist in the catalog (read them with get_target_course or take them from the "
+                "list below). These are unverified guesses for the officer, not evidence. Be quick: at most two tool steps."
+                f"{hint}")
+        max_rounds = min(max_rounds, 2)
 
     outcome = await run_bounded_agent(provider, registry, ctx, system=PROMPT, user=user, final_model=MatchOutput,
                                       max_tool_rounds=max_rounds, stage="matching")
@@ -49,6 +63,14 @@ async def run_matching(provider: LLMProvider, registry: ToolRegistry, ctx: ToolC
             ctx.case.requests.append(req)
         res.flags.append("NO_SOURCE_SYLLABUS")
         res.status = "NEEDS_SYLLABUS"
+        if title_only and outcome.status == "OK" and outcome.output is not None:
+            seen, sugg = set(), []
+            for t in outcome.output.title_only_suggestions:  # only real catalog courses, at most 3, no duplicates
+                if t.target_course_id in repo.targets and t.target_course_id not in seen and len(sugg) < 3:
+                    seen.add(t.target_course_id)
+                    sugg.append(t)
+            res.output = MatchOutput(recommendation="NEEDS_MORE_EVIDENCE", title_only_suggestions=sugg)  # no target, no citations
+            res.flags.append("TITLE_ONLY_UNVERIFIED")
         return res
     if outcome.status != "OK" or outcome.output is None:
         res.flags.append(outcome.error or "AGENT_FAILED")

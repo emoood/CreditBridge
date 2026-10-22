@@ -8,6 +8,7 @@ export type CaseResult = {
   triage: { category: Triage; reasons: string[]; priority: number };
   match: { status: string; target: { code: string; title: string; level: number; credits: number; basis?: string } | null; evidence_strength: string | null;
     supported_outcomes: { subject: Excerpt; target: Excerpt; explanation: string }[]; missing_or_weaker_outcomes: string[]; concerns: string[];
+    title_only_suggestions: { target: { code: string; title: string; level: number; credits: number } | null; reason: string; basis: 'TITLE_ONLY_UNVERIFIED' }[];
     flags: string[] };
   review: { status: string; flags: string[]; objections: { text: string; excerpts: Excerpt[] }[]; notes: string[] } | null;
   rules: { rule_id: string; status: string; reason: string; source_url: string }[];

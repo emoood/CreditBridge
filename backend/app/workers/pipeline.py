@@ -182,7 +182,7 @@ async def run_evaluation(job_id: str, provider: LLMProvider) -> None:
                     title = row.get("title") or (row["subject"]["name"] if row.get("subject") else "") or "Untitled subject"
                     R.repo.add_source(u.unit_key, title, str(row.get("credits") or ""), row.get("grade") or "", row.get("term") or "",
                                       row.get("title_ar") or "", outcomes, app.id)
-                if app.kind == "upload" and not outcomes:
+                if app.kind == "upload" and not outcomes and not s.title_only_suggestions:
                     case = no_evidence_case(R.repo, u.unit_key)  # unrecognized: no model call, never guessed
                 else:
                     case = await run_case(provider, R.repo, R.retriever, u.unit_key, R.precedent, s.matcher_max_tool_rounds, s.reviewer_max_tool_rounds)

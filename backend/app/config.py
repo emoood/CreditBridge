@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     llm_allow_fallback: bool = True
     llm_fallback_route: str = "mac_dev"
     matcher_max_tool_rounds: int = 6
+    title_only_suggestions: bool = True  # for subjects with no syllabus: up to 3 candidate courses from the title, marked unverified
     reviewer_max_tool_rounds: int = 6
     llm_context_tokens: int = 8192
     agent_protocol: str = "native"  # native (runtime tool calls) | json_action (constrained JSON actions parsed by our code)

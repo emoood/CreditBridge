@@ -104,18 +104,30 @@ async def test_one_failed_subject_does_not_block_the_others(env):
     assert len(res["results"]) == 5 and len(res["pending_units"]) == 2
 
 
-async def test_unrecognized_subject_is_flagged_and_does_not_stop_the_job(env):
+async def test_unrecognized_subject_gets_title_only_suggestions_never_a_match(env):
     up = await read_to_gate(env)
     rows = (await env.client.get(f"/api/v1/applications/{up['id']}")).json()["rows"]
     unrec = [r for r in rows if not r["subject"]]
     assert [r["title"] for r in unrec] == ["Islamic Studies"] and unrec[0]["curriculum_status"] == "NEEDS_SYLLABUS"
+    # a hostile model: claims a full match, cites things, and proposes 5 courses (one invented, one twice)
+    hostile = {"recommendation": "POTENTIAL_MATCH", "target_course_id": "CS101", "evidence_strength": "STRONG",
+                                 "supported_outcomes": [{"source_excerpt_id": "x", "target_excerpt_id": "tgt-CS101-o1", "explanation": "same"}],
+                                 "title_only_suggestions": [{"target_course_id": c, "reason": "title"} for c in ("CS101", "ZZZ999", "CS101", "CS330", "COMP220")]}
+    idx = rows.index(unrec[0]) + 1  # source ids are assigned at confirm: <short app id>-<position>
+    env.model.agent_args[f"{up['id'].replace('-', '')[-6:].upper()}-{idx:02d}"] = hostile
     await confirm(env, up["id"])
     await env.worker.idle()
     res = (await env.client.get(f"/api/v1/applications/{up['id']}/results")).json()
     by = {r["course"]["title"]: r for r in res["results"]}
-    assert by["Islamic Studies"]["match"]["status"] == "NEEDS_SYLLABUS" and by["Islamic Studies"]["triage"]["category"] == "NEEDS_EVIDENCE"
+    r = by["Islamic Studies"]
+    assert r["match"]["status"] == "NEEDS_SYLLABUS" and r["triage"]["category"] == "NEEDS_EVIDENCE"  # never a match, never ready
+    assert r["match"]["target"] is None and r["match"]["supported_outcomes"] == [] and r["review"] is None
+    sug = r["match"]["title_only_suggestions"]
+    assert 1 <= len(sug) <= 3 and all(s["basis"] == "TITLE_ONLY_UNVERIFIED" and s["target"] for s in sug)
+    assert len({s["target"]["code"] for s in sug}) == len(sug) and "ZZZ999" not in {s["target"]["code"] for s in sug}
+    assert r["syllabus_requests"] and "TITLE_ONLY_UNVERIFIED" in r["match"]["flags"]
     assert len(res["results"]) == 7 and res["job"]["status"] == "DONE"
-    assert not any(unit == by["Islamic Studies"]["course"]["code"] for stage, unit in env.model.calls if stage == "matching")  # no model call
+    assert not any(stage == "review" and unit == r["course"]["code"] for stage, unit in env.model.calls)  # never reviewed
 
 
 async def test_restart_marks_interrupted_and_resume_skips_done_units(env):

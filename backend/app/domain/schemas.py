@@ -58,6 +58,12 @@ class SupportedOutcome(AgentOutput):
     explanation: str
 
 
+class TitleOnlySuggestion(AgentOutput):
+    """A candidate AUD course proposed from the subject's title and level alone. Never evidence: no citations."""
+    target_course_id: str
+    reason: str = ""
+
+
 class MatchOutput(AgentOutput):
     recommendation: MatchRecommendation
     target_course_id: str | None = None
@@ -65,6 +71,8 @@ class MatchOutput(AgentOutput):
     missing_or_weaker_outcomes: list[str] = Field(default_factory=list)
     concerns: list[str] = Field(default_factory=list)
     evidence_strength: Literal["STRONG", "PARTIAL", "WEAK"] = "WEAK"  # how much of the target the evidence covers
+    # only for a subject with NO syllabus on file; code keeps at most 3 existing catalog courses and labels them unverified
+    title_only_suggestions: list[TitleOnlySuggestion] = Field(default_factory=list)
 
 
 class Objection(AgentOutput):

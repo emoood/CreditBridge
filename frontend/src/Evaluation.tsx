@@ -192,6 +192,9 @@ function Reasoning({ r }: { r: CaseResult }) {
   return <div className="reasoning">
     {m.supported_outcomes.length > 0 && <div className="block"><h4>Outcomes the evidence supports {m.evidence_strength && <span className="muted">· coverage {m.evidence_strength.toLowerCase()}</span>}</h4>
       {m.supported_outcomes.map((o, i) => <div className="pair" key={i}><div><small>SUBJECT · {o.subject.id}</small><p>{o.subject.text}</p></div><div><small>AUD COURSE · {o.target.id}</small><p>{o.target.text}</p></div><div className="why">{o.explanation}</div></div>)}{m.target?.basis === 'catalog description only' && <p className="muted">The AUD side of this comparison uses the catalog description only; the catalog publishes no learning outcomes.</p>}</div>}
+    {m.title_only_suggestions.length > 0 && <div className="block title-only"><h4>AI judgment from title only, no syllabus on file <Pill tone="amber">unverified</Pill></h4>
+      <p className="muted">These guesses use only the subject’s title and level. There is no evidence behind them and nothing here can be accepted. Confirm manually once the syllabus arrives.</p>
+      <ul>{m.title_only_suggestions.map((s, i) => <li key={i}><strong>{s.target ? `${s.target.code} · ${s.target.title}` : '?'}</strong> <small>{s.target ? `level ${s.target.level}` : ''}</small><br />{s.reason}</li>)}</ul></div>}
     {m.missing_or_weaker_outcomes.length > 0 && <div className="block"><h4>Missing or weaker</h4><ul>{m.missing_or_weaker_outcomes.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
     {m.concerns.length > 0 && <div className="block"><h4>Concerns</h4><ul>{m.concerns.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
     {r.review && <div className="block"><h4>Independent review <Pill tone={r.review.status === 'SUPPORTED_FOR_HUMAN_REVIEW' ? 'green' : r.review.status === 'CHALLENGED' ? 'red' : 'amber'}>{r.review.status.replace(/_/g, ' ').toLowerCase()}</Pill></h4>
