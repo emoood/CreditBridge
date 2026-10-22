@@ -20,7 +20,7 @@ def triage(match_status: str, evidence_strength: str | None, review_status: str,
     if match_status == "NO_DEFENSIBLE_MATCH":
         return Triage("NO_MATCH", ["No defensible AUD course found."], 5)
     if match_status == "POTENTIAL_GENERAL_ELECTIVE":
-        return Triage("POTENTIAL_GE", ["No specific course fits; possible general elective for the officer to decide."], 3)
+        return Triage("POTENTIAL_GE", ["No specific course fits; possible general elective. The AI only flags it; the officer decides."], 1)  # needs a human judgment, so it sits with needs-attention
     if match_status != "POTENTIAL_MATCH":
         return Triage("NEEDS_ATTENTION", ["The agent did not complete; review manually."], 1)
     fails = [r for r in rules if r.rule_id in ENFORCED and r.status == FAIL]

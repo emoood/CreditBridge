@@ -4,8 +4,8 @@ import { api, type AppInfo, type CaseResult, type Decision, type Job, type Row, 
 
 const TRIAGE: Record<Triage, { label: string; tone: string }> = {
   READY_TO_ACCEPT: { label: 'Ready to accept', tone: 'green' }, NEEDS_ATTENTION: { label: 'Needs attention', tone: 'amber' },
-  BLOCKED_BY_RULE: { label: 'Blocked by rule', tone: 'red' },
-  NEEDS_EVIDENCE: { label: 'Needs evidence', tone: 'neutral' }, POTENTIAL_GE: { label: 'Potential elective', tone: 'blue' }, NO_MATCH: { label: 'No match', tone: 'neutral' } };
+  POTENTIAL_GE: { label: 'AI: general elective, officer decides', tone: 'amber' }, BLOCKED_BY_RULE: { label: 'Blocked by rule', tone: 'red' },
+  NEEDS_EVIDENCE: { label: 'Needs evidence', tone: 'neutral' }, NO_MATCH: { label: 'No match', tone: 'neutral' } };
 const RULE_TONE: Record<string, string> = { PASS: 'green', FAIL: 'red', NEEDS_REVIEW: 'amber', NEEDS_HUMAN_VERIFICATION: 'amber', NOT_APPLICABLE: 'neutral' };
 const Pill = ({ tone, children }: { tone: string; children: React.ReactNode }) => <span className={`status status-${tone}`}><span className="status-dot" />{children}</span>;
 
@@ -125,7 +125,7 @@ function Verify({ app, quals, qual, locked, onChanged, collapsed }: { app: AppIn
       <div><div className="section-overline">VERIFY EXTRACTION {app.confirmed ? '· CONFIRMED' : ''}</div><h2>{included} subjects found · {linked} linked to the curriculum{ex?.unrecognized ? ` · ${ex.unrecognized} unrecognized` : ''}</h2></div>
       <span className="muted">{ex?.method === 'vision' ? 'Read by a vision model: check every row' : 'Read from the PDF text'} {open ? '▲' : '▼'}</span></button>
     {open && <>
-      {(ex?.failed_blocks ?? 0) > 0 && <div className="eval-warn"><AlertCircle size={15} /> {ex?.failed_blocks} block(s) could not be read. Add the missing subjects by hand or resume reading.</div>}
+      {(ex?.failed_blocks ?? 0) > 0 && <div className="eval-warn"><AlertCircle size={15} /> A page element with no course on it (for example a footer, legend or signature block) could not be read and was skipped ({ex?.failed_blocks}). This is not a missing course. Compare the table with the scan; if a course really is missing, add it by hand.</div>}
       {ex?.flags && ex.flags.length > 0 && <div className="eval-warn"><AlertCircle size={15} /> Cross-check flags: {ex.flags.slice(0, 6).join(' · ')}{ex.flags.length > 6 ? ` (+${ex.flags.length - 6} more)` : ''}</div>}
       {app.curriculum && !app.curriculum.available && <div className="eval-error"><AlertCircle size={15} /> The curriculum database is unreachable ({app.curriculum.error}). Subjects cannot be linked.</div>}
       <div className="verify-grid">
@@ -174,7 +174,7 @@ function ResultRow({ appId, r, role, onChanged }: { appId: string; r: CaseResult
   const [open, setOpen] = useState(false);
   const t = TRIAGE[r.triage.category];
   const target = r.match.target;
-  const headline = r.match.status === 'POTENTIAL_MATCH' && target ? `${target.code} · ${target.title}` : r.match.status === 'POTENTIAL_GENERAL_ELECTIVE' ? 'Possible general elective' : r.match.status === 'NEEDS_SYLLABUS' ? 'Syllabus missing' : t.label;
+  const headline = r.match.status === 'POTENTIAL_MATCH' && target ? `${target.code} · ${target.title}` : r.match.status === 'POTENTIAL_GENERAL_ELECTIVE' ? 'AI: general elective, officer decides' : r.match.status === 'NEEDS_SYLLABUS' ? 'Syllabus missing' : t.label;
   return <article className={`result ${open ? 'result-open' : ''}`}>
     <button className="result-top" onClick={() => setOpen(!open)} aria-expanded={open}>
       <div className="result-subject"><strong>{r.course.row_code || r.course.curriculum_qualification || r.course.code}</strong><span>{r.course.title}</span><small dir="auto">{r.course.title_ar}</small></div>

@@ -223,3 +223,9 @@ async def test_lookup_precedent_is_offered_only_once_real_precedents_exist(repo)
     seeded = FakeLLMProvider([submit(recommendation="NO_DEFENSIBLE_MATCH")])
     await run_case(seeded, repo, ret, "COMP101", PrecedentStore([Precedent("Intro", "demo", "CS101", "ACCEPTED")]))
     assert "lookup_precedent" in tool_names(seeded)
+
+
+def test_general_elective_flag_sorts_with_needs_attention_and_never_ready():
+    from backend.app.services.triage import triage
+    ge = triage("POTENTIAL_GENERAL_ELECTIVE", None, "NOT_RUN", [], False, [])
+    assert ge.category == "POTENTIAL_GE" and ge.priority == triage("POTENTIAL_MATCH", "PARTIAL", "CHALLENGED", [], False, []).priority
