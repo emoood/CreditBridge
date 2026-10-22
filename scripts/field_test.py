@@ -2,6 +2,8 @@
 
     python scripts/field_test.py read data/demo_inputs/demo1.pdf     # upload, wait for the gate, save the table locally
     python scripts/field_test.py evaluate <app_id> [corrections.json]  # apply officer corrections, confirm, evaluate, save results
+    python scripts/field_test.py full <file> <recording-name>        # read -> confirm (no corrections) -> evaluate -> save as a recording
+    python scripts/field_test.py record <app_id> <recording-name>    # save a finished run as a recording (for replay)
 
 Row-level data (a real student's transcript) goes ONLY to data/field_test/<name>/ (gitignored). Stdout carries counts,
 timings, flags and statuses, never student identity. Timings are printed per phase."""
@@ -39,7 +41,12 @@ def out_dir(app_id: str) -> Path:
     return d
 
 
-def read(path: str) -> None:
+def record(app_id: str, name: str) -> None:
+    r = c.post("/recordings", json={"app_id": app_id, "name": name}, headers=H)
+    print(f"== record -> HTTP {r.status_code}", {k: v for k, v in r.json().items() if k != "subjects"} if r.status_code == 200 else r.text)
+
+
+def read(path: str) -> str:
     p = Path(path)
     t = time.time()
     up = c.post("/applications", files={"file": (p.name, p.read_bytes(), "application/pdf")}, headers=H).json()
@@ -66,6 +73,7 @@ def read(path: str) -> None:
     print(f"   TOTAL rows={len(app['rows'])} credits={sum(float(r['credits'] or 0) for r in app['rows']):g}")
     print(f"   rows saved to {d}/rows.json (local only)")
     print(json.dumps({"app_id": up["id"], "reading_job": up["job_id"], "reading_wall_s": round(time.time() - T0, 1)}))
+    return up["id"]
 
 
 def evaluate(app_id: str, corrections: str | None) -> None:
@@ -104,5 +112,11 @@ if __name__ == "__main__":
     cmd = sys.argv[1]
     if cmd == "read":
         read(sys.argv[2])
+    elif cmd == "full":
+        aid = read(sys.argv[2])
+        evaluate(aid, None)
+        record(aid, sys.argv[3])
+    elif cmd == "record":
+        record(sys.argv[2], sys.argv[3])
     elif cmd == "evaluate":
         evaluate(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)

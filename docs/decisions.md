@@ -122,3 +122,21 @@ One subject failed once with a model error and succeeded on resume. The 4B model
 despite the prompt, matcher caving. Thin evidence also hurts (AP subjects have 4-6 curriculum objectives; AUD publishes one-paragraph descriptions, no outcomes).
 Mitigations added: candidates pre-retrieved for the matcher with an introductory-course/title ranking boost for school subjects, "be decisive" and "school vs university credit counts are not comparable" prompt rules (matching_v4/reviewer_v4).
 Not yet tried: a stronger model for the matcher/reviewer (LM Studio or a larger Ollama model), a recorded run for the demo.
+
+## 2026-10-22 Field-test phase: design changes (prompts untouched: matching_v4, reviewer_v4)
+1. **Reviewer is advisory only.** The revision round is gone: the reviewer's objections (with excerpt ids) and a new `notes` field (minor remarks) are shown next to the matcher's pick, and
+   nothing is fed back to the matcher. The matcher's first pick always stands. Triage: POTENTIAL_MATCH + SUPPORTED_FOR_HUMAN_REVIEW (and STRONG evidence, rules pass) = READY_TO_ACCEPT;
+   POTENTIAL_MATCH + CHALLENGED = NEEDS_ATTENTION with the objection visible. The CONTESTED category, `original_claim`, `revised` and `response_to_objections` were removed.
+   Why: in the demo_v2 run the 4B matcher withdrew correct first picks after pedantic objections; with an advisory reviewer the officer sees both and decides.
+2. **Speed without prompt changes.** Matcher max tool rounds 10 -> 6. `lookup_precedent` is offered to the agents only when real officer decisions exist (an empty store cost a model turn for nothing).
+   Caveat: matching_v4 still tells the matcher to "check lookup_precedent"; while the tool is unregistered a model that tries it gets "not available" (one wasted turn at worst). Fix belongs in the next prompt version.
+   Before (demo_v2, final run, same code except these two changes): 25 / 10 / 27 / 12 / 14 / 8 model calls and 127 / 46 / 166 / 53 / 69 / 38 s for the six subjects the model ran (avg 16 calls, 83 s).
+3. **Title-only suggestions for subjects with no syllabus.** Status stays NEEDS_SYLLABUS and the syllabus request is still drafted; only that subject is blocked. The matcher gets a per-subject instruction in the user
+   message (no prompt file edited) and a new output field `title_only_suggestions` (up to 3 existing catalog courses, a one-line reason each). Code keeps only courses that exist in the catalog, drops duplicates,
+   forces `target_course_id=None`, no citations, no `supported_outcomes`, and labels each `TITLE_ONLY_UNVERIFIED`. The referee still turns any POTENTIAL_MATCH without a syllabus into NEEDS_SYLLABUS.
+   UI: a separate dashed amber/grey box "AI judgment from title only, no syllabus on file", no accept button. Cost: an unrecognized subject now costs 1-3 model calls (max 2 tool rounds) instead of 0.
+4. **UI**: POTENTIAL_GENERAL_ELECTIVE is amber, labelled "AI: general elective, officer decides", and sorts with NEEDS_ATTENTION (priority 1). A page element that could not be read is described as a skipped non-course element, with a
+   reminder to compare the table with the scan.
+6. **Recorded run / replay.** `data/recordings/<name>/` (gitignored): recording.json (rows, reading summary, every subject's full result with citations and excerpt text, timings, model, date, traces) + the scan.
+   Replay loads it at the officer gate (the gate still applies) and fills each subject from the recording with `is_replay: true` and `replay.label = "Replay of recorded run, <date>, <model>"`; a subject can be named `live`, then
+   the model runs it now and it carries no label. A replayed result is used only if the row's title and linked curriculum subject still match the recording; an officer-edited row falls back to live.

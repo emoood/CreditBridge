@@ -70,7 +70,7 @@ def build(db, app_id: str, name: str) -> dict[str, Any]:
                       "error_code": u.error_code} for u in units if u.stage == "read"]
     model = (ev_job.model or (rd_job.model if rd_job else "") or "unknown")
     return {
-        "version": VERSION, "name": name, "recorded_at": datetime.now(UTC).isoformat(), "model": model,
+        "version": VERSION, "name": name, "recorded_at": iso(ev_job.finished_at) or datetime.now(UTC).isoformat(), "model": model,  # when the model produced these results
         "provider": ev_job.route or "", "catalog": rt().repo.catalog_label,
         "prompt_versions": next((e["result"]["prompt_versions"] for e in evaluation if e["result"] and e["result"].get("prompt_versions")), {}),
         "source": {"filename": (app.document or {}).get("filename"), "sha256": (app.document or {}).get("sha256"),
