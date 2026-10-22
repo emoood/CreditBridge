@@ -186,3 +186,24 @@ async def test_synthesis_fallback_rescues_a_model_that_will_not_submit(repo):
     r = await run_matching(p, REG, ctx(repo), max_rounds=1)
     assert r.status == "NO_DEFENSIBLE_MATCH" and "SYNTHESIS_FALLBACK" in r.flags
     assert "Evidence you already gathered" in p.requests[-1].messages[1]["content"]
+
+
+async def test_reviewer_is_advisory_challenge_keeps_the_pick_and_never_calls_the_matcher_again(repo):
+    from backend.app.agents.orchestrator import run_case
+    p = FakeLLMProvider([READ, submit(**good_match(repo)),
+                         submit(verdict="CHALLENGED", objections=[{"text": "depth differs", "excerpt_ids": ["tgt-CS101-o1"]}],
+                                notes=["minor wording"])])
+    r = await run_case(p, repo, CatalogRetriever(list(repo.targets.values())), "COMP101")
+    assert r.match.status == "POTENTIAL_MATCH" and r.match.output.target_course_id == "CS101"  # first pick stands
+    assert r.review.status == "CHALLENGED" and r.review.output.notes == ["minor wording"]
+    assert r.triage.category == "NEEDS_ATTENTION" and "objects" in r.triage.reasons[0]
+    assert r.llm_calls == 3 and p.script == []  # matcher x2 (read, submit) + reviewer x1; no revision round
+    assert [q.stage for q in p.requests].count("matching") == 2 and not any("depth differs" in str(q.messages) for q in p.requests if q.stage == "matching")
+
+
+async def test_supported_review_with_strong_evidence_is_ready(repo):
+    from backend.app.agents.orchestrator import run_case
+    good = good_match(repo) | {"evidence_strength": "STRONG"}
+    p = FakeLLMProvider([READ, submit(**good), submit(verdict="SUPPORTED_FOR_HUMAN_REVIEW")])
+    r = await run_case(p, repo, CatalogRetriever(list(repo.targets.values())), "COMP101")
+    assert r.review.status == "SUPPORTED_FOR_HUMAN_REVIEW" and r.triage.category in ("READY_TO_ACCEPT", "NEEDS_ATTENTION")

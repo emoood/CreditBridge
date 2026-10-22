@@ -1,5 +1,5 @@
 // Typed client for the FastAPI backend. All data is synthetic demo data.
-export type Triage = 'READY_TO_ACCEPT' | 'NEEDS_ATTENTION' | 'CONTESTED' | 'BLOCKED_BY_RULE' | 'NEEDS_EVIDENCE' | 'POTENTIAL_GE' | 'NO_MATCH';
+export type Triage = 'READY_TO_ACCEPT' | 'NEEDS_ATTENTION' | 'BLOCKED_BY_RULE' | 'NEEDS_EVIDENCE' | 'POTENTIAL_GE' | 'NO_MATCH';
 export type Excerpt = { id: string; text: string };
 export type Course = { code: string; row_code: string; title: string; title_ar: string; credits: string; grade: string; term: string; has_syllabus: boolean; curriculum_subject: string | null; curriculum_qualification: string | null };
 export type Decision = { decision: 'ACCEPTED' | 'DECLINED' | 'MORE_INFORMATION_REQUESTED'; reason: string; actor: string; actor_role: string; at: string; idempotency_key: string };
@@ -8,15 +8,13 @@ export type CaseResult = {
   triage: { category: Triage; reasons: string[]; priority: number };
   match: { status: string; target: { code: string; title: string; level: number; credits: number; basis?: string } | null; evidence_strength: string | null;
     supported_outcomes: { subject: Excerpt; target: Excerpt; explanation: string }[]; missing_or_weaker_outcomes: string[]; concerns: string[];
-    response_to_objections: string | null; flags: string[] };
-  review: { status: string; flags: string[]; objections: { text: string; excerpts: Excerpt[] }[] } | null;
+    flags: string[] };
+  review: { status: string; flags: string[]; objections: { text: string; excerpts: Excerpt[] }[]; notes: string[] } | null;
   rules: { rule_id: string; status: string; reason: string; source_url: string }[];
   staff_checklist: { rule_id: string; status: string; reason: string }[];
   case_file: { queries: string[]; notes: { by: string; kind: string; text: string }[]; targets_read: Record<string, string[]>; precedents_seen: unknown[] };
-  revised: boolean; contested: boolean; llm_calls: number; provider: string; model: string; duration_s: number; is_replay: boolean;
+  llm_calls: number; provider: string; model: string; duration_s: number; is_replay: boolean;
   syllabus_requests: { missing_fields: string[]; status: string }[];
-  original_claim: { target: { code: string; title: string; level: number; credits: number } | null; evidence_strength: string | null; objections: string[];
-    supported_outcomes: { subject: Excerpt; target: Excerpt; explanation: string }[] } | null;
   decision: (Decision & { stale?: boolean }) | null; version: number;
 };
 export type Unit = { stage: string; key: string; status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED_RETRYABLE' | 'SKIPPED'; attempts: number; method: string; error_code: string; duration_s: number };

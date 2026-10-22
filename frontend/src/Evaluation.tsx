@@ -4,7 +4,7 @@ import { api, type AppInfo, type CaseResult, type Decision, type Job, type Row, 
 
 const TRIAGE: Record<Triage, { label: string; tone: string }> = {
   READY_TO_ACCEPT: { label: 'Ready to accept', tone: 'green' }, NEEDS_ATTENTION: { label: 'Needs attention', tone: 'amber' },
-  CONTESTED: { label: 'Contested', tone: 'red' }, BLOCKED_BY_RULE: { label: 'Blocked by rule', tone: 'red' },
+  BLOCKED_BY_RULE: { label: 'Blocked by rule', tone: 'red' },
   NEEDS_EVIDENCE: { label: 'Needs evidence', tone: 'neutral' }, POTENTIAL_GE: { label: 'Potential elective', tone: 'blue' }, NO_MATCH: { label: 'No match', tone: 'neutral' } };
 const RULE_TONE: Record<string, string> = { PASS: 'green', FAIL: 'red', NEEDS_REVIEW: 'amber', NEEDS_HUMAN_VERIFICATION: 'amber', NOT_APPLICABLE: 'neutral' };
 const Pill = ({ tone, children }: { tone: string; children: React.ReactNode }) => <span className={`status status-${tone}`}><span className="status-dot" />{children}</span>;
@@ -195,11 +195,9 @@ function Reasoning({ r }: { r: CaseResult }) {
     {m.missing_or_weaker_outcomes.length > 0 && <div className="block"><h4>Missing or weaker</h4><ul>{m.missing_or_weaker_outcomes.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
     {m.concerns.length > 0 && <div className="block"><h4>Concerns</h4><ul>{m.concerns.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
     {r.review && <div className="block"><h4>Independent review <Pill tone={r.review.status === 'SUPPORTED_FOR_HUMAN_REVIEW' ? 'green' : r.review.status === 'CHALLENGED' ? 'red' : 'amber'}>{r.review.status.replace(/_/g, ' ').toLowerCase()}</Pill></h4>
-      {r.revised && <p className="muted">The matcher revised after the reviewer’s challenge{r.contested ? ' and the reviewer still disputes it.' : '.'}{m.response_to_objections ? ` Matcher’s response: ${m.response_to_objections}` : ''}</p>}
-      {r.review.objections.map((o, i) => <div className="objection" key={i}><p>{o.text}</p>{o.excerpts.map(e => <blockquote key={e.id}><small>{e.id}</small>{e.text}</blockquote>)}</div>)}</div>}
-    {r.original_claim && <div className="block withdrawn"><h4>The matcher first suggested {r.original_claim.target ? `${r.original_claim.target.code} · ${r.original_claim.target.title}` : 'a course'}, then withdrew</h4>
-      {r.original_claim.objections.map((o, i) => <p key={i}><strong>Reviewer:</strong> {o}</p>)}
-      {r.original_claim.supported_outcomes.map((o, i) => <div className="pair" key={i}><div><small>SUBJECT · {o.subject.id}</small><p>{o.subject.text}</p></div><div><small>AUD COURSE · {o.target.id}</small><p>{o.target.text}</p></div></div>)}</div>}
+      {r.review.objections.map((o, i) => <div className="objection" key={i}><p>{o.text}</p>{o.excerpts.map(e => <blockquote key={e.id}><small>{e.id}</small>{e.text}</blockquote>)}</div>)}
+      {r.review.notes.length > 0 && <div className="minor"><small>Minor remarks from the reviewer</small><ul>{r.review.notes.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
+      <p className="muted">The reviewer only advises. It does not change the suggestion.</p></div>}
     {r.rules.length > 0 && <div className="block"><h4>Policy checks <span className="muted">· computed by code, not AI</span></h4><div className="rules">{r.rules.map(x => <div key={x.rule_id}><Pill tone={RULE_TONE[x.status] ?? 'neutral'}>{x.status.replace(/_/g, ' ').toLowerCase()}</Pill> <strong>{x.rule_id.replace('AUD_', '').replace(/_/g, ' ').toLowerCase()}</strong> <span className="muted">{x.reason}</span></div>)}</div>
       {r.staff_checklist.length > 0 && <details><summary>Staff checklist ({r.staff_checklist.length} items to confirm manually)</summary><ul>{r.staff_checklist.map(x => <li key={x.rule_id}>{x.reason}</li>)}</ul></details>}</div>}
     {r.syllabus_requests.length > 0 && <div className="block"><h4>Request drafted</h4><p>An in-app request for the missing {r.syllabus_requests[0].missing_fields.join(', ')} was drafted ({r.syllabus_requests[0].status.toLowerCase().replace(/_/g, ' ')}). Nothing was sent.</p></div>}

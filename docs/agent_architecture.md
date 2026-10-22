@@ -6,7 +6,7 @@ Agents are investigators; code is the referee. Neither agent can approve credit.
 1. **MatchingAgent** investigates with tools and submits one of: `POTENTIAL_MATCH`, `POTENTIAL_GENERAL_ELECTIVE` (flag only), `NO_DEFENSIBLE_MATCH`, `NEEDS_MORE_EVIDENCE`.
 2. **Rules** (pure Python) run on any claimed course.
 3. **ReviewerAgent** tries to refute the claim from primary evidence (never sees the matcher's explanation).
-4. If `CHALLENGED`: one **revision round**. The matcher revises, withdraws or defends, then the reviewer looks once more. Still challenged => `contested`.
+4. If `CHALLENGED`: the reviewer is **advisory only**. Its objections (with excerpt ids) and minor remarks are shown next to the matcher's pick; nothing is fed back to the matcher and the first pick always stands. Triage: `NEEDS_ATTENTION`.
 5. **Triage** (pure Python) assigns the officer's worklist category.
 6. The admissions officer accepts or declines. Only a human decision is final.
 

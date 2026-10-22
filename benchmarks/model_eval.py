@@ -26,7 +26,7 @@ ORDER = ["COMP101", "STAT210", "COMP220", "SENG490", "INFS230", "ENGL101"]
 def claimed(r: CaseResult) -> str | None:
     if r.match.output and r.match.output.target_course_id:
         return r.match.output.target_course_id
-    return (r.original_claim or {}).get("target_course_id")
+    return None
 
 
 def score(code: str, r: CaseResult) -> tuple[int, str]:
@@ -34,7 +34,7 @@ def score(code: str, r: CaseResult) -> tuple[int, str]:
     if st == "NEEDS_HUMAN_REVIEW":
         return 0, "agent failed to finish"
     if code == "COMP101":
-        return (2, "ok") if c == "CS101" and t in ("READY_TO_ACCEPT", "NEEDS_ATTENTION", "CONTESTED") and st == "POTENTIAL_MATCH" else \
+        return (2, "ok") if c == "CS101" and t in ("READY_TO_ACCEPT", "NEEDS_ATTENTION") and st == "POTENTIAL_MATCH" else \
                (1, "claimed CS101 but withdrawn/flagged") if c == "CS101" else (0, f"expected CS101, got {c or st}")
     if code == "STAT210":
         return (2, "ok") if c == "STA201" and st == "POTENTIAL_MATCH" else (1, f"flag/other: {st}") if st == "POTENTIAL_GENERAL_ELECTIVE" or c == "STA201" else (0, f"expected STA201, got {c or st}")
@@ -73,7 +73,7 @@ async def main(a):
                 r = await run_case(prov, repo, ret, code, None, s.matcher_max_tool_rounds, s.reviewer_max_tool_rounds)
                 pts, why = score(code, r)
                 rows.append({"course": code, "points": pts, "why": why, "triage": r.triage.category, "match": r.match.status,
-                             "claimed": claimed(r), "review": r.review.status if r.review else None, "revised": r.revised,
+                             "claimed": claimed(r), "review": r.review.status if r.review else None,
                              "calls": r.llm_calls, "secs": round(time.time() - t0, 1),
                              "flags": [f for f in r.match.flags if f.startswith(("SYNTH", "FORCED", "TOOL_BUDGET", "INVALID", "TARGET_NEVER"))]})
             except Exception as e:  # noqa: BLE001

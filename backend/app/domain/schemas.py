@@ -65,7 +65,6 @@ class MatchOutput(AgentOutput):
     missing_or_weaker_outcomes: list[str] = Field(default_factory=list)
     concerns: list[str] = Field(default_factory=list)
     evidence_strength: Literal["STRONG", "PARTIAL", "WEAK"] = "WEAK"  # how much of the target the evidence covers
-    response_to_objections: str | None = None  # only set in the revision round
 
 
 class Objection(AgentOutput):
@@ -76,3 +75,4 @@ class Objection(AgentOutput):
 class ReviewOutput(AgentOutput):
     verdict: ReviewVerdict
     objections: list[Objection] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)  # minor remarks that are not objections

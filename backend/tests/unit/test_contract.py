@@ -8,10 +8,10 @@ pytestmark = pytest.mark.asyncio
 APP_KEYS = {"id", "kind", "student", "program", "institution", "courses", "status", "decided", "catalog", "created_at"}
 ROW_KEYS = {"id", "code", "title", "title_ar", "credits", "grade", "term", "page", "uncertain_fields", "subject", "candidates", "included", "corrected"}
 JOB_KEYS = {"id", "status", "courses", "errors", "route", "model", "llm_calls", "activity", "phase", "stage", "current_unit", "units", "timings", "flags"}
-RESULT_KEYS = {"course", "triage", "match", "review", "rules", "staff_checklist", "case_file", "revised", "contested", "llm_calls", "provider",
-               "model", "duration_s", "is_replay", "syllabus_requests", "original_claim", "decision", "version"}
+RESULT_KEYS = {"course", "triage", "match", "review", "rules", "staff_checklist", "case_file", "llm_calls", "provider",
+               "model", "duration_s", "is_replay", "syllabus_requests", "decision", "version"}
 COURSE_KEYS = {"code", "row_code", "title", "title_ar", "credits", "grade", "term", "has_syllabus", "curriculum_subject", "curriculum_qualification"}
-MATCH_KEYS = {"status", "target", "evidence_strength", "supported_outcomes", "missing_or_weaker_outcomes", "concerns", "response_to_objections", "flags"}
+MATCH_KEYS = {"status", "target", "evidence_strength", "supported_outcomes", "missing_or_weaker_outcomes", "concerns", "flags"}
 
 
 def has(d, keys, where):

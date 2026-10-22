@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     llm_default_route: str = "mac_dev"  # mac_dev | mac_quality | home_gpu | fixture_test
     llm_allow_fallback: bool = True
     llm_fallback_route: str = "mac_dev"
-    matcher_max_tool_rounds: int = 10
+    matcher_max_tool_rounds: int = 6
     reviewer_max_tool_rounds: int = 6
     llm_context_tokens: int = 8192
     agent_protocol: str = "native"  # native (runtime tool calls) | json_action (constrained JSON actions parsed by our code)

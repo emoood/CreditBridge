@@ -18,14 +18,6 @@ def _target(code: str | None) -> dict[str, Any] | None:
     return t and {"code": t["code"], "title": t["title"], "level": t["level"], "credits": t["credits"], "basis": t.get("evidence_basis")}
 
 
-def _claim(c: dict[str, Any] | None) -> dict[str, Any] | None:
-    if not c:
-        return None
-    return {"target": _target(c["target_course_id"]), "evidence_strength": c["evidence_strength"], "objections": c["objections"],
-            "supported_outcomes": [{"subject": _excerpt(o["source_excerpt_id"]), "target": _excerpt(o["target_excerpt_id"]),
-                                    "explanation": o["explanation"]} for o in c["supported_outcomes"]]}
-
-
 def course_row(sid: str, row: dict[str, Any]) -> dict[str, Any]:
     src = rt().repo.sources.get(sid)
     subj = row.get("subject")
@@ -50,16 +42,16 @@ def serialize(r: CaseResult, row: dict[str, Any], secs: float, result_id: str) -
                   "supported_outcomes": [{"subject": _excerpt(o.source_excerpt_id), "target": _excerpt(o.target_excerpt_id),
                                           "explanation": o.explanation} for o in (m.supported_outcomes if m else [])],
                   "missing_or_weaker_outcomes": m.missing_or_weaker_outcomes if m else [], "concerns": m.concerns if m else [],
-                  "response_to_objections": m.response_to_objections if m else None, "flags": r.match.flags},
+                  "flags": r.match.flags},
         "review": None if not r.review else {
             "status": r.review.status, "flags": r.review.flags,
             "objections": [{"text": o.text, "excerpts": [_excerpt(i) for i in o.excerpt_ids]}
-                           for o in (r.review.output.objections if r.review.output else [])]},
+                           for o in (r.review.output.objections if r.review.output else [])],
+            "notes": list(r.review.output.notes) if r.review.output else []},
         "rules": [{"rule_id": x.rule_id, "status": x.status, "reason": x.reason, "source_url": x.policy_source_url}
                   for x in r.rules if x.status != "NOT_APPLICABLE"],
-        "staff_checklist": staff, "case_file": r.case.to_dict(), "revised": r.revised, "contested": r.contested,
-        "llm_calls": r.llm_calls, "provider": r.provider, "model": r.model, "prompt_versions": r.prompt_versions,
+        "staff_checklist": staff, "case_file": r.case.to_dict(), "llm_calls": r.llm_calls, "provider": r.provider, "model": r.model, "prompt_versions": r.prompt_versions,
         "duration_s": round(secs, 1), "agent_flags": r.flags,
         "syllabus_requests": [q for q in S.repo.syllabus_requests if q["course_id"] == r.source_course_id][-1:],
-        "original_claim": _claim(r.original_claim), "is_replay": False,
+        "is_replay": False,
     }

@@ -1,4 +1,5 @@
-"""Runs one subject through the full case: investigate -> rules -> adversarial review -> (one revision round) -> triage.
+"""Runs one subject through the full case: investigate -> rules -> adversarial review -> triage.
+The reviewer is advisory: its objections are shown next to the pick and never fed back to the matcher.
 Fixed, auditable workflow around the two agents. Nothing here can approve credit."""
 from dataclasses import dataclass, field
 from typing import Any
@@ -27,25 +28,22 @@ class CaseResult:
     rules: list[pr.RuleResult]
     triage: Triage
     case: CaseFile
-    contested: bool = False
-    revised: bool = False
     llm_calls: int = 0
     provider: str = ""
     model: str = ""
     prompt_versions: dict[str, str] = field(default_factory=lambda: {"matching": MATCH_PROMPT, "review": REVIEW_PROMPT})
     flags: list[str] = field(default_factory=list)
-    original_claim: dict[str, Any] | None = None  # set when the matcher withdrew after a reviewer challenge
 
     def summary(self) -> dict[str, Any]:
         m = self.match.output
         return {"course": self.source_course_id, "match": self.match.status, "target": m.target_course_id if m else None,
                 "strength": m.evidence_strength if m else None, "review": self.review.status if self.review else None,
-                "revised": self.revised, "contested": self.contested, "triage": self.triage.category,
+                "triage": self.triage.category,
                 "reasons": self.triage.reasons, "llm_calls": self.llm_calls, "flags": self.flags}
 
 
 async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetriever, source_code: str,
-                   precedent: PrecedentStore | None = None, matcher_rounds: int = 10, reviewer_rounds: int = 6) -> CaseResult:
+                   precedent: PrecedentStore | None = None, matcher_rounds: int = 6, reviewer_rounds: int = 6) -> CaseResult:
     registry = ToolRegistry(ALL_TOOLS)
     case, prec = CaseFile(), precedent or PrecedentStore()
 
@@ -57,8 +55,6 @@ async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetr
     calls = match.agent.llm_calls if match.agent else 0
     rules: list[pr.RuleResult] = []
     review: ReviewResult | None = None
-    revised = contested = False
-    first_claim: dict[str, Any] | None = None
     flags = list(match.flags)
 
     if match.status == "POTENTIAL_MATCH" and match.output:
@@ -67,40 +63,16 @@ async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetr
         review = await run_review(provider, registry, ctx("reviewer"), match, rules, reviewer_rounds)
         calls += review.agent.llm_calls if review.agent else 0
 
-        if review.status == "CHALLENGED" and review.output:  # one bounded revision round
-            events.emit("stage", stage="revision", course=source_code)
-            prior = match.output
-            first_claim = {"target_course_id": prior.target_course_id, "evidence_strength": prior.evidence_strength,
-                           "supported_outcomes": [o.model_dump() for o in prior.supported_outcomes],
-                           "objections": [o.text for o in review.output.objections]}
-            objections = [o.text for o in review.output.objections] or ["The reviewer challenged this match."]
-            revised_match = await run_matching(provider, registry, ctx("matcher"), matcher_rounds, objections, prior)
-            calls += revised_match.agent.llm_calls if revised_match.agent else 0
-            revised = True
-            flags += [f"REVISION:{f}" for f in revised_match.flags]
-            if revised_match.status != "NEEDS_HUMAN_REVIEW":  # a failed revision keeps the original claim
-                match = revised_match
-            if match.status == "POTENTIAL_MATCH" and match.output:
-                rules = enforced_rules(ctx("matcher"), match.output.target_course_id)
-                review = await run_review(provider, registry, ctx("reviewer"), match, rules, reviewer_rounds)
-                calls += review.agent.llm_calls if review.agent else 0
-                contested = review.status == "CHALLENGED"
-            else:
-                review = None  # withdrawn or downgraded: nothing left to review
-                rules = []
-
     declined = False
     if match.output and match.output.target_course_id:
         subj = repo.sources[source_code].title
         declined = any(p["decision"] == "DECLINED" and p["target_course_id"] == match.output.target_course_id
                        for p in prec.search(subj))
-    withdrawn = bool(first_claim) and match.status != "POTENTIAL_MATCH"
     t = triage(match.status, match.output.evidence_strength if match.output else None,
-               review.status if review else "NOT_RUN", rules, contested, declined, match.flags, withdrawn)
+               review.status if review else "NOT_RUN", rules, declined, match.flags)
     events.emit("stage", stage="case_done", course=source_code, triage=t.category)
-    return CaseResult(source_code, match, review, rules, t, case, contested, revised, calls,
-                      getattr(provider, "name", ""), getattr(provider, "model", ""), flags=flags,
-                      original_claim=first_claim if withdrawn else None)
+    return CaseResult(source_code, match, review, rules, t, case, calls,
+                      getattr(provider, "name", ""), getattr(provider, "model", ""), flags=flags)
 
 
 def no_evidence_case(repo: DemoRepo, source_code: str) -> CaseResult:
@@ -112,5 +84,5 @@ def no_evidence_case(repo: DemoRepo, source_code: str) -> CaseResult:
         repo.syllabus_requests.append(req)
         case.requests.append(req)
     match = MatchResult("NEEDS_SYLLABUS", flags=["NO_SOURCE_SYLLABUS", "SUBJECT_NOT_IN_CURRICULUM"], case=case)
-    t = triage("NEEDS_SYLLABUS", None, "NOT_RUN", [], False, False, match.flags)
+    t = triage("NEEDS_SYLLABUS", None, "NOT_RUN", [], False, match.flags)
     return CaseResult(source_code, match, None, [], t, case, flags=match.flags)

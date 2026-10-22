@@ -21,8 +21,7 @@ class MatchResult:
     case: CaseFile | None = None
 
 
-async def run_matching(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, max_rounds: int = 10,
-                       objections: list[str] | None = None, prior: MatchOutput | None = None) -> MatchResult:
+async def run_matching(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, max_rounds: int = 6) -> MatchResult:
     repo = ctx.repo
     sc = repo.sources.get(ctx.source_course_id)
     if sc is None:  # the one hard stop: nothing to reason about
@@ -39,15 +38,9 @@ async def run_matching(provider: LLMProvider, registry: ToolRegistry, ctx: ToolC
             for c in cands:
                 ctx.case.search_hits[c.course_id] = c.score
     user = f"Subject to evaluate: {sc.id} - {sc.title}. Investigate and submit your result.{hint}"
-    if objections:
-        user += ("\n\nREVISION ROUND. You previously claimed: "
-                 f"{prior.recommendation if prior else '?'} -> {prior.target_course_id if prior else None}. "
-                 "The reviewer raised these objections:\n" + "\n".join(f"- {o}" for o in objections) +
-                 "\nCheck them against the evidence. Revise, withdraw (change your recommendation), or defend with "
-                 "evidence. Explain in response_to_objections.")
 
     outcome = await run_bounded_agent(provider, registry, ctx, system=PROMPT, user=user, final_model=MatchOutput,
-                                      max_tool_rounds=max_rounds, stage="matching_revision" if objections else "matching")
+                                      max_tool_rounds=max_rounds, stage="matching")
     res = MatchResult("NEEDS_HUMAN_REVIEW", flags=list(outcome.flags), agent=outcome, case=ctx.case)
     if not sc.syllabus_doc_id:  # referee: no evidence on file means no suggestion, whatever the agent did
         if not any(r["course_id"] == sc.id for r in repo.syllabus_requests):
