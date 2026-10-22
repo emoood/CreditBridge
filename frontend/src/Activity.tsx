@@ -1,0 +1,32 @@
+import { X } from 'lucide-react';
+import type { AppData } from './useApp';
+
+/** The agent trace: model calls, seconds, cost and what each agent looked at. Closed by default; the replay label appears once, here. */
+export function Activity({ data, onClose }: { data: AppData; onClose: () => void }) {
+  const { app, results, readJob, evalJob } = data;
+  const calls = results.reduce((n, r) => n + (r.replay ? r.replay.recorded_llm_calls ?? 0 : r.llm_calls), 0);
+  const secs = results.reduce((n, r) => n + (r.replay ? r.replay.recorded_duration_s ?? 0 : r.duration_s), 0);
+  const live = results.filter(r => !r.replay).length;
+  const models = [...new Set(results.map(r => r.model).filter(Boolean))];
+  const running = [readJob, evalJob].find(j => j && j.status === 'RUNNING');
+  return <aside className="activity-drawer" aria-label="Activity">
+    <div className="evidence-head"><div><small>ACTIVITY</small><h3>Agent trace</h3></div><button className="icon-button" onClick={onClose} aria-label="Close activity"><X size={18} /></button></div>
+    <div className="evidence-body">
+      {app.replay && <p className="muted">Figures are those of the recorded run{live ? `; ${live} course(s) ran live` : ''}.</p>}
+      <div className="act-stats">
+        <div><small>MODEL CALLS</small><strong>{calls}</strong></div>
+        <div><small>MODEL TIME</small><strong>{Math.round(secs)} s</strong></div>
+        <div><small>COST</small><strong>$0.00</strong><span>local model</span></div>
+        <div><small>MODEL</small><strong className="small-strong">{models.join(', ') || '—'}</strong></div>
+      </div>
+      {readJob && <p className="muted">Reading: {readJob.status.toLowerCase()} · {readJob.timings?.total_secs ?? '—'} s · {(readJob.units ?? []).filter(u => u.stage === 'read').length} page blocks · {readJob.model}</p>}
+      {evalJob && <p className="muted">Evaluation: {evalJob.status.toLowerCase()} · {evalJob.timings?.total_secs ?? '—'} s · {evalJob.route} · {evalJob.model}</p>}
+      {running && running.activity.length > 0 && <><h4>Happening now</h4><ul className="act-live">{[...running.activity].reverse().slice(0, 8).map((a, i) => <li key={i}><span className="muted">{a.course ?? ''}</span> {a.kind === 'tool_call' ? <>{a.role} used <strong>{a.tool}</strong> {a.ok ? '✓' : '✗'}</> : a.kind === 'stage' ? <>stage <strong>{a.stage}</strong></> : a.kind === 'llm_call' ? <>model call <span className="muted">{a.duration_s}s</span></> : 'error'}</li>)}</ul></>}
+      <h4>Per course</h4>
+      <table className="act-table"><thead><tr><th>Course</th><th>Calls</th><th>Seconds</th><th>Looked at</th></tr></thead>
+        <tbody>{results.map(r => <tr key={r.course.code}><td>{r.course.title}</td><td>{r.replay ? r.replay.recorded_llm_calls : r.llm_calls}</td><td>{Math.round(r.replay ? r.replay.recorded_duration_s : r.duration_s)}</td>
+          <td className="muted">{r.case_file.queries.length ? `${r.case_file.queries.length} search${r.case_file.queries.length === 1 ? '' : 'es'}` : ''}{Object.values(r.case_file.targets_read).flat().length ? ` · read ${[...new Set(Object.values(r.case_file.targets_read).flat())].join(', ')}` : ''}{r.review ? ` · reviewer: ${r.review.status.replace(/_/g, ' ').toLowerCase()}` : ''}</td></tr>)}</tbody></table>
+      {results.length === 0 && <p className="muted">No evaluation has run yet.</p>}
+    </div>
+  </aside>;
+}

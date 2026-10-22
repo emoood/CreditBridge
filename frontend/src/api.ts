@@ -28,7 +28,7 @@ export type Subject = { id: string; name: string; code: string; qualification: s
 export type Candidate = Subject & { score: number };
 export type Row = { id: string; code: string; title: string; title_ar: string; credits: string; grade: string; term: string; page: number; evidence_ref: string;
   uncertain_fields: string[]; subject: Subject | null; candidates: Candidate[]; included: boolean; corrected: boolean; auto_linked?: boolean;
-  mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string };
+  mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string; source_id?: string };
 export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; program: string; institution: string; courses: number; status: string; decided: number; catalog: string;
   created_at: string; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
   extraction?: { method: string; blocks?: { key: string; status: string; reread?: boolean; flags?: number | null; error?: string }[]; failed_blocks?: number; flags?: string[]; unrecognized?: number; rows_found?: number };
