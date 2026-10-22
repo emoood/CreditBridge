@@ -207,3 +207,19 @@ async def test_supported_review_with_strong_evidence_is_ready(repo):
     p = FakeLLMProvider([READ, submit(**good), submit(verdict="SUPPORTED_FOR_HUMAN_REVIEW")])
     r = await run_case(p, repo, CatalogRetriever(list(repo.targets.values())), "COMP101")
     assert r.review.status == "SUPPORTED_FOR_HUMAN_REVIEW" and r.triage.category in ("READY_TO_ACCEPT", "NEEDS_ATTENTION")
+
+
+async def test_lookup_precedent_is_offered_only_once_real_precedents_exist(repo):
+    from backend.app.agents.orchestrator import run_case
+    from backend.app.agents.precedent import Precedent, PrecedentStore
+    ret = CatalogRetriever(list(repo.targets.values()))
+
+    def tool_names(p):
+        return {t["function"]["name"] for t in p.requests[0].tools}
+
+    empty = FakeLLMProvider([submit(recommendation="NO_DEFENSIBLE_MATCH")])
+    await run_case(empty, repo, ret, "COMP101", PrecedentStore())
+    assert "lookup_precedent" not in tool_names(empty) and "get_target_course" in tool_names(empty)
+    seeded = FakeLLMProvider([submit(recommendation="NO_DEFENSIBLE_MATCH")])
+    await run_case(seeded, repo, ret, "COMP101", PrecedentStore([Precedent("Intro", "demo", "CS101", "ACCEPTED")]))
+    assert "lookup_precedent" in tool_names(seeded)

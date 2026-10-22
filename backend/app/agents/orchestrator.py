@@ -44,8 +44,9 @@ class CaseResult:
 
 async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetriever, source_code: str,
                    precedent: PrecedentStore | None = None, matcher_rounds: int = 6, reviewer_rounds: int = 6) -> CaseResult:
-    registry = ToolRegistry(ALL_TOOLS)
     case, prec = CaseFile(), precedent or PrecedentStore()
+    # lookup_precedent costs the model a turn and returns nothing until real officer decisions exist: leave it out until then
+    registry = ToolRegistry([t for t in ALL_TOOLS if t.name != "lookup_precedent" or prec.items])
 
     def ctx(role: str) -> ToolContext:  # both agents share one case file and one precedent memory
         return ToolContext(repo, retriever, role, source_code, case=case, precedent=prec)
