@@ -76,6 +76,8 @@ class ToolRegistry:
                     f"{'.'.join(map(str, x['loc']))}: {x['msg']}" for x in e.errors()))
             except ToolError as e:
                 res = ToolResult(False, error=str(e))
+            except Exception as e:  # noqa: BLE001  a tool that blows up (model error, timeout) is a failed tool call, never a crashed job
+                res = ToolResult(False, error=f"The tool failed ({type(e).__name__}: {str(e)[:80]}). Try something else or finish.")
         events.emit("tool_call", role=ctx.role, tool=call.name, arguments=call.arguments, ok=res.ok,
                     error=res.error, truncated=res.truncated, result=res.to_message()[:1500],
                     course=ctx.source_course_id)

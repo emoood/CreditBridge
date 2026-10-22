@@ -175,9 +175,12 @@ async def run_intake_agent(provider: LLMProvider, repo, retriever, app_id: str, 
     failing = {k: [f"{f['field']}: {f['detail']}" for f in xc.block_failures(b, scale)] for k, b in blocks.items() if xc.block_failures(b, scale)}
     if failing:
         import json
-        await run_bounded_agent(provider, TracedIntakeRegistry([GetBlockFailures(), RereadBlock(), FlagCell()]), ctx, system=PROMPT,
-                                user=json.dumps({"failing_blocks": failing, "rechecks_available": budget}), final_model=IntakeReport,
-                                max_tool_rounds=get_settings().intake_max_tool_rounds, stage="intake")
+        try:
+            await run_bounded_agent(provider, TracedIntakeRegistry([GetBlockFailures(), RereadBlock(), FlagCell()]), ctx, system=PROMPT,
+                                    user=json.dumps({"failing_blocks": failing, "rechecks_available": budget}), final_model=IntakeReport,
+                                    max_tool_rounds=get_settings().intake_max_tool_rounds, stage="intake")
+        except Exception as e:  # noqa: BLE001  the recheck is an extra: if it fails, reading continues and code flags the cells itself
+            trace(app_id, "", "intake_agent", "intake_failed", {}, False, f"{type(e).__name__}: {str(e)[:120]}")
     n = template_questions(ctx)
     trace(app_id, "", "code", "intake_summary", {"changes": len(ctx.changes), "agent_questions": ctx.questions, "code_questions": n, "rechecks_used": budget - ctx.budget})
     return ctx
