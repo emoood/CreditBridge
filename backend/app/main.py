@@ -16,8 +16,14 @@ from .config import get_settings
 from .db.session import app_session, init_app_db
 from .devlog import events
 from .providers.router import build_provider
+from .providers.warmup import warm_up
 from .services.mapping import seed_mappings
 from .workers.queue import recover, worker
+
+
+async def _warm() -> None:
+    r = await warm_up(get_settings())
+    events.emit("stage", stage="warmup", **{k: v for k, v in r.items() if k in ("ok", "model", "load_s", "warm_call_s", "thinking_chars", "error")})
 
 
 @asynccontextmanager
@@ -28,7 +34,10 @@ async def lifespan(_app: FastAPI):
         seed_mappings(db)
     recover(worker)  # RUNNING jobs -> INTERRUPTED; QUEUED jobs are queued again
     worker.start()
+    warm = asyncio.create_task(_warm()) if get_settings().warmup_on_start else None
     yield
+    if warm:
+        warm.cancel()
     await worker.stop()
 
 

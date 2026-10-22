@@ -13,5 +13,5 @@ def build_provider(settings: Settings, route: str | None = None) -> LLMProvider:
         inner: LLMProvider = OpenAICompatProvider(url, model, route, settings.llm_temperature, limit + 10)
     else:
         inner = OllamaProvider(url, model, route, settings.llm_context_tokens, settings.llm_temperature, limit + 10,
-                               keep_alive=settings.ollama_keep_alive)
+                               keep_alive=settings.ollama_keep_alive, think=settings.llm_think)
     return GuardedProvider(inner, limit)

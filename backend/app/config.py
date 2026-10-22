@@ -21,13 +21,15 @@ class Settings(BaseSettings):
     matcher_max_tool_rounds: int = 6
     title_only_suggestions: bool = True  # for subjects with no syllabus: up to 3 candidate courses from the title, marked unverified
     reviewer_max_tool_rounds: int = 6
-    case_max_tool_rounds: int = 6
+    case_max_tool_rounds: int = 3  # the Case agent is quick by design (read the mapping, act, submit)
     case_agent: bool = True  # the code-first path (gate, mapping lookup, Case agent). False = the older model evaluation of every subject
     llm_context_tokens: int = 8192
     agent_protocol: str = "native"  # native (runtime tool calls) | json_action (constrained JSON actions parsed by our code)
     llm_temperature: float = 0.0
     llm_call_timeout_seconds: float = 120
-    ollama_keep_alive: str = "30m"  # keep the model loaded between calls
+    ollama_keep_alive: str = "24h"  # keep the model resident between calls
+    llm_think: bool = False  # thinking mode off: far fewer output tokens per call on the local model
+    warmup_on_start: bool = True  # preload the model and send one warm-up call when the API starts
     vision_dpi: int = 200
     vision_reread_dpi: int = 300
     vision_max_block_px: int = 560
