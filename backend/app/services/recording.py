@@ -19,9 +19,11 @@ from typing import Any
 from sqlalchemy import select
 
 from ..config import get_settings
-from ..db.models import Application, Job, JobUnit, iso
+from ..db.models import Application, Job, JobUnit, RowAction, RowState, TraceEvent, UsageEntry, iso
 from ..devlog import events
 from ..runtime import rt
+from . import actions as ac
+from . import mapping as mp
 
 VERSION = 1
 ROOT = Path(__file__).resolve().parents[3]
@@ -42,7 +44,7 @@ def label(rec: dict[str, Any]) -> str:
     return f"Replay of recorded run, {rec['recorded_at'][:10]}, {rec['model']}"
 
 
-def build(db, app_id: str, name: str) -> dict[str, Any]:
+def build(db, app_id: str, name: str, extra: dict[str, Any] | None = None) -> dict[str, Any]:
     app = db.get(Application, app_id)
     if app is None or app.kind != "upload":
         raise ValueError("Only an uploaded transcript can be recorded")
@@ -79,13 +81,22 @@ def build(db, app_id: str, name: str) -> dict[str, Any]:
         "rows": app.rows, "extracted_rows": app.extracted_rows, "corrections": app.corrections,
         "confirmed_by": app.confirmed_by, "confirmed_at": iso(app.confirmed_at),
         "evaluation": {"timing": timing(ev_job), "units": evaluation},
+        "timings": (extra or {}).get("timings", {}),
+        "row_states": {s.row_id: mp.state_dict(s) for s in db.scalars(select(RowState).where(RowState.app_id == app_id))},  # status, finding, requests, facts per row
+        "trace": [{"at": iso(e.at), "row_id": e.row_id, "actor": e.actor, "name": e.name, "args": e.args, "ok": e.ok, "detail": e.detail}
+                  for e in db.scalars(select(TraceEvent).where(TraceEvent.app_id == app_id).order_by(TraceEvent.id))],  # tool actions of the agents and the code steps
+        "usage": [{"at": iso(u.at), "row_id": u.row_id, "stage": u.stage, "provider": u.provider, "model": u.model, "seconds": u.seconds, "prompt_tokens": u.prompt_tokens,
+                   "output_tokens": u.output_tokens, "cost_usd": u.cost_usd} for u in db.scalars(select(UsageEntry).where(UsageEntry.app_id == app_id).order_by(UsageEntry.id))],  # every model call
+        "actions": [ac.action_dict(a) for a in db.scalars(select(RowAction).where(RowAction.app_id == app_id, RowAction.row_id != "").order_by(RowAction.id))],
+        "planted": {"copy_error": (app.extraction or {}).get("planted_copy_error"), "misread": (app.extraction or {}).get("planted_misread")},
+        "student": {"name": app.student, "id": (app.extraction or {}).get("student_id", "")},
         "traces": [e for e in events.recent(2000) if e["ts"] >= started],  # tool calls and model calls of this run (document content already redacted)
     }
 
 
-def save(db, app_id: str, name: str) -> dict[str, Any]:
+def save(db, app_id: str, name: str, extra: dict[str, Any] | None = None) -> dict[str, Any]:
     name = safe_name(name)
-    rec = build(db, app_id, name)
+    rec = build(db, app_id, name, extra)
     folder = recordings_dir() / name
     folder.mkdir(parents=True, exist_ok=True)
     app = db.get(Application, app_id)

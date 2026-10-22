@@ -19,6 +19,7 @@ router = APIRouter(prefix="/api/v1")
 class SaveIn(BaseModel):
     app_id: str
     name: str
+    timings: dict | None = None  # wall-clock figures measured by whoever drove the run (time to table, first result, total)
 
 
 class ReplayIn(BaseModel):
@@ -37,7 +38,7 @@ def save_recording(body: SaveIn, x_role: str | None = Header(default=None)):
     with app_session() as db:
         get_app(db, body.app_id)
         try:
-            return recording.save(db, body.app_id, body.name)
+            return recording.save(db, body.app_id, body.name, {"timings": body.timings or {}})
         except ValueError as e:
             raise HTTPException(409, str(e)) from e
 
