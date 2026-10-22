@@ -66,7 +66,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
         <p className="muted">ID {app.student_id || app.id} · {curriculumOf(app, results)} curriculum{app.program ? ` · ${app.program}` : ''}</p></div>
       <div className="pop-head-right">{approved ? <span className="approved-tag"><Check size={13} /> Approved</span> : <AppPill s={status} />}<button className="icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button></div>
     </header>
-    {app.replay && <div className="replay-banner"><History size={15} /> <span><strong>{app.replay.label}</strong>. Nothing here was produced just now except {app.replay.live.length ? `${app.replay.live.length} course(s) run live` : 'nothing (no course was run live)'}.</span></div>}
+    {app.replay && <div className="replay-banner"><History size={15} /> <span><strong>{app.replay.label}</strong>. {app.replay.live.length ? `Nothing here was produced just now except ${app.replay.live.length} course(s) run live.` : 'Nothing here was produced just now: no model was called.'}</span></div>}
     {err && <div className="eval-error"><AlertCircle size={15} /> {err}</div>}
     {toast && <div className="toast-line" onClick={() => setToast(null)}><Check size={14} /> {toast}</div>}
     {interrupted && <div className="eval-warn"><AlertCircle size={15} /> The {interrupted.phase === 'READING' ? 'reading' : 'evaluation'} was {interrupted.status.toLowerCase()}. Finished work is kept.

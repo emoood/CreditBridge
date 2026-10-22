@@ -111,6 +111,7 @@ def summary(rec: dict[str, Any]) -> dict[str, Any]:
     subjects = [{"row_id": e["row_id"], "title": e["title"], "triage": (e["result"] or {}).get("triage", {}).get("category"),
                  "duration_s": e["duration_s"]} for e in rec["evaluation"]["units"] if e["status"] == "DONE" and e["result"]]
     return {"name": rec["name"], "recorded_at": rec["recorded_at"], "model": rec["model"], "label": label(rec), "subjects": subjects,
+            "student": rec.get("student"), "case_path": "row_states" in rec, "model_calls": len(rec.get("usage", [])), "timings": rec.get("timings", {}),
             "evaluation_s": (rec["evaluation"]["timing"] or {}).get("total_s"), "reading_s": (rec["reading"]["timing"] or {}).get("total_s")}
 
 

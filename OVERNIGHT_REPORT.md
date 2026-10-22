@@ -12,7 +12,7 @@ Rollback point: tag `pre-overnight` = `3801f36` (the last commit before this run
 | 2. Transcript A2 (A untouched) | done | `0c6072e` |
 | 3. Planted misread switch, Intake re-reads failed blocks, term-total questions | done | `898902a` |
 | 4. Real runs of A2, B (switch on), C | A2 and C recorded; B run failed, not recorded | `f34b7c6` (driver, recordings extended), this commit (report) |
-| 5. Replay mode, live/replay per application | | |
+| 5. Replay mode, live/replay per application | done | (this commit) |
 | 6. README demo runbook | | |
 | 7. Small tests | alongside each part | |
 
@@ -68,5 +68,13 @@ Driver: `scripts/overnight_runs.py` (raw results in `data/overnight/*.json`, git
 | Model got wrong | Its explanation says "credits from 1 to 3" but the sheet already said 3 credits (it quoted the school credits); the proposal itself is right. |
 | Total | whole scripted run 16.4 s |
 
+## Part 5: replay mode
+- A recording of a Case-agent run now restores, **without calling any model**: every row's state and finding, the drafted requests, the officer's actions (e.g. the 9 confirmations), the agent trace, the usage ledger, the planted flags and the Auditor report. Starting a replay (Worklist, "Replay a recorded run") creates an application at the officer gate with the recorded student name and ID and the scan; pressing Confirm loads the recorded results.
+- **Live/replay per application:** replaying is one choice, uploading is the other. The batch (A2, C) comes from recordings; Transcript A is uploaded live. Inside a replay, rows chosen as "run live" go through the normal lookup and Case agent now, and are not marked as recorded.
+- **Honest labelling:** the label "Replay of recorded run, <date>, <model>" shows once, as a banner at the top of the student popup (not on every row); it says no model was called (or which rows ran live). The activity drawer tags each trace entry "recorded", reports "N from the recording, M live" model calls, and recorded ledger rows carry the provider prefix `recorded:`.
+- Real check on the two real recordings (no model): `demo_a2` loads and evaluates in 0.15 s (statuses Conditional/Mapped/Not evaluated, 9 actions restored, sheet passes, 7 recorded calls, 0 live); `demo_c_copy_error` in 0.06 s (sheet fails with the planted row, the Auditor report is present, 4 recorded calls, 0 live). Looked at in Chrome (synthetic only).
+- Older recordings (field-test format) still replay through the earlier path.
+- Test: record a fake-model run, replay it with zero model calls and identical statuses and actions, trace marked recorded; replay with one row live: the model is called for that row only and it is not marked as a replay.
+
 ## Next
-Part 5 (replay mode).
+Part 6 (README runbook).

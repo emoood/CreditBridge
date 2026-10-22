@@ -67,9 +67,9 @@ def start_replay(name: str, body: ReplayIn | None = None, x_role: str | None = H
             doc = save_upload(get_settings().document_root, scan.name, scan.read_bytes(), 40, 60)
         except UploadError:
             doc = None
-    info = {"name": rec["name"], "label": recording.label(rec), "recorded_at": rec["recorded_at"], "model": rec["model"], "live": live_ids}
+    info = {"name": rec["name"], "label": recording.label(rec), "recorded_at": rec["recorded_at"], "model": rec["model"], "live": live_ids, "case_path": "row_states" in rec}
     with app_session() as db:
-        app = Application(id=f"APP-{uuid.uuid4().hex[:8].upper()}", kind="upload", student=f"Replay of {rec['name']}", status="EXTRACTION_REVIEW_REQUIRED",
+        app = Application(id=f"APP-{uuid.uuid4().hex[:8].upper()}", kind="upload", student=(rec.get("student") or {}).get("name") or f"Replay of {rec['name']}", status="EXTRACTION_REVIEW_REQUIRED",
                           document=doc, extraction={**rec["reading"]["extraction"], "replay": info}, rows=rows,
                           extracted_rows=rec["extracted_rows"], qualification_hint="")
         job = Job(id=uuid.uuid4().hex[:12], app_id=app.id, phase="READING", status="DONE", stage="gate", route="replay", model=rec["model"],

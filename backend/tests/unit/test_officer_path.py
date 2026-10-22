@@ -158,3 +158,38 @@ def test_a_failed_term_total_becomes_a_specific_question_on_each_row_of_the_term
     qs = [(c["block"], c["row"], c["field"], xc.question_for(c)) for c in cells if c["check"] == "credit_total"]
     assert [(b, r, f) for b, r, f, _ in qs] == [("p1b1", 0, "credits"), ("p1b3", 0, "credits")]
     assert "7.5" in qs[0][3] and "2" in qs[0][3] and "'A'" in qs[0][3]
+
+
+async def test_replay_of_a_case_agent_run_restores_everything_without_a_model_and_marks_it_recorded(case_env, monkeypatch, tmp_path):
+    from backend.app.config import get_settings
+    monkeypatch.setattr(get_settings(), "recordings_root", str(tmp_path))
+    c = case_env.client
+    app_id = await run_to_review(case_env)
+    _, _, res = await states(case_env, app_id)
+    await c.post(f"/api/v1/applications/{app_id}/confirm-mapped", headers=ADMIN)
+    assert (await c.post("/api/v1/recordings", json={"app_id": app_id, "name": "t-case", "timings": {"total_wall_s": 1.5}}, headers=ADMIN)).status_code == 200
+    listing = (await c.get("/api/v1/recordings")).json()[0]
+    assert listing["case_path"] and listing["model_calls"] > 0 and listing["timings"] == {"total_wall_s": 1.5}
+    before = len(case_env.model.calls)
+    rp = (await c.post("/api/v1/recordings/t-case/replay", json={"live": []}, headers=ADMIN)).json()
+    assert rp["replay"]["case_path"] and rp["status"] == "EXTRACTION_REVIEW_REQUIRED"
+    await c.post(f"/api/v1/applications/{rp['id']}/confirm", headers=ADMIN)
+    await case_env.worker.idle()
+    assert len(case_env.model.calls) == before                                    # not one model call: every row came from the recording
+    _, _, rres = await states(case_env, rp["id"])
+    assert sorted(v["status"] for v in rres["states"].values()) == sorted(v["status"] for v in res["states"].values())   # same statuses as the recorded run
+    assert len(rres["actions"]) == 2 and all(r["is_replay"] for r in rres["results"])                                  # the two confirmed rows came back as actions
+    act = (await c.get(f"/api/v1/applications/{rp['id']}/activity")).json()
+    assert act["usage"]["recorded_calls"] > 0 and act["usage"]["live_calls"] == 0 and act["trace"] and all(t["recorded"] for t in act["trace"] if t["actor"] != "code" or t["row_id"])
+    assert (await c.get(f"/api/v1/applications/{rp['id']}/sheet")).json()["ok"]
+    # one row chosen to run live: the model runs for that row only, and its entries are not marked as recorded
+    live_title = "AP Calculus AB"
+    rp2 = (await c.post("/api/v1/recordings/t-case/replay", json={"live": [live_title]}, headers=ADMIN)).json()
+    await c.post(f"/api/v1/applications/{rp2['id']}/confirm", headers=ADMIN)
+    await case_env.worker.idle()
+    asked = {u for stage, u in case_env.model.calls[before:]}
+    _, rows2, res2 = await states(case_env, rp2["id"])
+    calc2 = next(r for r in rows2 if r["title"] == live_title)
+    assert asked == {calc2["source_id"]}
+    live_result = next(r for r in res2["results"] if r["course"]["title"] == live_title)
+    assert not live_result["is_replay"] and sum(r["is_replay"] for r in res2["results"]) == len(res2["results"]) - 1

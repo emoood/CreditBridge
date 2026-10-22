@@ -40,8 +40,8 @@ export type RowStatus = 'Mapped' | 'Conditional' | 'No mapping' | 'Waiting on do
 export type RowStateInfo = { row_id: string; status: RowStatus; kind: string; reason: string; can_include: boolean; included_override: boolean;
   mapping: { aud_code: string; aud_credits: number; version: string; status: string; condition: { type: string; value: unknown; evidence?: string } | null } | null;
   condition_result: { status: string; reason: string; missing: { field: string; evidence: string }[] } | null; finding: Finding | null; requests: DraftedRequest[]; facts: Record<string, unknown> };
-export type Activity = { usage: { calls: number; seconds: number; prompt_tokens: number; output_tokens: number; cost_usd: number; models: string[]; by_stage: Record<string, { calls: number; seconds: number }> };
-  trace: { at: string; row_id: string; actor: string; name: string; args: Record<string, unknown>; ok: boolean; detail: string }[] };
+export type Activity = { usage: { recorded_calls?: number; recorded_seconds?: number; live_calls?: number; calls: number; seconds: number; prompt_tokens: number; output_tokens: number; cost_usd: number; models: string[]; by_stage: Record<string, { calls: number; seconds: number }> };
+  trace: { at: string; row_id: string; actor: string; name: string; args: Record<string, unknown>; ok: boolean; detail: string; recorded?: boolean }[] };
 export type Subject = { id: string; name: string; code: string; qualification: string };
 export type Candidate = Subject & { score: number };
 export type Row = { id: string; code: string; title: string; title_ar: string; credits: string; grade: string; term: string; page: number; evidence_ref: string;
@@ -53,7 +53,7 @@ export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; pr
     planted_misread?: { subject: string; wrong: number; applied?: { subject: string; from: number; to: number }[] } | null };
   curriculum?: { available: boolean; error: string | null };
   replay?: { name: string; label: string; recorded_at: string; model: string; live: string[] } | null };
-export type Recording = { name: string; recorded_at: string; model: string; label: string; evaluation_s: number | null; reading_s: number | null;
+export type Recording = { student?: { name: string; id: string } | null; case_path?: boolean; model_calls?: number; name: string; recorded_at: string; model: string; label: string; evaluation_s: number | null; reading_s: number | null;
   subjects: { row_id: string; title: string; triage: string | null; duration_s: number }[] };
 export type DevEvent = Record<string, any> & { id: number; ts: number; kind: string };
 

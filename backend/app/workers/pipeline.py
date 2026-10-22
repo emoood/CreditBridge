@@ -326,9 +326,12 @@ async def run_evaluation(job_id: str, provider: LLMProvider) -> None:
     with app_session() as db:
         job = db.get(Job, job_id)
         app = db.get(Application, job.app_id)
-        legacy = not (get_settings().case_agent and app.kind == "upload" and not (app.extraction or {}).get("replay"))
+        replay = (app.extraction or {}).get("replay")
+        legacy = not (get_settings().case_agent and app.kind == "upload" and (not replay or replay.get("case_path")))
     if legacy:
         return await run_evaluation_legacy(job_id, provider)
+    if replay:
+        return await run_evaluation_replay(job_id, provider)
     with app_session() as db:
         job = db.get(Job, job_id)
         app = db.get(Application, job.app_id)
@@ -392,3 +395,60 @@ async def run_audit(job_id: str, provider: LLMProvider) -> None:
         app.status = prev
         db.commit()
         store.audit(db, app.id, "system", "audit_finished", job.id, flags=job.flags)
+
+
+async def run_evaluation_replay(job_id: str, provider: LLMProvider) -> None:
+    """Replay of a recorded Case-agent run: no model is called for any row that is not chosen to run live. Row states, officer actions, the trace and the usage
+    ledger are restored and marked as recorded; rows chosen live go through the normal lookup and Case agent now and are not marked."""
+    from datetime import datetime
+
+    from ..db.models import RowAction, TraceEvent, UsageEntry
+    with app_session() as db:
+        job = db.get(Job, job_id)
+        app = db.get(Application, job.app_id)
+        replay = app.extraction["replay"]
+        rec = recording.load(replay["name"])
+        live = set(replay["live"])
+        job.status, job.started_at, job.stage = "RUNNING", store.now(), "replay"
+        job.route, job.model = ("replay", rec["model"]) if not live else ("replay + live", f"{rec['model']} (recorded) / {getattr(provider, 'model', '')} (live)")
+        job.summary = {**job.summary, "replay": replay}
+        db.commit()
+        rows = [dict(r) for r in app.rows]
+        rec_rows = {r["id"]: r for r in rec["rows"]}
+        rec_units = {e["row_id"]: e for e in rec["evaluation"]["units"]}
+        replayed = [r for r in rows if r["id"] not in live and r["id"] in rec["row_states"] and recording.can_replay(rec_units.get(r["id"]) or {"status": "DONE", "result": {}}, r, rec_rows.get(r["id"]))]
+        rest = [r for r in rows if r not in replayed]
+        keep = {r["id"] for r in replayed}
+        for r in replayed:  # restore the recorded state of the row exactly
+            s = rec["row_states"][r["id"]]
+            mp.save_state(db, app.id, r["id"], status=s["status"], kind=s["kind"], reason=s["reason"], can_include=s["can_include"], included_override=s["included_override"],
+                          mapping=s["mapping"], condition_result=s["condition_result"], finding=s["finding"], requests=s["requests"], facts=s["facts"])
+        if rest:
+            _lookup_rows(db, app, rest)
+        for a in rec.get("actions", []):
+            if a["row_id"] in keep:
+                db.add(RowAction(app_id=app.id, row_id=a["row_id"], action=a["action"], actor=a["actor"], actor_role="admissions", at=datetime.fromisoformat(a["at"]),
+                                 original=a["original"], chosen=a["chosen"], reason=a["reason"], batch=a["batch"]))
+        for e in rec.get("trace", []):
+            if e["row_id"] in keep or e["row_id"] == "":
+                db.add(TraceEvent(app_id=app.id, row_id=e["row_id"], at=datetime.fromisoformat(e["at"]), actor=e["actor"], name=e["name"], args={**e["args"], "_recorded": replay["label"]},
+                                  ok=e["ok"], detail=e["detail"]))
+        for u in rec.get("usage", []):
+            if u["row_id"] in keep or u["row_id"] == "":
+                db.add(UsageEntry(app_id=app.id, row_id=u["row_id"], at=datetime.fromisoformat(u["at"]), stage=u["stage"], provider="recorded:" + u["provider"], model=u["model"], seconds=u["seconds"],
+                                  prompt_tokens=u["prompt_tokens"], output_tokens=u["output_tokens"], cost_usd=u["cost_usd"]))
+        db.commit()
+        todo = [r for r in rows if r.get("source_id") and mp.get_state(db, app.id, r["id"]).status != mp.NOT_EVAL]
+        units = store.plan_units(db, job, "evaluate", [r["source_id"] for r in todo], True)
+        by_sid = {r["source_id"]: r for r in todo}
+        for u in units:
+            row = by_sid[u.unit_key]
+            if row["id"] in keep:
+                store.start_unit(db, job, u, "replay")
+                res = recording.replayed_result(rec, rec_units[row["id"]], row, u.unit_key)
+                res["row_state"] = mp.state_dict(mp.get_state(db, app.id, row["id"]))
+                store.finish_unit(db, u, "DONE", res, method="replay")
+                store.audit(db, app.id, "system", "case_replayed", u.unit_key, recorded_at=rec["recorded_at"])
+            else:
+                await _work_unit(db, job, app, row, u, provider)
+        _finish_evaluation(db, job, app)

@@ -50,7 +50,9 @@ def activity(app_id: str, limit: int = 300) -> dict[str, Any]:
             s["seconds"] = round(s["seconds"] + c.seconds, 2)
             s["prompt_tokens"] += c.prompt_tokens
             s["output_tokens"] += c.output_tokens
-        return {"usage": {"calls": len(calls), "seconds": round(sum(c.seconds for c in calls), 1), "prompt_tokens": sum(c.prompt_tokens for c in calls),
+        recorded = [c for c in calls if (c.provider or "").startswith("recorded:")]
+        return {"usage": {"recorded_calls": len(recorded), "recorded_seconds": round(sum(c.seconds for c in recorded), 1), "live_calls": len(calls) - len(recorded), "calls": len(calls), "seconds": round(sum(c.seconds for c in calls), 1), "prompt_tokens": sum(c.prompt_tokens for c in calls),
                           "output_tokens": sum(c.output_tokens for c in calls), "cost_usd": round(sum(c.cost_usd for c in calls), 4),
                           "models": sorted({c.model for c in calls if c.model}), "by_stage": by_stage},
-                "trace": [{"at": iso(e.at), "row_id": e.row_id, "actor": e.actor, "name": e.name, "args": e.args, "ok": e.ok, "detail": e.detail} for e in reversed(events)]}
+                "trace": [{"at": iso(e.at), "row_id": e.row_id, "actor": e.actor, "name": e.name, "args": {k: v for k, v in e.args.items() if k != "_recorded"}, "ok": e.ok, "detail": e.detail,
+                           "recorded": bool(e.args.get("_recorded"))} for e in reversed(events)]}

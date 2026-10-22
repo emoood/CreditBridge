@@ -316,7 +316,7 @@ function ReplayPicker({
       >
         {recordings.map((r) => (
           <option key={r.name} value={r.name}>
-            {r.label}
+            {r.student?.name ? `${r.student.name} · ` : ''}{r.label}{r.case_path ? ` · ${r.model_calls ?? 0} recorded model calls` : ' · older format'}
           </option>
         ))}
       </select>
