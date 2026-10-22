@@ -1,7 +1,7 @@
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # POTENTIAL_GENERAL_ELECTIVE is only a flag for the admissions officer: no specific course fits, the AI does not
 # judge elective eligibility. The human decides.
@@ -29,16 +29,36 @@ class Excerpt(BaseModel):
     excerpt_hash: str
 
 
-# Agent output contracts. Deliberately NO approval field anywhere (strict: unknown keys rejected).
-class SupportedOutcome(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+def _reject_approval(x: Any) -> None:
+    if isinstance(x, dict):
+        for k, v in x.items():
+            if "approv" in str(k).lower():
+                raise ValueError("agents cannot approve credit")
+            _reject_approval(v)
+    elif isinstance(x, list):
+        for v in x:
+            _reject_approval(v)
+
+
+class AgentOutput(BaseModel):
+    """Agent output contract. Harmless extra keys are ignored (small models add some), but any approval-like key is
+    rejected outright, and no approval field exists on any agent output."""
+    model_config = ConfigDict(extra="ignore")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_approval_keys(cls, data: Any) -> Any:
+        _reject_approval(data)
+        return data
+
+
+class SupportedOutcome(AgentOutput):
     source_excerpt_id: str
     target_excerpt_id: str
     explanation: str
 
 
-class MatchOutput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class MatchOutput(AgentOutput):
     recommendation: MatchRecommendation
     target_course_id: str | None = None
     supported_outcomes: list[SupportedOutcome] = Field(default_factory=list)
@@ -48,13 +68,11 @@ class MatchOutput(BaseModel):
     response_to_objections: str | None = None  # only set in the revision round
 
 
-class Objection(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class Objection(AgentOutput):
     text: str
     excerpt_ids: list[str] = Field(default_factory=list)
 
 
-class ReviewOutput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class ReviewOutput(AgentOutput):
     verdict: ReviewVerdict
     objections: list[Objection] = Field(default_factory=list)

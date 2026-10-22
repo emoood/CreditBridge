@@ -46,3 +46,15 @@ Single runs, not a benchmark. n=5 courses, one run each.
 - Raw output: `benchmarks/results/live_check_2026-10-22_run2_qwen3.5-4b.json`.
 
 **Implications:** (1) the scenario 5 trap is defused by retrieval + matcher on this run, so the demo should force/show the CS330 candidate to exercise the reviewer's challenge; (2) free-text ids in objections are not validated, only the structured `excerpt_ids`; (3) 6 courses is roughly 3-4 minutes per full pass, inside the 10-minute live budget.
+
+## 2026-10-22 Model comparison, same six fixture subjects, prompts matching_v3/reviewer_v3 (`benchmarks/model_eval.py`, 1 run each)
+Rubric: 2 = intended outcome, 1 = acceptable fallback, 0 = wrong or failed; max 12. Single runs, directional only.
+
+| Model (Ollama, MLX runner) | Score | Time for 6 subjects | Notes |
+|---|---|---|---|
+| qwen3.5:4b | 8/12 | 363 s | All cases finished. Clear match reached "ready to accept". |
+| qwen3.5:9b | 5/12 | 1097 s | 2 crashes (Ollama: "qwen3.5 tool call parsing failed: XML syntax error", HTTP 500, one hung ~13 min). 14 GB resident. Slower per call. |
+
+Conclusion so far: on Ollama's MLX runner the 9B is slower and less reliable than the 4B, so the 4B stays the default.
+Next: LM Studio provider is written (`providers/openai_compat.py`) but untested live; try the same Qwen weights there and another tool-capable model.
+Raw results: `benchmarks/results/model_eval_2026-10-22_*.json`.

@@ -7,7 +7,7 @@ from .case_file import CaseFile
 from .loop import AgentOutcome, run_bounded_agent
 from .tools.base import ToolContext, ToolRegistry
 
-PROMPT_VERSION = "matching_v2"
+PROMPT_VERSION = "matching_v3"
 PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
 
 
@@ -40,14 +40,7 @@ async def run_matching(provider: LLMProvider, registry: ToolRegistry, ctx: ToolC
     outcome = await run_bounded_agent(provider, registry, ctx, system=PROMPT, user=user, final_model=MatchOutput,
                                       max_tool_rounds=max_rounds, stage="matching_revision" if objections else "matching")
     res = MatchResult("NEEDS_HUMAN_REVIEW", flags=list(outcome.flags), agent=outcome, case=ctx.case)
-    if outcome.status != "OK" or outcome.output is None:
-        res.flags.append(outcome.error or "AGENT_FAILED")
-        return res
-    out: MatchOutput = outcome.output
-    res.output, res.status = out, out.recommendation
-
-    # Referee checks (code). The agent investigates; these keep the record honest.
-    if not sc.syllabus_doc_id:
+    if not sc.syllabus_doc_id:  # referee: no evidence on file means no suggestion, whatever the agent did
         if not any(r["course_id"] == sc.id for r in repo.syllabus_requests):
             req = {"course_id": sc.id, "missing_fields": ["syllabus"], "status": "DRAFT_IN_APP"}
             repo.syllabus_requests.append(req)
@@ -55,7 +48,13 @@ async def run_matching(provider: LLMProvider, registry: ToolRegistry, ctx: ToolC
         res.flags.append("NO_SOURCE_SYLLABUS")
         res.status = "NEEDS_SYLLABUS"
         return res
+    if outcome.status != "OK" or outcome.output is None:
+        res.flags.append(outcome.error or "AGENT_FAILED")
+        return res
+    out: MatchOutput = outcome.output
+    res.output, res.status = out, out.recommendation
 
+    # Referee checks (code). The agent investigates; these keep the record honest.
     if out.recommendation == "POTENTIAL_GENERAL_ELECTIVE":
         out.target_course_id, out.supported_outcomes = None, []  # a flag only
         res.flags.append("GENERAL_ELECTIVE_FLAG_FOR_HUMAN")

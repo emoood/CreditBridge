@@ -1,0 +1,95 @@
+{
+ "model": "qwen3.5:4b",
+ "think": "false",
+ "date": "2026-10-22",
+ "prompt": "matching_v3/reviewer_v3",
+ "runs": [
+  {
+   "run": 1,
+   "total": 8,
+   "secs": 363,
+   "rows": [
+    {
+     "course": "COMP101",
+     "points": 2,
+     "why": "ok",
+     "triage": "READY_TO_ACCEPT",
+     "match": "POTENTIAL_MATCH",
+     "claimed": "CS101",
+     "review": "SUPPORTED_FOR_HUMAN_REVIEW",
+     "revised": false,
+     "calls": 13,
+     "secs": 40.2,
+     "flags": []
+    },
+    {
+     "course": "STAT210",
+     "points": 1,
+     "why": "flag/other: NO_DEFENSIBLE_MATCH",
+     "triage": "NEEDS_ATTENTION",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "STA201",
+     "review": null,
+     "revised": true,
+     "calls": 24,
+     "secs": 103.1,
+     "flags": []
+    },
+    {
+     "course": "COMP220",
+     "points": 1,
+     "why": "claimed CS310, not blocked (withdrawn)",
+     "triage": "NEEDS_ATTENTION",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "CS310",
+     "review": null,
+     "revised": true,
+     "calls": 24,
+     "secs": 88.3,
+     "flags": []
+    },
+    {
+     "course": "SENG490",
+     "points": 1,
+     "why": "no match (acceptable, rule not shown)",
+     "triage": "NO_MATCH",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "None",
+     "review": null,
+     "revised": false,
+     "calls": 8,
+     "secs": 24.4,
+     "flags": []
+    },
+    {
+     "course": "INFS230",
+     "points": 1,
+     "why": "no unsafe claim (NO_DEFENSIBLE_MATCH)",
+     "triage": "NEEDS_ATTENTION",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "CS340",
+     "review": null,
+     "revised": true,
+     "calls": 25,
+     "secs": 83.1,
+     "flags": []
+    },
+    {
+     "course": "ENGL101",
+     "points": 2,
+     "why": "ok",
+     "triage": "NEEDS_EVIDENCE",
+     "match": "NEEDS_SYLLABUS",
+     "claimed": null,
+     "review": null,
+     "revised": false,
+     "calls": 12,
+     "secs": 23.7,
+     "flags": [
+      "FORCED_FINAL_NUDGE"
+     ]
+    }
+   ]
+  }
+ ]
+}

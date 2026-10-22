@@ -11,10 +11,10 @@ class OllamaProvider:
     so agents finish via a submit_result tool call instead."""
 
     def __init__(self, base_url: str, model: str, route: str, context: int = 8192,
-                 temperature: float = 0.0, timeout: float = 120):
+                 temperature: float = 0.0, timeout: float = 120, think: bool | str | None = False):
         self.base_url, self.model, self.route = base_url.rstrip("/"), model, route
         self.name = f"ollama:{route}"
-        self.context, self.temperature, self.timeout = context, temperature, timeout
+        self.context, self.temperature, self.timeout, self.think = context, temperature, timeout, think
 
     async def health(self) -> ProviderHealth:
         try:
@@ -30,8 +30,10 @@ class OllamaProvider:
                               size_mb=round(loaded["size"] / 1e6) if loaded else None)
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
-        body = {"model": self.model, "messages": request.messages, "stream": False, "think": False,
+        body = {"model": self.model, "messages": request.messages, "stream": False,
                 "options": {"temperature": self.temperature, "num_ctx": self.context}}
+        if self.think is not None:  # None = omit (models without a thinking switch)
+            body["think"] = self.think
         if request.tools:
             body["tools"] = request.tools
         t0 = time.time()

@@ -34,6 +34,7 @@ class CaseResult:
     model: str = ""
     prompt_versions: dict[str, str] = field(default_factory=lambda: {"matching": MATCH_PROMPT, "review": REVIEW_PROMPT})
     flags: list[str] = field(default_factory=list)
+    original_claim: dict[str, Any] | None = None  # set when the matcher withdrew after a reviewer challenge
 
     def summary(self) -> dict[str, Any]:
         m = self.match.output
@@ -57,6 +58,7 @@ async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetr
     rules: list[pr.RuleResult] = []
     review: ReviewResult | None = None
     revised = contested = False
+    first_claim: dict[str, Any] | None = None
     flags = list(match.flags)
 
     if match.status == "POTENTIAL_MATCH" and match.output:
@@ -68,6 +70,9 @@ async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetr
         if review.status == "CHALLENGED" and review.output:  # one bounded revision round
             events.emit("stage", stage="revision", course=source_code)
             prior = match.output
+            first_claim = {"target_course_id": prior.target_course_id, "evidence_strength": prior.evidence_strength,
+                           "supported_outcomes": [o.model_dump() for o in prior.supported_outcomes],
+                           "objections": [o.text for o in review.output.objections]}
             objections = [o.text for o in review.output.objections] or ["The reviewer challenged this match."]
             revised_match = await run_matching(provider, registry, ctx("matcher"), matcher_rounds, objections, prior)
             calls += revised_match.agent.llm_calls if revised_match.agent else 0
@@ -89,8 +94,10 @@ async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetr
         subj = repo.sources[source_code].title
         declined = any(p["decision"] == "DECLINED" and p["target_course_id"] == match.output.target_course_id
                        for p in prec.search(subj))
+    withdrawn = bool(first_claim) and match.status != "POTENTIAL_MATCH"
     t = triage(match.status, match.output.evidence_strength if match.output else None,
-               review.status if review else "NOT_RUN", rules, contested, declined, match.flags)
+               review.status if review else "NOT_RUN", rules, contested, declined, match.flags, withdrawn)
     events.emit("stage", stage="case_done", course=source_code, triage=t.category)
     return CaseResult(source_code, match, review, rules, t, case, contested, revised, calls,
-                      getattr(provider, "name", ""), getattr(provider, "model", ""), flags=flags)
+                      getattr(provider, "name", ""), getattr(provider, "model", ""), flags=flags,
+                      original_claim=first_claim if withdrawn else None)

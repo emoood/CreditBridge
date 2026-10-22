@@ -5,6 +5,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+from .api.evaluation import router as evaluation_router
+from .api.intake import router as intake_router
 from .config import get_settings
 from .devlog import events
 from .providers.router import build_provider
@@ -12,6 +14,10 @@ from .providers.router import build_provider
 app = FastAPI(title="CreditBridge API (synthetic demo data)")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
                    allow_methods=["*"], allow_headers=["*"])
+
+
+app.include_router(intake_router)
+app.include_router(evaluation_router)
 
 
 @app.get("/api/v1/health")

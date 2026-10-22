@@ -1,0 +1,81 @@
+{
+ "model": "qwen3.5:9b",
+ "think": "false",
+ "date": "2026-10-22",
+ "prompt": "matching_v3/reviewer_v3",
+ "runs": [
+  {
+   "run": 1,
+   "total": 5,
+   "secs": 1097,
+   "rows": [
+    {
+     "course": "COMP101",
+     "points": 1,
+     "why": "claimed CS101 but withdrawn/flagged",
+     "triage": "NEEDS_ATTENTION",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "CS101",
+     "review": null,
+     "revised": true,
+     "calls": 23,
+     "secs": 113.7,
+     "flags": []
+    },
+    {
+     "course": "STAT210",
+     "points": 0,
+     "why": "crash HTTPStatusError: Server error '500 Internal Server Error' for url 'http://127.0.0.1:11434/api/chat'\nFor more informat",
+     "secs": 792.3
+    },
+    {
+     "course": "COMP220",
+     "points": 0,
+     "why": "crash HTTPStatusError: Server error '500 Internal Server Error' for url 'http://127.0.0.1:11434/api/chat'\nFor more informat",
+     "secs": 38.0
+    },
+    {
+     "course": "SENG490",
+     "points": 1,
+     "why": "no match (acceptable, rule not shown)",
+     "triage": "NO_MATCH",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "CS450",
+     "review": null,
+     "revised": false,
+     "calls": 12,
+     "secs": 28.2,
+     "flags": [
+      "FORCED_FINAL_NUDGE"
+     ]
+    },
+    {
+     "course": "INFS230",
+     "points": 1,
+     "why": "no unsafe claim (NO_DEFENSIBLE_MATCH)",
+     "triage": "NEEDS_ATTENTION",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "CS340",
+     "review": null,
+     "revised": true,
+     "calls": 24,
+     "secs": 117.6,
+     "flags": []
+    },
+    {
+     "course": "ENGL101",
+     "points": 2,
+     "why": "ok",
+     "triage": "NEEDS_EVIDENCE",
+     "match": "NEEDS_SYLLABUS",
+     "claimed": null,
+     "review": null,
+     "revised": false,
+     "calls": 3,
+     "secs": 7.4,
+     "flags": []
+    }
+   ]
+  }
+ ]
+}

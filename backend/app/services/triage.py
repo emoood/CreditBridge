@@ -14,7 +14,11 @@ class Triage:
 
 
 def triage(match_status: str, evidence_strength: str | None, review_status: str, rules: list[RuleResult],
-           contested: bool, declined_precedent: bool, flags: list[str]) -> Triage:
+           contested: bool, declined_precedent: bool, flags: list[str],
+           withdrawn_after_challenge: bool = False) -> Triage:
+    if withdrawn_after_challenge and match_status in ("NO_DEFENSIBLE_MATCH", "NEEDS_MORE_EVIDENCE", "POTENTIAL_GENERAL_ELECTIVE"):
+        return Triage("NEEDS_ATTENTION", [("The matcher withdrew its first suggestion after the reviewer's objections. "
+                                           "Both views are shown for your judgment.")], 1)
     if match_status in ("NEEDS_SYLLABUS", "NEEDS_MORE_EVIDENCE"):
         return Triage("NEEDS_EVIDENCE", ["Evidence is missing or insufficient."] + flags[:3], 2)
     if match_status == "NO_DEFENSIBLE_MATCH":

@@ -24,6 +24,9 @@ def ctx(repo, code="COMP101", role="matcher"):
     return ToolContext(repo, CatalogRetriever(list(repo.targets.values())), role, code)
 
 
+READ = [ToolCall("r", "get_target_course", {"course_id": "CS101"})]  # the matcher must read a course before claiming it
+
+
 def submit(**kw):
     return [ToolCall("1", "submit_result", kw)]
 
@@ -35,16 +38,21 @@ def good_match(repo):
 
 
 async def test_happy_path_tool_round_then_submit(repo):
-    p = FakeLLMProvider([[ToolCall("a", "get_target_course", {"course_id": "CS101"})], submit(**good_match(repo))])
+    p = FakeLLMProvider([READ, submit(**good_match(repo))])
     r = await run_matching(p, REG, ctx(repo))
     assert r.status == "POTENTIAL_MATCH" and r.agent.llm_calls == 2
-    assert r.agent.tool_calls[0]["ok"] and "CS101" in [c.course_id for c in r.candidates]
+    assert r.agent.tool_calls[0]["ok"] and "CS101" in r.case.targets_read["matcher"]
+
+
+async def test_claiming_a_course_never_read_is_downgraded(repo):
+    r = await run_matching(FakeLLMProvider([submit(**good_match(repo))]), REG, ctx(repo))
+    assert r.status == "NEEDS_MORE_EVIDENCE" and "TARGET_NEVER_READ" in r.flags
 
 
 async def test_fabricated_citation_removed_and_match_downgraded(repo):
     bad = good_match(repo)
     bad["supported_outcomes"][0]["target_excerpt_id"] = "tgt-CS101-o99"
-    r = await run_matching(FakeLLMProvider([submit(**bad)]), REG, ctx(repo))
+    r = await run_matching(FakeLLMProvider([READ, submit(**bad)]), REG, ctx(repo))
     assert r.status == "NEEDS_MORE_EVIDENCE"
     assert "INVALID_CITATION_REMOVED:tgt-CS101-o99" in r.flags and "NO_VALID_CITATIONS" in r.flags
 
@@ -52,22 +60,29 @@ async def test_fabricated_citation_removed_and_match_downgraded(repo):
 async def test_citation_from_wrong_course_rejected(repo):
     bad = good_match(repo)
     bad["supported_outcomes"][0]["source_excerpt_id"] = repo.sources["COMP220"].excerpt_ids[0]
-    r = await run_matching(FakeLLMProvider([submit(**bad)]), REG, ctx(repo))
+    r = await run_matching(FakeLLMProvider([READ, submit(**bad)]), REG, ctx(repo))
     assert r.status == "NEEDS_MORE_EVIDENCE"
 
 
-async def test_missing_syllabus_makes_no_llm_call_and_creates_request(repo):
-    p = FakeLLMProvider([])
+async def test_missing_syllabus_is_forced_to_needs_syllabus_with_request(repo):
+    # even if the model claims a match, code overrides: no syllabus means no match
+    p = FakeLLMProvider([READ, submit(**good_match(repo))])
     r = await run_matching(p, REG, ctx(repo, "ENGL101"))
-    assert r.status == "NEEDS_SYLLABUS" and p.requests == []
+    assert r.status == "NEEDS_SYLLABUS" and "NO_SOURCE_SYLLABUS" in r.flags
     assert repo.syllabus_requests[0]["course_id"] == "ENGL101"
 
 
-async def test_target_outside_candidates_is_rejected(repo):
+async def test_unknown_subject_makes_no_llm_call(repo):
+    p = FakeLLMProvider([])
+    r = await run_matching(p, REG, ctx(repo, "NOPE999"))
+    assert r.status == "NEEDS_MORE_EVIDENCE" and "SUBJECT_NOT_FOUND" in r.flags and p.requests == []
+
+
+async def test_unknown_target_is_rejected(repo):
     m = good_match(repo)
-    m["target_course_id"] = "CS499"
+    m["target_course_id"] = "ZZ999"
     r = await run_matching(FakeLLMProvider([submit(**m)]), REG, ctx(repo))
-    assert r.status == "NEEDS_MORE_EVIDENCE" and "TARGET_NOT_IN_CANDIDATES" in r.flags
+    assert r.status == "NEEDS_MORE_EVIDENCE" and "UNKNOWN_TARGET" in r.flags
 
 
 async def test_unknown_tool_bad_args_and_scope_return_errors_not_crashes(repo):
@@ -94,7 +109,7 @@ async def test_search_top_k_capped_at_3(repo):
 
 
 async def test_tool_budget_then_forced_final_turn_with_submit_only(repo):
-    loop = [[ToolCall(str(i), "get_policy_summary", {})] for i in range(3)]
+    loop = [READ, *[[ToolCall(str(i), "get_policy_summary", {})] for i in range(2)]]
     p = FakeLLMProvider([*loop, submit(**good_match(repo))])
     r = await run_matching(p, REG, ctx(repo), max_rounds=3)
     assert r.status == "POTENTIAL_MATCH"
@@ -102,9 +117,17 @@ async def test_tool_budget_then_forced_final_turn_with_submit_only(repo):
 
 
 async def test_tool_use_after_budget_exhausted_fails_safely(repo):
-    p = FakeLLMProvider([[ToolCall("1", "get_policy_summary", {})], [ToolCall("2", "get_policy_summary", {})]])
+    tool = lambda i: [ToolCall(str(i), "get_policy_summary", {})]
+    p = FakeLLMProvider([tool(1), tool(2), tool(3), "no usable answer"])  # still wants tools; synthesis also fails
     r = await run_matching(p, REG, ctx(repo), max_rounds=1)
-    assert r.status == "NEEDS_HUMAN_REVIEW" and "TOOL_BUDGET_EXCEEDED" in r.flags
+    assert r.status == "NEEDS_HUMAN_REVIEW" and "TOOL_BUDGET_EXCEEDED" in r.flags and "FORCED_FINAL_NUDGE" in r.flags
+
+
+async def test_nudge_after_budget_lets_the_model_submit(repo):
+    tool = lambda i: [ToolCall(str(i), "get_policy_summary", {})]
+    p = FakeLLMProvider([READ, tool(2), submit(recommendation="NO_DEFENSIBLE_MATCH")])
+    r = await run_matching(p, REG, ctx(repo), max_rounds=1)
+    assert r.status == "NO_DEFENSIBLE_MATCH" and "FORCED_FINAL_NUDGE" in r.flags
 
 
 async def test_schema_violation_one_repair_then_fail(repo):
@@ -136,7 +159,7 @@ async def test_injection_text_is_only_tool_data(repo):
 
 async def test_reviewer_runs_only_on_potential_match_and_flags_bad_citations(repo):
     c = ctx(repo)
-    m = await run_matching(FakeLLMProvider([submit(**good_match(repo))]), REG, c)
+    m = await run_matching(FakeLLMProvider([READ, submit(**good_match(repo))]), REG, c)
     rules = pr.evaluate_course(pr.Policy.load(), pr.CourseFacts("A-", 100, None, True))
     p = FakeLLMProvider([submit(verdict="CHALLENGED", objections=[{"text": "x", "excerpt_ids": ["tgt-CS101-o1", "nope"]}])])
     rv = await run_review(p, REG, ctx(repo, role="reviewer"), m, rules)
@@ -155,3 +178,11 @@ async def test_general_elective_is_only_a_flag_and_skips_reviewer(repo):
     assert "GENERAL_ELECTIVE_FLAG_FOR_HUMAN" in m.flags
     rv = await run_review(FakeLLMProvider([]), REG, ctx(repo, role="reviewer"), m, [])
     assert rv.status == "NOT_RUN"
+
+
+async def test_synthesis_fallback_rescues_a_model_that_will_not_submit(repo):
+    tool = lambda i: [ToolCall(str(i), "get_policy_summary", {})]
+    p = FakeLLMProvider([READ, tool(2), tool(3), submit(recommendation="NO_DEFENSIBLE_MATCH")])
+    r = await run_matching(p, REG, ctx(repo), max_rounds=1)
+    assert r.status == "NO_DEFENSIBLE_MATCH" and "SYNTHESIS_FALLBACK" in r.flags
+    assert "Evidence you already gathered" in p.requests[-1].messages[1]["content"]

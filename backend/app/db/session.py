@@ -11,7 +11,7 @@ def get_engine():
     url = get_settings().database_url
     if not url:
         raise RuntimeError("DATABASE_URL is not set")
-    return create_engine(url, pool_pre_ping=True, pool_size=3, max_overflow=2)
+    return create_engine(url, pool_pre_ping=True, pool_size=3, max_overflow=2, connect_args={"connect_timeout": 10})
 
 
 def get_session() -> Session:

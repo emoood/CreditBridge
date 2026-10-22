@@ -18,6 +18,8 @@ class SourceCourse:
     grade: str
     syllabus_doc_id: str | None
     excerpt_ids: list[str] = field(default_factory=list)
+    title_ar: str = ""
+    term: str = ""
 
 
 class DemoRepo:
@@ -34,7 +36,7 @@ class DemoRepo:
         self.sources: dict[str, SourceCourse] = {}
         for t in truth:
             code = t["source_code"]
-            sc = SourceCourse(code, code, t["title"], t["credits"], t["grade"], None)
+            sc = SourceCourse(code, code, t["title"], t["credits"], t["grade"], None, title_ar=t.get("title_ar", ""), term=t.get("term", ""))
             pdf = fixtures / "syllabi" / f"{code}.pdf"
             if pdf.exists():
                 sc.syllabus_doc_id = f"src-doc-{code}"
@@ -44,3 +46,15 @@ class DemoRepo:
 
     def target_excerpts(self, code: str) -> list[Excerpt]:
         return self.store.for_document(self.targets[code]["document_id"])
+
+    def add_source(self, source_id: str, title: str, credits: str, grade: str, term: str, title_ar: str,
+                   outcomes: list[dict], document_id: str) -> SourceCourse:
+        """Register an uploaded-transcript subject whose evidence is the curriculum database (read-only)."""
+        sc = SourceCourse(source_id, source_id, title, credits, grade, None, title_ar=title_ar, term=term)
+        if outcomes:
+            sc.syllabus_doc_id = f"src-doc-{source_id}"
+            for n, o in enumerate(outcomes, 1):
+                ex = self.store.add(f"src-{source_id}-p{o['page']}-e{n}", sc.syllabus_doc_id, o["page"], o["text"])
+                sc.excerpt_ids.append(ex.id)
+        self.sources[source_id] = sc
+        return sc

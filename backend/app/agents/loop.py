@@ -39,6 +39,35 @@ def _try_content_json(content: str, model: type[BaseModel]) -> BaseModel | None:
 
 async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, *, system: str,
                             user: str, final_model: type[BaseModel], max_tool_rounds: int, stage: str) -> AgentOutcome:
+    """Investigate with tools; if the model cannot finish, one clean synthesis turn over a compact evidence summary."""
+    evidence: list[str] = []
+    out = await _loop(provider, registry, ctx, system, user, final_model, max_tool_rounds, stage, evidence)
+    if out.status == "OK" or not evidence:
+        return out
+    meta = {"course": ctx.source_course_id}
+    summary = "\n".join(evidence)[-7000:]
+    messages = [{"role": "system", "content": system},
+                {"role": "user", "content": f"{user}\n\nEvidence you already gathered (tool results):\n{summary}\n\n"
+                                            "Do not call any other tool. Call submit_result now with your best conclusion from this "
+                                            "evidence. Use NEEDS_MORE_EVIDENCE only if the evidence truly cannot support a conclusion."}]
+    out.llm_calls += 1
+    resp = await provider.complete(LLMRequest(messages, [_submit_tool(final_model)], stage + "_synthesis", meta))
+    sub = next((c for c in resp.tool_calls if c.name == SUBMIT), None)
+    try:
+        if sub:
+            out.output = final_model.model_validate(sub.arguments)
+        else:
+            out.output = _try_content_json(resp.content, final_model)
+    except ValidationError:
+        out.output = None
+    if out.output is not None:
+        out.status, out.error = "OK", None
+        out.flags.append("SYNTHESIS_FALLBACK")
+    return out
+
+
+async def _loop(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, system: str, user: str,
+                final_model: type[BaseModel], max_tool_rounds: int, stage: str, evidence: list[str]) -> AgentOutcome:
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}, {"role": "user", "content": user}]
     out = AgentOutcome("NEEDS_HUMAN_REVIEW")
     meta = {"course": ctx.source_course_id}
@@ -85,9 +114,16 @@ async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: 
             messages += [{"role": "assistant", "content": resp.content},
                          {"role": "user", "content": "Finish now by calling submit_result with the required fields."}]
             continue
-        if final_turn:  # tools requested after budget exhausted
-            out.error = "TOOL_BUDGET_EXCEEDED"
-            return out
+        if final_turn:  # budget exhausted but the model still wants tools: one firm nudge, then fail safely
+            if repaired:
+                out.error = "TOOL_BUDGET_EXCEEDED"
+                return out
+            repaired = True
+            out.flags.append("FORCED_FINAL_NUDGE")
+            messages += [{"role": "assistant", "content": resp.content or ""},
+                         {"role": "user", "content": "The tool budget is used up. Call submit_result NOW with your best conclusion "
+                                                      "from what you have already read. Use NEEDS_MORE_EVIDENCE if you are unsure."}]
+            continue
         if any(c.name != "add_case_note" for c in resp.tool_calls):  # note-taking is free; investigating is budgeted
             rounds += 1
         total_turns += 1
@@ -99,4 +135,6 @@ async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: 
         for c in resp.tool_calls:
             r = await registry.execute(c, ctx)
             out.tool_calls.append({"name": c.name, "arguments": c.arguments, "ok": r.ok})
+            if r.ok and c.name != "add_case_note":
+                evidence.append(f"[{c.name} {json.dumps(c.arguments, ensure_ascii=False)[:120]}] {r.to_message()[:1500]}")
             messages.append({"role": "tool", "tool_name": c.name, "content": r.to_message()})

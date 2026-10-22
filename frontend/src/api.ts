@@ -1,0 +1,62 @@
+// Typed client for the FastAPI backend. All data is synthetic demo data.
+export type Triage = 'READY_TO_ACCEPT' | 'NEEDS_ATTENTION' | 'CONTESTED' | 'BLOCKED_BY_RULE' | 'NEEDS_EVIDENCE' | 'POTENTIAL_GE' | 'NO_MATCH';
+export type Excerpt = { id: string; text: string };
+export type Course = { code: string; row_code: string; title: string; title_ar: string; credits: string; grade: string; term: string; has_syllabus: boolean; curriculum_subject: string | null; curriculum_qualification: string | null };
+export type Decision = { decision: 'ACCEPTED' | 'DECLINED' | 'MORE_INFORMATION_REQUESTED'; reason: string; actor: string; actor_role: string; at: string; idempotency_key: string };
+export type CaseResult = {
+  course: Course;
+  triage: { category: Triage; reasons: string[]; priority: number };
+  match: { status: string; target: { code: string; title: string; level: number; credits: number } | null; evidence_strength: string | null;
+    supported_outcomes: { subject: Excerpt; target: Excerpt; explanation: string }[]; missing_or_weaker_outcomes: string[]; concerns: string[];
+    response_to_objections: string | null; flags: string[] };
+  review: { status: string; flags: string[]; objections: { text: string; excerpts: Excerpt[] }[] } | null;
+  rules: { rule_id: string; status: string; reason: string; source_url: string }[];
+  staff_checklist: { rule_id: string; status: string; reason: string }[];
+  case_file: { queries: string[]; notes: { by: string; kind: string; text: string }[]; targets_read: Record<string, string[]>; precedents_seen: unknown[] };
+  revised: boolean; contested: boolean; llm_calls: number; provider: string; model: string; duration_s: number; is_replay: boolean;
+  syllabus_requests: { missing_fields: string[]; status: string }[];
+  original_claim: { target: { code: string; title: string; level: number; credits: number } | null; evidence_strength: string | null; objections: string[];
+    supported_outcomes: { subject: Excerpt; target: Excerpt; explanation: string }[] } | null;
+  decision: Decision | null; version: number;
+};
+export type Job = { id: string; status: 'QUEUED' | 'RUNNING' | 'DONE'; courses: Record<string, string>; errors: Record<string, string>; route: string; model: string;
+  llm_calls: number; activity: { ts: number; kind: string; course?: string; tool?: string; stage?: string; role?: string; ok?: boolean; duration_s?: number }[] };
+export type Subject = { id: string; name: string; code: string; qualification: string };
+export type Candidate = Subject & { score: number };
+export type Row = { id: string; code: string; title: string; title_ar: string; credits: string; grade: string; term: string; page: number; evidence_ref: string;
+  uncertain_fields: string[]; subject: Subject | null; candidates: Candidate[]; included: boolean; corrected: boolean; auto_linked?: boolean };
+export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; program: string; institution: string; courses: number; status: string; decided: number; catalog: string;
+  created_at: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null;
+  extraction?: { method: string; page_count: number; warnings: string[]; unparsed_lines: { page: number; text: string }[]; rows_found: number };
+  curriculum?: { available: boolean; error: string | null } };
+export type DevEvent = Record<string, any> & { id: number; ts: number; kind: string };
+
+const ROLE_HEADERS = (role: string) => ({ 'content-type': 'application/json', 'X-Role': role, 'X-Actor': role === 'admissions' ? 'Admissions officer' : role });
+async function j<T>(r: Response): Promise<T> {
+  if (!r.ok) { let m = r.statusText; try { m = (await r.json()).detail ?? m; } catch { /* ignore */ } throw new Error(String(m)); }
+  return r.json();
+}
+export const api = {
+  applications: () => fetch('/api/v1/applications').then(j<AppInfo[]>),
+  application: (id: string) => fetch(`/api/v1/applications/${id}`).then(j<AppInfo>),
+  upload: (file: File, label: string, qualification: string) => { const f = new FormData(); f.append('file', file); f.append('student_label', label); f.append('qualification', qualification);
+    return fetch('/api/v1/applications', { method: 'POST', body: f, headers: { 'X-Role': 'admissions' } }).then(j<AppInfo>); },
+  patchRow: (id: string, row: string, body: Record<string, unknown>) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<Row>),
+  addRow: (id: string) => fetch(`/api/v1/applications/${id}/rows`, { method: 'POST' }).then(j<Row>),
+  deleteRow: (id: string, row: string) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'DELETE' }).then(j<{ deleted: boolean }>),
+  link: (id: string, qualification: string | null, relink: boolean) => fetch(`/api/v1/applications/${id}/link`, { method: 'POST', headers: ROLE_HEADERS('admissions'), body: JSON.stringify({ qualification, relink }) }).then(j<AppInfo>),
+  previewUrl: (id: string, page: number) => `/api/v1/applications/${id}/preview/${page}`,
+  qualifications: () => fetch('/api/v1/curriculum/qualifications').then(j<{ qualifications: string[]; available: boolean; error: string | null }>),
+  subjects: (q: string, qualification: string) => fetch(`/api/v1/curriculum/subjects?q=${encodeURIComponent(q)}&qualification=${encodeURIComponent(qualification)}&limit=15`.replace('&qualification=&', '&')).then(j<Subject[]>),
+  results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null }>),
+  job: (id: string) => fetch(`/api/v1/jobs/${id}`).then(j<Job>),
+  evaluate: (id: string, role: string) => fetch(`/api/v1/applications/${id}/evaluate`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
+  decide: (id: string, course: string, role: string, decision: Decision['decision'], reason: string, version: number) =>
+    fetch(`/api/v1/applications/${id}/results/${course}/decision`, { method: 'POST', headers: ROLE_HEADERS(role),
+      body: JSON.stringify({ decision, reason, expected_version: version, idempotency_key: crypto.randomUUID() }) }).then(j<Decision>),
+  runtime: () => fetch('/api/v1/config/runtime').then(j<{ route: string; model: string; last_latency_s: number | null }>),
+  health: () => fetch('/api/v1/health').then(j<{ provider: { ok: boolean; name: string; model: string; detail: string } }>),
+  devModel: () => fetch('/api/v1/dev/model').then(j<{ ok: boolean; provider: string; model: string; detail: string; loaded: boolean | null; size_mb: number | null }>),
+  devEvents: () => fetch('/api/v1/dev/events?limit=300').then(j<DevEvent[]>),
+  reset: () => fetch('/api/v1/dev/reset', { method: 'POST' }).then(j<{ reset: boolean }>),
+};
