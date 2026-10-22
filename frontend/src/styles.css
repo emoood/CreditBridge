@@ -33,3 +33,4 @@
 .verify-actions{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
 @media(max-width:900px){.verify-grid{grid-template-columns:1fr}}
 .withdrawn{background:#fff9ec;border:1px solid #f0dca6;border-radius:10px;padding:12px 14px}
+.unrec{color:#9c2f28;font-size:11.5px;font-weight:700}.rowflag{display:block;color:#9a6a00;font-size:10.5px;margin-top:3px}.vtable td.num{color:#5b6d88;font-size:12px}

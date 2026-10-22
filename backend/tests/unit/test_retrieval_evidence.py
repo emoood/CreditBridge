@@ -43,3 +43,14 @@ def test_retriever_caps_top_k_and_finds_intended_targets():
         got = [c.course_id for c in r.search(q)]
         for must in sc["retrieval_must_include_top3"]:
             assert must in got, (sc["scenario"], got)
+
+
+def test_school_subject_ranking_prefers_the_introductory_course_with_matching_title():
+    cat = [{"code": "PSYC 210", "title": "ABNORMAL PSYCHOLOGY", "level": 200, "description": "psychology theories psychological",
+            "outcomes": []},
+           {"code": "PSYC 201", "title": "GENERAL PSYCHOLOGY", "level": 200, "description": "psychology theories psychological", "outcomes": []},
+           {"code": "PSYC 450", "title": "ADVANCED PSYCHOLOGY SEMINAR", "level": 400, "description": "psychological theories disorders", "outcomes": []}]
+    r = CatalogRetriever(cat)
+    plain = [c.course_id for c in r.search("psychology disorders theories psychological")]
+    boosted = [c.course_id for c in r.search("psychology disorders theories psychological", subject_title="AP Psychology")]
+    assert plain[0] == "PSYC 210" and boosted[0] == "PSYC 201"  # a tie on content: the school-subject boost prefers the general intro course

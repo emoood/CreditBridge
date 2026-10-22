@@ -7,7 +7,7 @@ from .case_file import CaseFile
 from .loop import AgentOutcome, run_bounded_agent
 from .tools.base import ToolContext, ToolRegistry
 
-PROMPT_VERSION = "matching_v3"
+PROMPT_VERSION = "matching_v4"
 PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
 
 
@@ -29,7 +29,16 @@ async def run_matching(provider: LLMProvider, registry: ToolRegistry, ctx: ToolC
         return MatchResult("NEEDS_MORE_EVIDENCE", flags=["SUBJECT_NOT_FOUND"], case=ctx.case)
     ctx.case.subject = {"id": sc.id, "title": sc.title, "credits": sc.credits}
 
-    user = f"Subject to evaluate: {sc.id} - {sc.title} ({sc.credits} credits). Investigate and submit your result."
+    hint = ""
+    if sc.excerpt_ids:  # code pre-retrieves likely candidates so the agent does not burn its tool budget searching
+        query = sc.title + " " + " ".join(repo.store.get(i).text for i in sc.excerpt_ids)
+        cands = ctx.retriever.search(query, subject_title=sc.title)
+        if cands:
+            hint = ("\nCatalog search suggests these candidates (retrieval relevance only, NOT equivalence; you may search further):\n"
+                    + "\n".join(f"- {c.course_id}: {repo.targets[c.course_id]['title']} (relevance {c.score})" for c in cands))
+            for c in cands:
+                ctx.case.search_hits[c.course_id] = c.score
+    user = f"Subject to evaluate: {sc.id} - {sc.title}. Investigate and submit your result.{hint}"
     if objections:
         user += ("\n\nREVISION ROUND. You previously claimed: "
                  f"{prior.recommendation if prior else '?'} -> {prior.target_course_id if prior else None}. "

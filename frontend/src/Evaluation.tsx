@@ -9,12 +9,18 @@ const TRIAGE: Record<Triage, { label: string; tone: string }> = {
 const RULE_TONE: Record<string, string> = { PASS: 'green', FAIL: 'red', NEEDS_REVIEW: 'amber', NEEDS_HUMAN_VERIFICATION: 'amber', NOT_APPLICABLE: 'neutral' };
 const Pill = ({ tone, children }: { tone: string; children: React.ReactNode }) => <span className={`status status-${tone}`}><span className="status-dot" />{children}</span>;
 
+const BUSY = ['READING', 'CONFIRMED', 'EVALUATION_IN_PROGRESS'];
+const STATUS_LABEL: Record<string, string> = { READY_FOR_EVALUATION: 'ready for evaluation', READING: 'reading transcript', EXTRACTION_REVIEW_REQUIRED: 'verify extraction',
+  CONFIRMED: 'confirmed, queued', EVALUATION_IN_PROGRESS: 'evaluating', REVIEW_READY: 'review ready', EVALUATION_PARTIAL: 'partly evaluated', DECISIONS_RECORDED: 'decisions recorded' };
+
 export default function Evaluation() {
   const [apps, setApps] = useState<AppInfo[]>([]);
   const [appId, setAppId] = useState('DEMO-001');
   const [app, setApp] = useState<AppInfo | null>(null);
   const [results, setResults] = useState<CaseResult[]>([]);
-  const [job, setJob] = useState<Job | null>(null);
+  const [pending, setPending] = useState<{ key: string; status: string; error_code: string }[]>([]);
+  const [readJob, setReadJob] = useState<Job | null>(null);
+  const [evalJob, setEvalJob] = useState<Job | null>(null);
   const [role, setRole] = useState('admissions');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -26,17 +32,16 @@ export default function Evaluation() {
   const refresh = useCallback(async () => {
     try {
       const [list, a, r] = await Promise.all([api.applications(), api.application(appId), api.results(appId)]);
-      setApps(list); setApp(a); setResults(r.results);
-      setJob(r.job ? await api.job(r.job.id) : null);
+      setApps(list); setApp(a); setResults(r.results); setPending(r.pending_units ?? []);
+      setReadJob(a.reading_job_id ? await api.job(a.reading_job_id) : null);
+      setEvalJob(a.evaluation_job_id ? await api.job(a.evaluation_job_id) : null);
       setError(null);
-    } catch (e) { setError(`Cannot reach the backend (${(e as Error).message}). Start it with: uvicorn backend.app.main:app --port 8000`); }
+    } catch (e) { setError(`Cannot reach the backend (${(e as Error).message}). Start it with: scripts/start.sh`); }
   }, [appId]);
-  useEffect(() => { setResults([]); setJob(null); refresh(); }, [refresh]);
+  useEffect(() => { setResults([]); setReadJob(null); setEvalJob(null); refresh(); }, [refresh]);
   useEffect(() => { api.qualifications().then(q => setQuals(q.qualifications)).catch(() => undefined); }, []);
-  useEffect(() => { // poll while an evaluation runs
-    if (!job || job.status === 'DONE') return;
-    const t = setInterval(refresh, 1500); return () => clearInterval(t);
-  }, [job, refresh]);
+  const active = !!app && (BUSY.includes(app.status) || [readJob, evalJob].some(j => j && (j.status === 'QUEUED' || j.status === 'RUNNING')));
+  useEffect(() => { if (!active) return; const t = setInterval(refresh, 1500); return () => clearInterval(t); }, [active, refresh]);
 
   async function upload(f: File | undefined) {
     if (!f) return;
@@ -44,42 +49,43 @@ export default function Evaluation() {
     try { const a = await api.upload(f, '', qual); setAppId(a.id); } catch (e) { setError((e as Error).message); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
   }
-  async function start() {
-    setBusy(true);
-    try { await api.evaluate(appId, role); setResults([]); await refresh(); }
-    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
-  }
-  const running = job?.status === 'RUNNING' || job?.status === 'QUEUED';
-  const counts = results.reduce<Record<string, number>>((m, r) => ({ ...m, [r.triage.category]: (m[r.triage.category] ?? 0) + 1 }), {});
+  async function act(f: () => Promise<unknown>) { setBusy(true); try { await f(); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
   const isUpload = app?.kind === 'upload';
+  const reviewing = app?.status === 'EXTRACTION_REVIEW_REQUIRED';
+  const interrupted = [readJob, evalJob].find(j => j && (j.status === 'INTERRUPTED' || j.status === 'FAILED'));
+  const counts = results.reduce<Record<string, number>>((m, r) => ({ ...m, [r.triage.category]: (m[r.triage.category] ?? 0) + 1 }), {});
+  const job = evalJob ?? readJob;
 
   return <div className="eval">
     {error && <div className="eval-error"><AlertCircle size={17} /> {error}</div>}
     <section className="panel eval-head">
       <div><div className="section-overline">APPLICATION</div>
         <select className="app-select" aria-label="Select application" value={appId} onChange={e => setAppId(e.target.value)}>
-          {apps.map(a => <option key={a.id} value={a.id}>{a.kind === 'demo' ? 'Demo fixtures (synthetic)' : `Uploaded transcript ${a.id}`} · {a.status.replace(/_/g, ' ').toLowerCase()}</option>)}</select>
+          {apps.map(a => <option key={a.id} value={a.id}>{a.kind === 'demo' ? 'Demo fixtures (synthetic)' : `Uploaded transcript ${a.id}`} · {STATUS_LABEL[a.status] ?? a.status.toLowerCase()}</option>)}</select>
         <p>{app?.program || (isUpload ? 'Uploaded transcript' : '')}{app?.institution ? ` · ${app.institution}` : ''} · {app?.courses ?? 0} subjects</p>
         <p className="muted">AUD course catalog: {app?.catalog}</p></div>
       <div className="eval-actions">
         <label className="role-pick">Curriculum hint <select value={qual} onChange={e => setQual(e.target.value)}><option value="">Detect from transcript</option>{quals.map(q => <option key={q}>{q}</option>)}</select></label>
         <input ref={fileRef} type="file" accept=".pdf,.png,.jpg,.jpeg" hidden onChange={e => upload(e.target.files?.[0])} />
-        <button className="secondary-button" onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? <Loader2 size={16} className="spin" /> : <UploadCloud size={16} />} {uploading ? 'Reading transcript…' : 'Upload transcript'}</button>
+        <button className="secondary-button" onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? <Loader2 size={16} className="spin" /> : <UploadCloud size={16} />} {uploading ? 'Uploading…' : 'Upload transcript'}</button>
         <label className="role-pick">Acting as <select value={role} onChange={e => setRole(e.target.value)}><option value="admissions">Admissions officer</option><option value="registrar">Registrar (cannot decide)</option></select></label>
-        <button className="primary-button" onClick={start} disabled={busy || running || !app?.courses}>{running ? <Loader2 size={17} className="spin" /> : <Play size={17} />} {running ? 'Evaluating…' : results.length ? 'Re-run evaluation' : 'Run AI evaluation'}</button>
+        {!isUpload && <button className="primary-button" onClick={() => act(() => api.evaluate(appId, role))} disabled={busy || active}>{active ? <Loader2 size={17} className="spin" /> : <Play size={17} />} {active ? 'Evaluating…' : results.length ? 'Re-run evaluation' : 'Run AI evaluation'}</button>}
+        {isUpload && reviewing && <button className="primary-button" onClick={() => act(() => api.confirm(appId, role))} disabled={busy || !app?.courses}><Check size={17} /> Confirm extraction and start evaluation</button>}
+        {isUpload && app?.confirmed && !active && app.status !== 'EXTRACTION_REVIEW_REQUIRED' && <button className="secondary-button" onClick={() => act(() => api.evaluate(appId, role))} disabled={busy}>Re-run evaluation</button>}
       </div>
     </section>
 
-    {isUpload && app && <Verify app={app} quals={quals} qual={qual} locked={running} onChanged={refresh} collapsed={results.length > 0} />}
+    {interrupted && <div className="eval-warn"><AlertCircle size={15} /> The {interrupted.phase === 'READING' ? 'reading' : 'evaluation'} job was {interrupted.status.toLowerCase()}. Finished work is kept.
+      <button className="link-btn" onClick={() => act(() => api.resume(interrupted.id, role))}>Resume from the last finished unit</button></div>}
 
-    {job && <section className="panel progress-panel">
-      <div className="panel-header"><div><div className="section-overline">AI PROGRESS</div><h2>{job.status === 'DONE' ? 'Evaluation complete' : 'Agents are working'}</h2></div>
-        <span className="muted">{job.route} · {job.model} · {job.llm_calls} model calls</span></div>
-      <div className="course-chips">{Object.entries(job.courses).map(([c, s]) => <span key={c} className={`chip chip-${s.toLowerCase()}`}>{s === 'DONE' ? <Check size={13} /> : s === 'RUNNING' ? <CircleDot size={13} /> : null} {c}</span>)}</div>
-      {running && <ul className="activity">{[...job.activity].reverse().slice(0, 7).map((a, i) => <li key={i}>
-        <span className="muted">{a.course ?? ''}</span> {a.kind === 'tool_call' ? <>{a.role} used <strong>{a.tool}</strong> {a.ok ? '✓' : '✗'}</> : a.kind === 'stage' ? <>stage: <strong>{a.stage}</strong></> : a.kind === 'llm_call' ? <>model call <span className="muted">{a.duration_s}s</span></> : 'error'}</li>)}</ul>}
-      {Object.keys(job.errors).length > 0 && <div className="eval-error"><AlertCircle size={16} /> {Object.entries(job.errors).map(([c, m]) => `${c}: ${m}`).join(' · ')} (retryable)</div>}
-    </section>}
+    {app?.status === 'READING' && readJob && <JobPanel job={readJob} title="Reading the transcript" note="A vision model reads one block at a time, then code cross-checks marks, grades, points, credits and GPA." />}
+
+    {isUpload && app && !['READING'].includes(app.status) && (app.rows?.length || reviewing) ? <Verify app={app} quals={quals} qual={qual} locked={!reviewing || busy} onChanged={refresh} collapsed={!reviewing} /> : null}
+
+    {(app?.status === 'CONFIRMED' || evalJob) && evalJob && <JobPanel job={evalJob} title={evalJob.status === 'DONE' ? 'Evaluation complete' : 'Agents are working'} note="Results appear below as each subject finishes." />}
+
+    {app?.status === 'EVALUATION_PARTIAL' && pending.length > 0 && <div className="eval-warn"><AlertCircle size={15} /> {pending.length} subject(s) did not finish ({pending.map(p => `${p.key}: ${p.error_code || p.status}`).join(', ')}). All other results are saved.
+      {evalJob && <button className="link-btn" onClick={() => act(() => api.resume(evalJob.id, role))}>Retry the unfinished subjects</button>}</div>}
 
     {results.length > 0 && <>
       <div className="triage-bar">{(Object.keys(TRIAGE) as Triage[]).filter(t => counts[t]).map(t => <Pill key={t} tone={TRIAGE[t].tone}>{counts[t]} {TRIAGE[t].label}</Pill>)}
@@ -88,6 +94,20 @@ export default function Evaluation() {
     </>}
     {!results.length && !job && !error && !isUpload && <section className="panel placeholder-panel"><div className="placeholder-icon"><Sparkles size={26} /></div><h2>No evaluation yet</h2><p>Run the AI evaluation on the demo fixtures, or upload a transcript to try your own.</p></section>}
   </div>;
+}
+
+function JobPanel({ job, title, note }: { job: Job; title: string; note: string }) {
+  const running = job.status === 'RUNNING' || job.status === 'QUEUED';
+  const units = (job.units ?? []).filter(u => ['read', 'evaluate'].includes(u.stage));
+  return <section className="panel progress-panel">
+    <div className="panel-header"><div><div className="section-overline">{job.phase === 'READING' ? 'PHASE 1 · READING' : 'PHASE 2 · EVALUATION'}</div><h2>{title}</h2></div>
+      <span className="muted">{job.status === 'QUEUED' ? 'waiting in the queue · ' : ''}{job.stage ? `stage ${job.stage} · ` : ''}{job.route} · {job.model} · {job.llm_calls} model calls{job.timings?.total_secs != null ? ` · ${job.timings.total_secs}s` : ''}</span></div>
+    <p className="muted">{note}</p>
+    <div className="course-chips">{units.map(u => <span key={u.key} className={`chip chip-${u.status.toLowerCase()}`} title={u.error_code || u.method}>{u.status === 'DONE' ? <Check size={13} /> : u.status === 'RUNNING' ? <CircleDot size={13} /> : null} {u.key}{u.attempts > 1 ? ` ×${u.attempts}` : ''}</span>)}</div>
+    {running && <ul className="activity">{[...job.activity].reverse().slice(0, 6).map((a, i) => <li key={i}>
+      <span className="muted">{a.course ?? ''}</span> {a.kind === 'tool_call' ? <>{a.role} used <strong>{a.tool}</strong> {a.ok ? '✓' : '✗'}</> : a.kind === 'stage' ? <>stage: <strong>{a.stage}</strong></> : a.kind === 'llm_call' ? <>model call <span className="muted">{a.duration_s}s</span></> : 'error'}</li>)}</ul>}
+    {job.flags && job.flags.length > 0 && <p className="muted">Flags: {job.flags.join(', ')}</p>}
+  </section>;
 }
 
 function Verify({ app, quals, qual, locked, onChanged, collapsed }: { app: AppInfo; quals: string[]; qual: string; locked: boolean; onChanged: () => void; collapsed: boolean }) {
@@ -102,22 +122,23 @@ function Verify({ app, quals, qual, locked, onChanged, collapsed }: { app: AppIn
   const included = rows.filter(r => r.included).length;
   return <section className="panel verify">
     <button className="verify-head" onClick={() => setOpen(!open)} aria-expanded={open}>
-      <div><div className="section-overline">VERIFY EXTRACTION</div><h2>{included} subjects found · {linked} linked to the curriculum</h2></div>
-      <span className="muted">{ex?.method === 'ocr' ? 'Read with OCR — check every row' : 'Read from the PDF text'} {open ? '▲' : '▼'}</span></button>
+      <div><div className="section-overline">VERIFY EXTRACTION {app.confirmed ? '· CONFIRMED' : ''}</div><h2>{included} subjects found · {linked} linked to the curriculum{ex?.unrecognized ? ` · ${ex.unrecognized} unrecognized` : ''}</h2></div>
+      <span className="muted">{ex?.method === 'vision' ? 'Read by a vision model: check every row' : 'Read from the PDF text'} {open ? '▲' : '▼'}</span></button>
     {open && <>
-      {ex?.warnings.map((w, i) => <div className="eval-warn" key={i}><AlertCircle size={15} /> {w}</div>)}
+      {(ex?.failed_blocks ?? 0) > 0 && <div className="eval-warn"><AlertCircle size={15} /> {ex?.failed_blocks} block(s) could not be read. Add the missing subjects by hand or resume reading.</div>}
+      {ex?.flags && ex.flags.length > 0 && <div className="eval-warn"><AlertCircle size={15} /> Cross-check flags: {ex.flags.slice(0, 6).join(' · ')}{ex.flags.length > 6 ? ` (+${ex.flags.length - 6} more)` : ''}</div>}
       {app.curriculum && !app.curriculum.available && <div className="eval-error"><AlertCircle size={15} /> The curriculum database is unreachable ({app.curriculum.error}). Subjects cannot be linked.</div>}
       <div className="verify-grid">
         <div className="scan"><div className="scan-tabs">{Array.from({ length: app.document?.page_count ?? 1 }, (_, i) => <button key={i} className={page === i + 1 ? 'on' : ''} onClick={() => setPage(i + 1)}>Page {i + 1}</button>)}</div>
           <img src={api.previewUrl(app.id, page)} alt={`Transcript page ${page}`} /></div>
-        <div className="vtable-wrap"><table className="vtable"><thead><tr><th/><th>Code</th><th>Subject (as written)</th><th>Credits</th><th>Grade</th><th>Term</th><th>Curriculum subject</th><th/></tr></thead>
+        <div className="vtable-wrap"><table className="vtable"><thead><tr><th/><th>Code</th><th>Subject (as written)</th><th>Mark</th><th>Grade</th><th>Pts</th><th>Credits</th><th>Term</th><th>Curriculum subject</th><th/></tr></thead>
           <tbody>{rows.map(r => <VRow key={r.id} appId={app.id} r={r} quals={quals} qual={qual} locked={locked} wrap={wrap} />)}</tbody></table>
           {rows.length === 0 && <div className="empty-state">No subjects were recognised. Add rows manually.</div>}
-          <div className="verify-actions">
-            <button className="secondary-button" disabled={locked} onClick={() => wrap(() => api.addRow(app.id))}><Plus size={15} /> Add subject</button>
-            <button className="secondary-button" disabled={locked} onClick={() => wrap(() => api.link(app.id, qual || null, true))}>Re-run auto-link</button>
-            <span className="muted push">Amber fields were uncertain. Edits are saved as you leave a field and recorded in the audit log.</span></div>
-          {ex && ex.unparsed_lines.length > 0 && <details><summary>{ex.unparsed_lines.length} lines were not recognised as subjects</summary><ul>{ex.unparsed_lines.map((u, i) => <li key={i}>p{u.page}: {u.text}</li>)}</ul></details>}
+          {!locked && <div className="verify-actions">
+            <button className="secondary-button" onClick={() => wrap(() => api.addRow(app.id))}><Plus size={15} /> Add subject</button>
+            <button className="secondary-button" onClick={() => wrap(() => api.link(app.id, qual || null, true))}>Re-run auto-link</button>
+            <span className="muted push">Amber fields were uncertain. Edits are saved as you leave a field and recorded in the audit log.</span></div>}
+          {locked && app.confirmed && <p className="muted">Confirmed{app.corrections?.length ? ` with ${app.corrections.length} correction(s)` : ' without corrections'}. The table is now locked.</p>}
           {err && <div className="eval-error"><AlertCircle size={15} /> {err}</div>}</div>
       </div></>}
   </section>;
@@ -128,15 +149,16 @@ function VRow({ appId, r, quals, qual, locked, wrap }: { appId: string; r: Row; 
   const field = (k: 'code' | 'title' | 'credits' | 'grade' | 'term', w?: number) =>
     <input defaultValue={r[k]} disabled={locked} style={w ? { width: w } : undefined} className={r.uncertain_fields.includes(k) ? 'unsure' : ''}
       aria-label={k} onBlur={e => { if (e.target.value !== r[k]) wrap(() => api.patchRow(appId, r.id, { [k]: e.target.value })); }} />;
-  return <><tr className={r.included ? '' : 'off'}>
+  return <><tr className={r.included ? '' : 'off'} title={r.flags?.join('\n')}>
     <td><input type="checkbox" checked={r.included} disabled={locked} aria-label="Include" onChange={e => wrap(() => api.patchRow(appId, r.id, { included: e.target.checked }))} /></td>
     <td>{field('code', 70)}</td>
-    <td>{field('title')}{r.title_ar && <small dir="auto" className="ar">{r.title_ar}</small>}</td>
-    <td>{field('credits', 52)}</td><td>{field('grade', 52)}</td><td>{field('term', 90)}</td>
-    <td className="subj">{r.subject ? <span className="subj-chosen"><strong>{r.subject.name}</strong><small>{r.subject.qualification}{r.auto_linked ? ' · auto' : ''}</small></span> : <span className="muted">Not linked</span>}
+    <td>{field('title')}{r.title_ar && <small dir="auto" className="ar">{r.title_ar}</small>}{r.flags && r.flags.length > 0 && <small className="rowflag">⚠ {r.flags[0]}</small>}</td>
+    <td className="num">{r.mark ?? ''}</td>
+    <td>{field('grade', 52)}</td><td className="num">{r.points ?? ''}</td><td>{field('credits', 52)}</td><td>{field('term', 90)}</td>
+    <td className="subj">{r.subject ? <span className="subj-chosen"><strong>{r.subject.name}</strong><small>{r.subject.qualification}{r.auto_linked ? ' · auto' : ''}</small></span> : <span className="unrec">Unrecognized · needs syllabus</span>}
       <button className="link-btn" disabled={locked} onClick={() => setPicker(!picker)}>{r.subject ? 'Change' : 'Choose'}</button></td>
     <td><button className="icon-button" disabled={locked} aria-label="Remove row" onClick={() => wrap(() => api.deleteRow(appId, r.id))}><X size={15} /></button></td></tr>
-    {picker && <tr><td colSpan={8}><SubjectPicker r={r} quals={quals} qual={qual} onPick={id => { setPicker(false); wrap(() => api.patchRow(appId, r.id, { subject_id: id })); }} /></td></tr>}</>;
+    {picker && <tr><td colSpan={10}><SubjectPicker r={r} quals={quals} qual={qual} onPick={id => { setPicker(false); wrap(() => api.patchRow(appId, r.id, { subject_id: id })); }} /></td></tr>}</>;
 }
 
 function SubjectPicker({ r, quals, qual, onPick }: { r: Row; quals: string[]; qual: string; onPick: (id: string) => void }) {
@@ -169,7 +191,7 @@ function Reasoning({ r }: { r: CaseResult }) {
   const m = r.match;
   return <div className="reasoning">
     {m.supported_outcomes.length > 0 && <div className="block"><h4>Outcomes the evidence supports {m.evidence_strength && <span className="muted">· coverage {m.evidence_strength.toLowerCase()}</span>}</h4>
-      {m.supported_outcomes.map((o, i) => <div className="pair" key={i}><div><small>SUBJECT · {o.subject.id}</small><p>{o.subject.text}</p></div><div><small>AUD COURSE · {o.target.id}</small><p>{o.target.text}</p></div><div className="why">{o.explanation}</div></div>)}</div>}
+      {m.supported_outcomes.map((o, i) => <div className="pair" key={i}><div><small>SUBJECT · {o.subject.id}</small><p>{o.subject.text}</p></div><div><small>AUD COURSE · {o.target.id}</small><p>{o.target.text}</p></div><div className="why">{o.explanation}</div></div>)}{m.target?.basis === 'catalog description only' && <p className="muted">The AUD side of this comparison uses the catalog description only; the catalog publishes no learning outcomes.</p>}</div>}
     {m.missing_or_weaker_outcomes.length > 0 && <div className="block"><h4>Missing or weaker</h4><ul>{m.missing_or_weaker_outcomes.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
     {m.concerns.length > 0 && <div className="block"><h4>Concerns</h4><ul>{m.concerns.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
     {r.review && <div className="block"><h4>Independent review <Pill tone={r.review.status === 'SUPPORTED_FOR_HUMAN_REVIEW' ? 'green' : r.review.status === 'CHALLENGED' ? 'red' : 'amber'}>{r.review.status.replace(/_/g, ' ').toLowerCase()}</Pill></h4>
@@ -197,7 +219,7 @@ function DecisionBar({ appId, r, role, onChanged }: { appId: string; r: CaseResu
     setBusy(true); setErr(null);
     try { await api.decide(appId, r.course.code, role, d, reason, r.version); setReason(''); onChanged(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
-  if (r.decision) return <div className="decision done"><strong>{r.decision.decision.replace(/_/g, ' ').toLowerCase()}</strong> by {r.decision.actor} · {new Date(r.decision.at).toLocaleTimeString()}{r.decision.reason && <> — “{r.decision.reason}”</>}</div>;
+  if (r.decision) return <div className="decision done"><strong>{r.decision.decision.replace(/_/g, ' ').toLowerCase()}</strong> by {r.decision.actor} · {new Date(r.decision.at).toLocaleTimeString()}{r.decision.reason && <> — “{r.decision.reason}”</>}{r.decision.stale && <p className="muted">This decision answered an earlier suggestion; the subject was re-evaluated since. Please review again.</p>}</div>;
   return <div className="decision">
     <p className="muted">This is an AI suggestion, not a decision. Accept or decline it as the admissions officer.</p>
     <input placeholder="Reason (required to decline or request information)" value={reason} onChange={e => setReason(e.target.value)} />

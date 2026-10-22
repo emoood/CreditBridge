@@ -9,8 +9,10 @@ class Settings(BaseSettings):
     app_env: str = "development"
     demo_mode: bool = True
     dev_console: bool = True
-    database_url: str = ""
+    database_url: str = ""  # curriculum database (Supabase), read-only
+    app_database_url: str = "postgresql+psycopg:///creditbridge"  # this app's own state: local PostgreSQL, never Supabase
     document_root: str = "./data/documents"
+    catalog: str = "demo"  # demo (synthetic, used by fixtures/tests) | aud_2026_2027 (real AUD catalog, descriptions only)
 
     llm_default_route: str = "mac_dev"  # mac_dev | mac_quality | home_gpu | fixture_test
     llm_allow_fallback: bool = True
@@ -18,8 +20,13 @@ class Settings(BaseSettings):
     matcher_max_tool_rounds: int = 10
     reviewer_max_tool_rounds: int = 6
     llm_context_tokens: int = 8192
+    agent_protocol: str = "native"  # native (runtime tool calls) | json_action (constrained JSON actions parsed by our code)
     llm_temperature: float = 0.0
     llm_call_timeout_seconds: float = 120
+    ollama_keep_alive: str = "30m"  # keep the model loaded between calls
+    vision_dpi: int = 200
+    vision_reread_dpi: int = 300
+    vision_max_block_px: int = 560
 
     ollama_mac_url: str = "http://127.0.0.1:11434"
     ollama_mac_dev_model: str = "qwen3.5:4b"

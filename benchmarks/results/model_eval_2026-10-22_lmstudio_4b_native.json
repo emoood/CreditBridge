@@ -1,0 +1,93 @@
+{
+ "model": "qwen/qwen3.5-4b:2",
+ "think": "false",
+ "date": "2026-10-22",
+ "prompt": "matching_v3/reviewer_v3",
+ "runs": [
+  {
+   "run": 1,
+   "total": 7,
+   "secs": 665,
+   "rows": [
+    {
+     "course": "COMP101",
+     "points": 1,
+     "why": "claimed CS101 but withdrawn/flagged",
+     "triage": "NEEDS_ATTENTION",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "CS101",
+     "review": null,
+     "revised": true,
+     "calls": 15,
+     "secs": 108.3,
+     "flags": []
+    },
+    {
+     "course": "STAT210",
+     "points": 1,
+     "why": "flag/other: NO_DEFENSIBLE_MATCH",
+     "triage": "NEEDS_ATTENTION",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "STA201",
+     "review": null,
+     "revised": true,
+     "calls": 17,
+     "secs": 178.3,
+     "flags": []
+    },
+    {
+     "course": "COMP220",
+     "points": 1,
+     "why": "claimed CS310, not blocked (withdrawn)",
+     "triage": "NEEDS_ATTENTION",
+     "match": "POTENTIAL_GENERAL_ELECTIVE",
+     "claimed": "CS310",
+     "review": null,
+     "revised": true,
+     "calls": 18,
+     "secs": 99.4,
+     "flags": []
+    },
+    {
+     "course": "SENG490",
+     "points": 1,
+     "why": "no match (acceptable, rule not shown)",
+     "triage": "NO_MATCH",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "CS450",
+     "review": null,
+     "revised": false,
+     "calls": 10,
+     "secs": 53.6,
+     "flags": []
+    },
+    {
+     "course": "INFS230",
+     "points": 1,
+     "why": "no unsafe claim (NO_DEFENSIBLE_MATCH)",
+     "triage": "NEEDS_ATTENTION",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "null",
+     "review": null,
+     "revised": true,
+     "calls": 21,
+     "secs": 190.9,
+     "flags": []
+    },
+    {
+     "course": "ENGL101",
+     "points": 2,
+     "why": "ok",
+     "triage": "NEEDS_EVIDENCE",
+     "match": "NEEDS_SYLLABUS",
+     "claimed": null,
+     "review": null,
+     "revised": false,
+     "calls": 8,
+     "secs": 34.5,
+     "flags": []
+    }
+   ]
+  }
+ ]
+}

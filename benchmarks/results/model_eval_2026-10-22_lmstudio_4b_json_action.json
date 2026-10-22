@@ -1,0 +1,95 @@
+{
+ "model": "qwen/qwen3.5-4b:2",
+ "think": "false",
+ "date": "2026-10-22",
+ "prompt": "matching_v3/reviewer_v3",
+ "runs": [
+  {
+   "run": 1,
+   "total": 5,
+   "secs": 165,
+   "rows": [
+    {
+     "course": "COMP101",
+     "points": 0,
+     "why": "expected CS101, got POTENTIAL_GENERAL_ELECTIVE",
+     "triage": "POTENTIAL_GE",
+     "match": "POTENTIAL_GENERAL_ELECTIVE",
+     "claimed": null,
+     "review": null,
+     "revised": false,
+     "calls": 8,
+     "secs": 16.8,
+     "flags": []
+    },
+    {
+     "course": "STAT210",
+     "points": 0,
+     "why": "expected STA201, got NEEDS_MORE_EVIDENCE",
+     "triage": "NEEDS_EVIDENCE",
+     "match": "NEEDS_MORE_EVIDENCE",
+     "claimed": null,
+     "review": null,
+     "revised": false,
+     "calls": 11,
+     "secs": 21.4,
+     "flags": []
+    },
+    {
+     "course": "COMP220",
+     "points": 1,
+     "why": "claimed CS310, not blocked (withdrawn)",
+     "triage": "NEEDS_EVIDENCE",
+     "match": "NEEDS_MORE_EVIDENCE",
+     "claimed": "CS310",
+     "review": null,
+     "revised": false,
+     "calls": 9,
+     "secs": 17.0,
+     "flags": []
+    },
+    {
+     "course": "SENG490",
+     "points": 1,
+     "why": "no match (acceptable, rule not shown)",
+     "triage": "NO_MATCH",
+     "match": "NO_DEFENSIBLE_MATCH",
+     "claimed": "CS450",
+     "review": null,
+     "revised": false,
+     "calls": 13,
+     "secs": 79.3,
+     "flags": [
+      "SYNTHESIS_FALLBACK"
+     ]
+    },
+    {
+     "course": "INFS230",
+     "points": 1,
+     "why": "no unsafe claim (POTENTIAL_GENERAL_ELECTIVE)",
+     "triage": "POTENTIAL_GE",
+     "match": "POTENTIAL_GENERAL_ELECTIVE",
+     "claimed": null,
+     "review": null,
+     "revised": false,
+     "calls": 8,
+     "secs": 14.2,
+     "flags": []
+    },
+    {
+     "course": "ENGL101",
+     "points": 2,
+     "why": "ok",
+     "triage": "NEEDS_EVIDENCE",
+     "match": "NEEDS_SYLLABUS",
+     "claimed": null,
+     "review": null,
+     "revised": false,
+     "calls": 9,
+     "secs": 16.8,
+     "flags": []
+    }
+   ]
+  }
+ ]
+}

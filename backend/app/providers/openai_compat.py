@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 
 from ..devlog import events
-from .base import LLMRequest, LLMResponse, ProviderHealth, ToolCall
+from .base import LLMRequest, LLMResponse, ProviderHealth, ToolCall, loggable
 
 
 def to_openai_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -31,6 +31,10 @@ def to_openai_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
             idx = next((i for i, (_, name) in enumerate(pending) if name == m.get("tool_name")), 0 if pending else None)
             cid = pending.pop(idx)[0] if idx is not None else f"call_{n + 1}"
             out.append({"role": "tool", "tool_call_id": cid, "content": m["content"]})
+        elif m.get("images"):  # vision: OpenAI content parts with data URIs
+            parts = [{"type": "text", "text": m.get("content", "")}] + [
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b}"}} for b in m["images"]]
+            out.append({"role": m["role"], "content": parts})
         else:
             out.append({"role": m["role"], "content": m.get("content", "")})
     return out
@@ -60,6 +64,8 @@ class OpenAICompatProvider:
                                 "temperature": self.temperature, "max_tokens": self.max_tokens, "stream": False}
         if request.tools:
             body["tools"] = request.tools
+        if request.response_format:
+            body["response_format"] = {"type": "json_schema", "json_schema": {"name": "action", "strict": True, "schema": request.response_format}}
         t0 = time.time()
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as c:
@@ -81,11 +87,14 @@ class OpenAICompatProvider:
                 args = {"_unparsed": raw[:300]}  # malformed arguments surface as a validation error, not a crash
             calls.append(ToolCall(tc.get("id", ""), tc["function"]["name"], args))
         usage = d.get("usage") or {}
-        resp = LLMResponse(msg.get("content") or "", calls, self.name, self.model, dur,
+        content = msg.get("content") or ""
+        if not content.strip() and not calls and msg.get("reasoning_content"):
+            content = msg["reasoning_content"]  # LM Studio can place a constrained/final answer in reasoning_content
+        resp = LLMResponse(content, calls, self.name, self.model, dur,
                            usage.get("prompt_tokens"), usage.get("completion_tokens"))
         events.emit("llm_call", provider=self.name, model=self.model, stage=request.stage, duration_s=dur,
                     prompt_tokens=resp.prompt_tokens, output_tokens=resp.output_tokens,
                     tok_per_s=round(resp.output_tokens / dur, 1) if resp.output_tokens and dur else None,
                     tool_calls=[{"name": c.name, "arguments": c.arguments} for c in calls],
-                    request_messages=request.messages, response_content=resp.content, **request.meta)
+                    **loggable(request, resp.content), **{k: v for k, v in request.meta.items() if k != "redact"})
         return resp

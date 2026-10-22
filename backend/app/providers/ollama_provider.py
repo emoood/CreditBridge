@@ -3,7 +3,7 @@ import time
 import httpx
 
 from ..devlog import events
-from .base import LLMRequest, LLMResponse, ProviderHealth, ToolCall
+from .base import LLMRequest, LLMResponse, ProviderHealth, ToolCall, loggable
 
 
 class OllamaProvider:
@@ -11,10 +11,11 @@ class OllamaProvider:
     so agents finish via a submit_result tool call instead."""
 
     def __init__(self, base_url: str, model: str, route: str, context: int = 8192,
-                 temperature: float = 0.0, timeout: float = 120, think: bool | str | None = False):
+                 temperature: float = 0.0, timeout: float = 120, think: bool | str | None = False, keep_alive: str = "30m"):
         self.base_url, self.model, self.route = base_url.rstrip("/"), model, route
         self.name = f"ollama:{route}"
         self.context, self.temperature, self.timeout, self.think = context, temperature, timeout, think
+        self.keep_alive = keep_alive  # keep the model loaded between calls
 
     async def health(self) -> ProviderHealth:
         try:
@@ -30,12 +31,14 @@ class OllamaProvider:
                               size_mb=round(loaded["size"] / 1e6) if loaded else None)
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
-        body = {"model": self.model, "messages": request.messages, "stream": False,
+        body = {"model": self.model, "messages": request.messages, "stream": False, "keep_alive": self.keep_alive,
                 "options": {"temperature": self.temperature, "num_ctx": self.context}}
         if self.think is not None:  # None = omit (models without a thinking switch)
             body["think"] = self.think
         if request.tools:
             body["tools"] = request.tools
+        if request.response_format:  # unsupported on Ollama's MLX runner (HTTP 501); fine on llama.cpp runners
+            body["format"] = request.response_format
         t0 = time.time()
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as c:
@@ -56,5 +59,5 @@ class OllamaProvider:
                     duration_s=dur, prompt_tokens=resp.prompt_tokens, output_tokens=resp.output_tokens,
                     tok_per_s=round(resp.output_tokens / dur, 1) if resp.output_tokens and dur else None,
                     tool_calls=[{"name": c.name, "arguments": c.arguments} for c in calls],
-                    request_messages=request.messages, response_content=resp.content, **request.meta)
+                    **loggable(request, resp.content), **{k: v for k, v in request.meta.items() if k != "redact"})
         return resp

@@ -1,0 +1,168 @@
+{
+ "label": "SYNTHETIC DEMO DATA - hand-derived from the generator's data, not from any model output",
+ "grade_scale": "policies/school_grade_scales.yaml synthetic_us_4_0",
+ "school_transcript": {
+  "terms": [
+   {
+    "term": "Fall 2025 - Grade 11",
+    "rows": [
+     {
+      "subject": "AP Calculus AB",
+      "mark": 94,
+      "letter": "A",
+      "points": 4.0,
+      "credits": 1.0
+     },
+     {
+      "subject": "AP English Language and Composition",
+      "mark": 88,
+      "letter": "B+",
+      "points": 3.3,
+      "credits": 1.0
+     },
+     {
+      "subject": "AP Psychology",
+      "mark": 95,
+      "letter": "A",
+      "points": 4.0,
+      "credits": 0.5
+     },
+     {
+      "subject": "Moral Education",
+      "mark": 90,
+      "letter": "A-",
+      "points": 3.7,
+      "credits": 0.5
+     }
+    ],
+    "credits": 3.0,
+    "quality_points": 11.15,
+    "gpa": 3.72
+   },
+   {
+    "term": "Spring 2026 - Grade 11",
+    "rows": [
+     {
+      "subject": "AP Computer Science A",
+      "mark": 91,
+      "letter": "A-",
+      "points": 3.7,
+      "credits": 1.0
+     },
+     {
+      "subject": "AP Statistics",
+      "mark": 85,
+      "letter": "B",
+      "points": 3.0,
+      "credits": 1.0
+     },
+     {
+      "subject": "AP Art History",
+      "mark": 82,
+      "letter": "B-",
+      "points": 2.7,
+      "credits": 0.5
+     }
+    ],
+    "credits": 2.5,
+    "quality_points": 8.05,
+    "gpa": 3.22
+   }
+  ],
+  "planted_error": null,
+  "cumulative": {
+   "credits": 5.5,
+   "quality_points": 19.2,
+   "gpa": 3.49
+  }
+ },
+ "school_transcript_planted_error": {
+  "terms": [
+   {
+    "term": "Fall 2025 - Grade 11",
+    "rows": [
+     {
+      "subject": "AP Calculus AB",
+      "mark": 94,
+      "letter": "A",
+      "points": 4.0,
+      "credits": 1.0
+     },
+     {
+      "subject": "AP English Language and Composition",
+      "mark": 88,
+      "letter": "B+",
+      "points": 3.3,
+      "credits": 1.0
+     },
+     {
+      "subject": "AP Psychology",
+      "mark": 95,
+      "letter": "A",
+      "points": 4.0,
+      "credits": 0.5
+     },
+     {
+      "subject": "Moral Education",
+      "mark": 90,
+      "letter": "A-",
+      "points": 3.7,
+      "credits": 0.5
+     }
+    ],
+    "credits": 3.0,
+    "quality_points": 11.15,
+    "gpa": 3.72
+   },
+   {
+    "term": "Spring 2026 - Grade 11",
+    "rows": [
+     {
+      "subject": "AP Computer Science A",
+      "mark": 91,
+      "letter": "A-",
+      "points": 3.7,
+      "credits": 1.0
+     },
+     {
+      "subject": "AP Statistics",
+      "mark": 85,
+      "letter": "B",
+      "points": 3.0,
+      "credits": 1.0
+     },
+     {
+      "subject": "AP Art History",
+      "mark": 82,
+      "letter": "B-",
+      "points": 2.7,
+      "credits": 0.5
+     }
+    ],
+    "credits": 2.5,
+    "quality_points": 8.05,
+    "gpa": 3.22
+   }
+  ],
+  "planted_error": {
+   "subject": "AP Statistics",
+   "mark": 85,
+   "printed_letter": "B+",
+   "expected_letter": "B"
+  },
+  "cumulative": {
+   "credits": 5.5,
+   "quality_points": 19.2,
+   "gpa": 3.49
+  }
+ },
+ "curriculum_expectations": {
+  "AP Calculus AB": "AP-CALC-AB",
+  "AP English Language and Composition": "AP-ENG-LANG",
+  "AP Psychology": "AP-PSYC",
+  "AP Computer Science A": "AP-CSA",
+  "AP Statistics": "AP-STAT",
+  "AP Art History": "AP-ART-HIST",
+  "Moral Education": "NOT IN CURRICULUM DB -> unrecognized / NEEDS_SYLLABUS"
+ }
+}

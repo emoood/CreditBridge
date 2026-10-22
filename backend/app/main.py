@@ -1,17 +1,33 @@
 import asyncio
 import json
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+from .api.common import seed_demo
 from .api.evaluation import router as evaluation_router
 from .api.intake import router as intake_router
 from .config import get_settings
+from .db.session import app_session, init_app_db
 from .devlog import events
 from .providers.router import build_provider
+from .workers.queue import recover, worker
 
-app = FastAPI(title="CreditBridge API (synthetic demo data)")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    init_app_db()
+    with app_session() as db:
+        seed_demo(db)
+    recover(worker)  # RUNNING jobs -> INTERRUPTED; QUEUED jobs are queued again
+    worker.start()
+    yield
+    await worker.stop()
+
+
+app = FastAPI(title="CreditBridge API (synthetic demo data)", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
                    allow_methods=["*"], allow_headers=["*"])
 

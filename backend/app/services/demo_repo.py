@@ -6,7 +6,9 @@ from pathlib import Path
 from ..domain.schemas import Excerpt
 from .evidence import EvidenceStore, ingest_syllabus_pdf
 
-FIXTURES = Path(__file__).resolve().parents[3] / "fixtures" / "demo_v1"
+ROOT = Path(__file__).resolve().parents[3]
+FIXTURES = ROOT / "fixtures" / "demo_v1"
+CATALOGS = {"demo": FIXTURES / "catalog.json", "aud_2026_2027": ROOT / "catalog" / "aud_undergrad_2026_2027" / "courses.json"}
 
 
 @dataclass
@@ -23,15 +25,20 @@ class SourceCourse:
 
 
 class DemoRepo:
-    def __init__(self, fixtures: Path = FIXTURES):
+    def __init__(self, fixtures: Path = FIXTURES, catalog: str = "demo"):
         self.store = EvidenceStore()
-        cat = json.loads((fixtures / "catalog.json").read_text())
+        cat = json.loads((CATALOGS[catalog] if fixtures == FIXTURES else fixtures / "catalog.json").read_text())
         self.catalog_version, self.catalog_label = cat["catalog_version"], cat["label"]
-        self.targets = {c["code"]: c for c in cat["courses"]}
+        self.catalog_key = catalog
+        self.targets = {}
         for c in cat["courses"]:
-            self.store.add(f"tgt-{c['code']}-desc", c["document_id"], 1, c["description"])
+            # The real AUD catalog has no learning outcomes: its description sentences are the (only) citable evidence.
+            c["outcomes"] = c.get("outcomes") or [{"id": e["id"], "text": e["text"]} for e in c.get("excerpts", [])]
+            c["evidence_basis"] = "catalog description only" if c.get("excerpts") else "learning outcomes"
+            self.targets[c["code"]] = c
+            self.store.add(f"tgt-{c['code'].replace(' ', '')}-desc", c["document_id"], c.get("page", 1), c["description"])
             for o in c["outcomes"]:
-                self.store.add(o["id"], c["document_id"], 1, o["text"])
+                self.store.add(o["id"], c["document_id"], c.get("page", 1), o["text"])
         truth = json.loads((fixtures / "expected_results.json").read_text())["extraction_truth"]
         self.sources: dict[str, SourceCourse] = {}
         for t in truth:

@@ -101,3 +101,16 @@ async def run_case(provider: LLMProvider, repo: DemoRepo, retriever: CatalogRetr
     return CaseResult(source_code, match, review, rules, t, case, contested, revised, calls,
                       getattr(provider, "name", ""), getattr(provider, "model", ""), flags=flags,
                       original_claim=first_claim if withdrawn else None)
+
+
+def no_evidence_case(repo: DemoRepo, source_code: str) -> CaseResult:
+    """A subject with no curriculum evidence (unrecognized): NEEDS_SYLLABUS, a drafted in-app request, no model call."""
+    from .matching_agent import MatchResult
+    case = CaseFile()
+    if not any(q["course_id"] == source_code for q in repo.syllabus_requests):
+        req = {"course_id": source_code, "missing_fields": ["syllabus"], "status": "DRAFT_IN_APP"}
+        repo.syllabus_requests.append(req)
+        case.requests.append(req)
+    match = MatchResult("NEEDS_SYLLABUS", flags=["NO_SOURCE_SYLLABUS", "SUBJECT_NOT_IN_CURRICULUM"], case=case)
+    t = triage("NEEDS_SYLLABUS", None, "NOT_RUN", [], False, False, match.flags)
+    return CaseResult(source_code, match, None, [], t, case, flags=match.flags)

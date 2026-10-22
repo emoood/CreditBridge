@@ -1,0 +1,8 @@
+{
+ "synthetic": true,
+ "generator": "fixtures/generate_demo_v2.py",
+ "files": [
+  "school_transcript.pdf/png",
+  "school_transcript_planted_error.pdf/png"
+ ]
+}

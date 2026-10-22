@@ -1,82 +1,62 @@
-# CreditBridge: Setup
+# CreditBridge
 
-AI-assisted transfer-credit evaluation demo. **All data is synthetic.** Full spec: `CREDITBRIDGE_CLAUDE_BUILD_PLAN.md`.
+AI-assisted school-to-university credit evaluation prototype. **Synthetic data only. The AI suggests; a human decides.**
+Spec: `CREDITBRIDGE_CLAUDE_BUILD_PLAN.md`. Decisions and measurements: `docs/decisions.md`.
 
-## 1. Install (macOS)
-
-```bash
-brew install python node tesseract tesseract-lang ollama
-ollama pull qwen3.5:4b          # ~4 GB
-```
-
-Needs: Python 3.11+, Node 20+, git.
-
-## 2. Get the code
+## One-time setup (macOS)
 
 ```bash
-git clone https://github.com/emoood/CreditBridge.git
-cd CreditBridge
+brew install python node postgresql@18 ollama
+brew services start postgresql@18 && createdb creditbridge     # this app's own state (local, never Supabase)
+ollama pull qwen3.5:4b                                         # ~4 GB; supports vision + tool calls
+
+git clone https://github.com/emoood/CreditBridge.git && cd CreditBridge
+python3 -m venv .venv && source .venv/bin/activate && pip install -e '.[dev]'
+(cd frontend && npm install)
+cp .env.example .env        # then set DATABASE_URL (see below)
 ```
 
-## 3. Backend
+`.env` needs one secret, the **curriculum database** (teammate's Supabase, read-only). Ask the team for it privately and never commit it:
+
+```
+DATABASE_URL=postgresql+psycopg://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres   # Session pooler, port 5432
+```
+
+## Start everything (one command)
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e '.[dev]'
-cp .env.example .env
+scripts/start.sh
 ```
 
-Edit `.env` and set `DATABASE_URL` (get it privately from the team; **never commit `.env`**):
+It starts Ollama if needed, runs a **preflight** (it stops with a clear message if Postgres, Ollama, the model, the curriculum
+database, the catalog or the frontend dependencies are missing), then starts the API (`:8000`) and the app (`http://localhost:5173`).
+Ctrl+C stops both. Logs are in `data/logs/` and contain no transcript text. Check the setup alone with `python scripts/preflight.py`.
 
-```
-DATABASE_URL=postgresql+psycopg://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
-```
+## Manual test script (about 10 minutes)
 
-Use the Supabase **Session pooler** string (port 5432), with `postgresql+psycopg://` at the start.
+1. Open <http://localhost:5173>. The Evaluation page is the landing page; the yellow banner says the data is synthetic.
+2. Click **Upload transcript** and choose `fixtures/demo_v2/school_transcript.pdf` (synthetic, image only).
+3. **Watch phase 1 (reading).** Blocks turn from queued to running to done; a vision model reads one block at a time. Nothing is evaluated yet.
+4. **Verify.** The scan appears beside the table. Check subjects, marks, grades, points and credits. Amber means uncertain; the warning bar lists cross-check flags (mark to letter to points, credit and GPA totals). `Moral Education` is shown as *Unrecognized · needs syllabus* because it is not in the curriculum database. Correct anything wrong; edits are logged.
+5. Click **Confirm extraction and start evaluation.** This is the gate: evaluation never starts on its own, and clicking twice does not queue it twice.
+6. **Watch phase 2.** Results appear one subject at a time, sorted by what needs your attention (blocked by a rule, contested, needs attention, ready to accept).
+7. Open a row. See the matched outcomes side by side, the reviewer's objections, the policy checks and how the agents worked.
+8. **Decide.** Accept or decline each suggestion (a reason is required to decline). Switch *Acting as* to *Registrar* to see the backend refuse a decision (403).
+9. Optional: **Dev Console** (sidebar) shows the live model and tool calls.
 
-## 4. Run
+If something stops mid-run (for example you restart the backend), the job is marked **INTERRUPTED**; click *Resume* and it continues from the last finished unit.
 
-Three terminals:
+## Checks
 
 ```bash
-# 1. Model server
-OLLAMA_MAX_LOADED_MODELS=1 OLLAMA_NUM_PARALLEL=1 OLLAMA_CONTEXT_LENGTH=8192 ollama serve
-
-# 2. Backend (from repo root, venv active)
-uvicorn backend.app.main:app --reload --port 8000
-
-# 3. Frontend
-cd frontend && npm install && npm run dev      # http://localhost:5173
-```
-
-## 5. Check it works
-
-```bash
-curl localhost:8000/api/v1/health      # provider ok: true
-pytest -q                              # tests need no Ollama, DB or Tesseract
+pytest -q                          # 66+ tests; fake model, in-memory DB; needs no Ollama, Postgres or Supabase
 ruff check .
+python scripts/e2e_live.py         # one live end-to-end pass through the API (needs the backend running)
 ```
 
-Live AI check (uses the real model, ~3 min): `python benchmarks/live_check.py`
+## Notes
 
-## Useful
-
-| Need | Command |
-|---|---|
-| See loaded model | `ollama ps` |
-| Live AI events | `curl -N localhost:8000/api/v1/dev/stream` |
-| Regenerate fixtures | `python fixtures/generate_demo_v1.py` (macOS fonts) |
-| No Ollama / slow machine | Run `pytest` only (uses the fake provider) |
-| Arabic OCR languages | `tesseract --list-langs` should list `ara` and `eng` |
-
-## Troubleshooting
-
-- **`failed to resolve host`:** you used the Direct connection string. Use the Session pooler one.
-- **Health shows `model not pulled`:** run `ollama pull qwen3.5:4b`.
-- **Health shows `unreachable`:** `ollama serve` is not running.
-- **Windows/Linux:** install Ollama and Tesseract (with Arabic data) from their sites; behavior of the model may differ from the Mac results in `docs/decisions.md`.
-
-## Rules
-
-- The AI recommends only; humans approve. No LLM in the rules engine.
-- Synthetic data only. No real student data. No secrets in git.
+- Uploads are stored under `data/` (gitignored). **Never commit real transcripts.** Logs and audit events contain ids, counts and statuses only.
+- `CATALOG=aud_2026_2027` uses the real AUD 2026-27 catalog (descriptions only, no learning outcomes); `CATALOG=demo` uses the small synthetic one.
+- Model setup tried so far is in `docs/decisions.md`. The default is Ollama `qwen3.5:4b`; LM Studio is supported (`LLM_DEFAULT_ROUTE=lmstudio`).
+- Deferred concerns (security, data depth, policy verification) are tracked in `docs/concerns.md`.

@@ -6,7 +6,7 @@ export type Decision = { decision: 'ACCEPTED' | 'DECLINED' | 'MORE_INFORMATION_R
 export type CaseResult = {
   course: Course;
   triage: { category: Triage; reasons: string[]; priority: number };
-  match: { status: string; target: { code: string; title: string; level: number; credits: number } | null; evidence_strength: string | null;
+  match: { status: string; target: { code: string; title: string; level: number; credits: number; basis?: string } | null; evidence_strength: string | null;
     supported_outcomes: { subject: Excerpt; target: Excerpt; explanation: string }[]; missing_or_weaker_outcomes: string[]; concerns: string[];
     response_to_objections: string | null; flags: string[] };
   review: { status: string; flags: string[]; objections: { text: string; excerpts: Excerpt[] }[] } | null;
@@ -17,17 +17,21 @@ export type CaseResult = {
   syllabus_requests: { missing_fields: string[]; status: string }[];
   original_claim: { target: { code: string; title: string; level: number; credits: number } | null; evidence_strength: string | null; objections: string[];
     supported_outcomes: { subject: Excerpt; target: Excerpt; explanation: string }[] } | null;
-  decision: Decision | null; version: number;
+  decision: (Decision & { stale?: boolean }) | null; version: number;
 };
-export type Job = { id: string; status: 'QUEUED' | 'RUNNING' | 'DONE'; courses: Record<string, string>; errors: Record<string, string>; route: string; model: string;
+export type Unit = { stage: string; key: string; status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED_RETRYABLE' | 'SKIPPED'; attempts: number; method: string; error_code: string; duration_s: number };
+export type Job = { id: string; app_id?: string; phase?: 'READING' | 'EVALUATION'; status: 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED' | 'INTERRUPTED'; stage?: string; current_unit?: string;
+  flags?: string[]; units?: Unit[]; summary?: { triage_counts?: Record<string, number>; worklist?: string[]; failed?: string[] }; timings?: { total_secs: number | null; per_stage_secs: Record<string, number> };
+  courses: Record<string, string>; errors: Record<string, string>; route: string; model: string;
   llm_calls: number; activity: { ts: number; kind: string; course?: string; tool?: string; stage?: string; role?: string; ok?: boolean; duration_s?: number }[] };
 export type Subject = { id: string; name: string; code: string; qualification: string };
 export type Candidate = Subject & { score: number };
 export type Row = { id: string; code: string; title: string; title_ar: string; credits: string; grade: string; term: string; page: number; evidence_ref: string;
-  uncertain_fields: string[]; subject: Subject | null; candidates: Candidate[]; included: boolean; corrected: boolean; auto_linked?: boolean };
+  uncertain_fields: string[]; subject: Subject | null; candidates: Candidate[]; included: boolean; corrected: boolean; auto_linked?: boolean;
+  mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string };
 export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; program: string; institution: string; courses: number; status: string; decided: number; catalog: string;
-  created_at: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null;
-  extraction?: { method: string; page_count: number; warnings: string[]; unparsed_lines: { page: number; text: string }[]; rows_found: number };
+  created_at: string; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
+  extraction?: { method: string; blocks?: { key: string; status: string; reread?: boolean; flags?: number | null; error?: string }[]; failed_blocks?: number; flags?: string[]; unrecognized?: number; rows_found?: number };
   curriculum?: { available: boolean; error: string | null } };
 export type DevEvent = Record<string, any> & { id: number; ts: number; kind: string };
 
@@ -48,7 +52,9 @@ export const api = {
   previewUrl: (id: string, page: number) => `/api/v1/applications/${id}/preview/${page}`,
   qualifications: () => fetch('/api/v1/curriculum/qualifications').then(j<{ qualifications: string[]; available: boolean; error: string | null }>),
   subjects: (q: string, qualification: string) => fetch(`/api/v1/curriculum/subjects?q=${encodeURIComponent(q)}&qualification=${encodeURIComponent(qualification)}&limit=15`.replace('&qualification=&', '&')).then(j<Subject[]>),
-  results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null }>),
+  results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null; pending_units?: { key: string; status: string; error_code: string }[]; status?: string }>),
+  confirm: (id: string, role: string) => fetch(`/api/v1/applications/${id}/confirm`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({}) }).then(j<{ job_id: string; already_confirmed: boolean }>),
+  resume: (jobId: string, role: string) => fetch(`/api/v1/jobs/${jobId}/resume`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
   job: (id: string) => fetch(`/api/v1/jobs/${id}`).then(j<Job>),
   evaluate: (id: string, role: string) => fetch(`/api/v1/applications/${id}/evaluate`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
   decide: (id: string, course: string, role: string, decision: Decision['decision'], reason: string, version: number) =>
