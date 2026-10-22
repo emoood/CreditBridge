@@ -49,7 +49,8 @@ export type Row = { id: string; code: string; title: string; title_ar: string; c
   mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string; source_id?: string; questions?: { field: string; question: string }[] };
 export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; program: string; institution: string; courses: number; status: string; decided: number; catalog: string;
   created_at: string; student_id?: string; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
-  extraction?: { method: string; blocks?: { key: string; status: string; reread?: boolean; flags?: number | null; error?: string }[]; failed_blocks?: number; flags?: string[]; unrecognized?: number; rows_found?: number };
+  extraction?: { method: string; blocks?: { key: string; status: string; reread?: boolean; flags?: number | null; error?: string }[]; failed_blocks?: number; flags?: string[]; unrecognized?: number; rows_found?: number;
+    planted_misread?: { subject: string; wrong: number; applied?: { subject: string; from: number; to: number }[] } | null };
   curriculum?: { available: boolean; error: string | null };
   replay?: { name: string; label: string; recorded_at: string; model: string; live: string[] } | null };
 export type Recording = { name: string; recorded_at: string; model: string; label: string; evaluation_s: number | null; reading_s: number | null;
@@ -64,7 +65,7 @@ async function j<T>(r: Response): Promise<T> {
 export const api = {
   applications: () => fetch('/api/v1/applications').then(j<AppInfo[]>),
   application: (id: string) => fetch(`/api/v1/applications/${id}`).then(j<AppInfo>),
-  upload: (file: File, label: string, qualification: string, studentId = '') => { const f = new FormData(); f.append('file', file); f.append('student_label', label); f.append('student_id', studentId); f.append('qualification', qualification);
+  upload: (file: File, label: string, qualification: string, studentId = '', plantMisread = false) => { const f = new FormData(); f.append('file', file); f.append('student_label', label); f.append('student_id', studentId); if (plantMisread) f.append('plant_misread', '1'); f.append('qualification', qualification);
     return fetch('/api/v1/applications', { method: 'POST', body: f, headers: { 'X-Role': 'admissions' } }).then(j<AppInfo>); },
   patchRow: (id: string, row: string, body: Record<string, unknown>) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<Row>),
   addRow: (id: string) => fetch(`/api/v1/applications/${id}/rows`, { method: 'POST' }).then(j<Row>),

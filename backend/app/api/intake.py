@@ -44,7 +44,7 @@ def get_application(app_id: str):
 
 @router.post("/applications")
 async def create_application(file: UploadFile = File(...),  # noqa: B008
-                             student_label: str = Form(""), student_id: str = Form(""), program: str = Form(""), qualification: str = Form(""),
+                             student_label: str = Form(""), student_id: str = Form(""), plant_misread: str = Form(""), program: str = Form(""), qualification: str = Form(""),
                              x_role: str | None = Header(default=None)):
     """Store + hash the file, create the application and the reading job, return immediately. Reading happens in the worker."""
     data = await file.read()
@@ -54,7 +54,7 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         raise HTTPException(400, str(e)) from e
     with app_session() as db:
         app = Application(id=f"APP-{uuid.uuid4().hex[:8].upper()}", kind="upload", student=student_label.strip() or "Uploaded transcript",
-                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={"student_id": student_id.strip()})
+                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={"student_id": student_id.strip(), **({"planted_misread": {"subject": "AP Chemistry", "field": "mark", "wrong": 65}} if plant_misread.strip().lower() in ("1", "true", "on") and get_settings().demo_mode else {})})
         job = Job(id=uuid.uuid4().hex[:12], app_id=app.id, phase="READING", status="QUEUED")
         db.add_all([app, job])
         db.commit()

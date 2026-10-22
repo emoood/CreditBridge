@@ -19,7 +19,7 @@ from ..services.usage import trace
 from .loop import run_bounded_agent
 from .tools.base import AgentTool, ToolContext, ToolError, ToolRegistry, ToolResult
 
-PROMPT_VERSION = "intake_v1"
+PROMPT_VERSION = "intake_v2"
 PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
 FIELDS = {"title": "subject", "grade": "letter", "points": "points", "credits": "credits"}
 
@@ -35,6 +35,12 @@ class IntakeContext(ToolContext):
     budget: int = 3
     changes: list[dict[str, Any]] = field(default_factory=list)
     questions: int = 0
+
+
+def accept_failed_block(new: dict[str, Any], scale: dict[str, Any]) -> dict[str, Any] | None:
+    """A block that failed outright is accepted from a re-read only if it now yields course rows and every one of them passes its checks."""
+    rows = [r for r in new.get("rows", []) if not xc.is_non_course(r)]
+    return new if rows and not any(gc.check_row(r, scale).flags for r in rows) else None
 
 
 def accept_rechecked(old: dict[str, Any], new: dict[str, Any], scale: dict[str, Any], prior: list[dict[str, Any]] | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -78,7 +84,7 @@ class GetBlockFailures(AgentTool):
     async def execute(self, args: KeyArgs, ctx: IntakeContext):
         if args.block not in ctx.blocks:
             raise ToolError(f"Unknown block '{args.block}'.")
-        return xc.failures_in(ctx.blocks, args.block, ctx.scale)
+        return [f for f in xc.cell_failures(ctx.blocks, ctx.scale) if args.block in (f["block"], f["via"])]
 
 
 class RereadArgs(BaseModel):
@@ -105,7 +111,12 @@ class RereadBlock(AgentTool):
         img = await asyncio.to_thread(ctx.render, page, dpi)
         b64 = vr.crop_png_b64(img, span, dpi / get_settings().vision_dpi)
         new = vr.check_block(await vr.read_block(ctx.provider, b64, args.block, hint=args.focus), ctx.scale)
-        merged, changes = accept_rechecked(ctx.blocks[args.block], new, ctx.scale, xc.prior_rows(ctx.blocks, args.block))
+        if ctx.blocks[args.block].get("failed"):
+            ok = accept_failed_block(new, ctx.scale)
+            merged = {**ok, "reread": True, "page": page} if ok else ctx.blocks[args.block]
+            changes = [{"row": "(block)", "field": "block", "from": "unreadable", "to": f"{len(ok['rows'])} rows read"}] if ok else []
+        else:
+            merged, changes = accept_rechecked(ctx.blocks[args.block], new, ctx.scale, xc.prior_rows(ctx.blocks, args.block))
         ctx.blocks[args.block].clear()
         ctx.blocks[args.block].update(merged)
         ctx.changes += [{"block": args.block, **c} for c in changes]
@@ -130,7 +141,7 @@ class FlagCell(AgentTool):
         b = ctx.blocks.get(args.block)
         if b is None:
             raise ToolError(f"Unknown block '{args.block}'.")
-        if not any(f["row"] == args.row and f["field"] == args.field for f in xc.failures_in(ctx.blocks, args.block, ctx.scale)):
+        if not any(f["block"] == args.block and f["row"] == args.row and f["field"] == args.field for f in xc.cell_failures(ctx.blocks, ctx.scale)):
             raise ToolError("That cell does not fail a check, so it cannot be flagged.")
         attach_question(b, args.row, args.field, args.question)
         ctx.questions += 1
@@ -159,13 +170,13 @@ class TracedIntakeRegistry(ToolRegistry):
 def template_questions(ctx: IntakeContext) -> int:
     """Whatever still fails and was not flagged by the agent gets one specific question from code, so no failing cell is left unexplained."""
     n = 0
-    for key, b in ctx.blocks.items():
-        for f in xc.failures_in(ctx.blocks, key, ctx.scale):
-            if f["row"] is None:
-                continue
-            if not any(q["field"] == f["field"] for q in b["rows"][f["row"]].get("questions", [])):
-                attach_question(b, f["row"], f["field"], f"Check the {f['field']} of '{f['subject'] or 'this row'}' against the scan: {f['detail']}")
-                n += 1
+    for f in xc.cell_failures(ctx.blocks, ctx.scale):
+        if f["row"] is None:
+            continue  # an unreadable block has no cell; the reading screen already says a part could not be read
+        b = ctx.blocks[f["block"]]
+        if not any(q["field"] == f["field"] for q in b["rows"][f["row"]].get("questions", [])):
+            attach_question(b, f["row"], f["field"], xc.question_for(f))
+            n += 1
     return n
 
 

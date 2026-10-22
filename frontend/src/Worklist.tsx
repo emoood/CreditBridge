@@ -11,7 +11,7 @@ import {
 } from "./model";
 import { StudentPopup } from "./StudentPopup";
 import { AppPill } from "./ui";
-import { loadApp } from "./useApp";
+import { loadApp, useInstitution } from "./useApp";
 
 type Entry = {
   app: AppInfo;
@@ -40,6 +40,8 @@ export default function Worklist() {
   const [qual, setQual] = useState("");
   const [name, setName] = useState("");
   const [sid, setSid] = useState("");
+  const [plant, setPlant] = useState(false);
+  const inst = useInstitution();
   const [quals, setQuals] = useState<string[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [replayOpen, setReplayOpen] = useState(false);
@@ -110,7 +112,8 @@ export default function Worklist() {
     setUploading(true);
     setError(null);
     try {
-      const a = await api.upload(f, name, qual, sid);
+      const a = await api.upload(f, name, qual, sid, plant);
+      setPlant(false);
       setName("");
       setSid("");
       setOpen(a.id);
@@ -149,6 +152,11 @@ export default function Worklist() {
             <input className="mini" placeholder="Name (synthetic)" value={name} onChange={(e) => setName(e.target.value)} />
             <input className="mini" placeholder="ID" value={sid} onChange={(e) => setSid(e.target.value)} style={{ width: 90 }} />
           </label>
+          {inst.demo_mode && (
+            <label className="role-pick demo-switch" title="Demo only: replaces the AP Chemistry mark with a wrong value before the extraction checks run, so the Intake recheck has something to fix (Transcript B)">
+              <input type="checkbox" checked={plant} onChange={(e) => setPlant(e.target.checked)} /> Demo: plant a misread (Transcript B)
+            </label>
+          )}
           <input
             ref={fileRef}
             type="file"

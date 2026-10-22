@@ -21,6 +21,7 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: 
         <p className="muted">{included} courses read. {lowRows ? `${lowRows} row${lowRows === 1 ? '' : 's'} with a highlighted cell: check against the scan.` : 'Nothing looks uncertain.'}{noCur ? ` ${noCur} not in the curriculum (greyed, at the bottom).` : ''} Edit any cell by clicking it.</p></div>
       <button className="primary-button" onClick={confirm} disabled={busy || !included}>{busy ? <Loader2 size={16} className="spin" /> : <Check size={16} />} Confirm extraction</button>
     </div>
+    {ex?.planted_misread?.applied?.length ? <div className="planted"><strong>PLANTED FOR DEMO</strong> The {ex.planted_misread.applied[0].subject} mark was read as {ex.planted_misread.applied[0].from} and replaced with {ex.planted_misread.applied[0].to} before the checks ran. The Intake recheck should re-read it.</div> : null}
     {(ex?.failed_blocks ?? 0) > 0 && <div className="eval-warn"><AlertCircle size={15} /> A part of the page with no course on it (a footer, legend or signature block) could not be read and was skipped. This is not a missing course. Compare the table with the scan; if a course really is missing, add it by hand.</div>}
     {ex?.flags && ex.flags.length > 0 && <div className="eval-warn"><AlertCircle size={15} /> {ex.flags.length} cross-check note{ex.flags.length === 1 ? '' : 's'} (marks, points, credits or GPA do not add up).
       <button className="link-btn" onClick={() => setFlagsOpen(!flagsOpen)}>{flagsOpen ? 'Hide' : 'Show'}</button></div>}

@@ -106,6 +106,16 @@ async def read_block(provider: LLMProvider, image_b64: str, unit: str, hint: str
         raise VisionError("invalid_output") from e
 
 
+def plant_misread(reading: BlockReading, cfg: dict[str, Any]) -> dict[str, Any] | None:
+    """PLANTED FOR DEMO: replace one correctly read mark with a wrong one BEFORE the extraction checks run. Returns what was changed, or None."""
+    for r in reading.rows:
+        if cfg["subject"].lower() in (r.subject or "").lower() and r.mark is not None:
+            rec = {"subject": r.subject, "field": "mark", "from": r.mark, "to": float(cfg["wrong"])}
+            r.mark = float(cfg["wrong"])
+            return rec
+    return None
+
+
 def check_block(b: BlockReading, scale: dict[str, Any]) -> dict[str, Any]:
     rows, flags = [], []
     for r in b.rows:

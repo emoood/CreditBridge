@@ -131,3 +131,30 @@ def test_block_checks_ignore_headings_and_compare_a_total_with_the_whole_term_no
     assert [f["check"] for f in xc.block_failures(b2, scale)] == ["credit_total", "grade_point_total", "gpa_total"] or xc.block_failures(b2, scale)  # alone it would raise a false alarm
     b2["totals"]["term_credits"] = 3.5
     assert [f["check"] for f in xc.failures_in(blocks, "p1b2", scale)] == ["credit_total"]   # a genuine mismatch is still caught
+
+
+def test_planted_misread_changes_one_mark_before_the_checks_and_a_failed_block_can_be_accepted_only_if_all_rows_pass():
+    from backend.app.agents.intake_agent import accept_failed_block
+    from backend.app.services import vision_reader as vr
+    scale = gc.load_scale()
+    reading = vr.BlockReading.model_validate({"rows": [{"subject": "AP Chemistry", "mark": 85, "letter": "B", "points": 3.0, "credits": 1.0},
+                                                       {"subject": "AP Biology", "mark": 89, "letter": "B+", "points": 3.3, "credits": 1.0}]})
+    rec = vr.plant_misread(reading, {"subject": "AP Chemistry", "field": "mark", "wrong": 65})
+    assert rec == {"subject": "AP Chemistry", "field": "mark", "from": 85, "to": 65.0} and reading.rows[1].mark == 89   # only that mark, nothing else
+    checked = vr.check_block(reading, scale)
+    assert checked["flags"] and xc.block_failures(checked, scale)[0]["field"] in ("grade", "points")                      # the planted value trips the grading-scale check
+    assert vr.plant_misread(vr.BlockReading.model_validate({"rows": [{"subject": "Art", "mark": 80}]}), {"subject": "AP Chemistry", "wrong": 65}) is None
+    good = vr.check_block(vr.BlockReading.model_validate({"rows": [{"subject": "AP Chemistry", "mark": 85, "letter": "B", "points": 3.0, "credits": 1.0}]}), scale)
+    assert accept_failed_block(good, scale) is good and accept_failed_block(checked, scale) is None and accept_failed_block({"rows": []}, scale) is None
+
+
+def test_a_failed_term_total_becomes_a_specific_question_on_each_row_of_the_term_and_an_unreadable_block_is_a_failure():
+    scale = gc.load_scale()
+    row = lambda s, c: {"subject": s, "mark": 90, "letter": "A-", "points": 3.7, "credits": c}
+    blocks = {"p1b1": {"rows": [row("A", 1.0)], "totals": {}}, "p1b2": {"failed": True, "rows": [], "totals": {}, "error": "invalid_output"},
+              "p1b3": {"rows": [row("B", 1.0)], "totals": {"term_credits": 7.5}}}
+    cells = xc.cell_failures(blocks, scale)
+    assert [(c["block"], c["check"]) for c in cells if c["check"] == "block_unreadable"] == [("p1b2", "block_unreadable")]
+    qs = [(c["block"], c["row"], c["field"], xc.question_for(c)) for c in cells if c["check"] == "credit_total"]
+    assert [(b, r, f) for b, r, f, _ in qs] == [("p1b1", 0, "credits"), ("p1b3", 0, "credits")]
+    assert "7.5" in qs[0][3] and "2" in qs[0][3] and "'A'" in qs[0][3]
