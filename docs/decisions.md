@@ -170,3 +170,22 @@ Replaces "the model evaluates every subject". Flow after the officer confirms th
    (refused for rows that have a mapping), then states gaps and a short review package. It can never set "Mapped" (only the code lookup can) and has no approval path. Output is a finding.
    Resume: `POST /rows/{id}/evidence` (facts such as `{"exam_score": 5}` and/or a file) marks the open requests received and queues a one-row job: the code re-checks the condition first (often settling the row with no model call), else the agent runs on that row only.
 Not run against a real model yet (by request); tests use fake providers. The mapping table is a placeholder: its AUD codes and conditions are made up for the demo.
+
+## 2026-10-23 Letting the officer finish a case, plus Intake, Auditor and Case notes
+**Code (no model calls)**
+- Row statuses are now Mapped | Conditional | No mapping | Waiting on document | Not evaluated ("Needs your input" is the card strip for every unresolved No mapping, Conditional and Waiting row).
+- Row actions (`POST /rows/{id}/action`, table `row_actions`, append-only): CONFIRM (row must be Mapped), CHANGE (another AUD course and/or credits, reason required, policy-checked, never an ENGL course), REJECT and NO_CREDIT (reason required),
+  SEND_FOR_REVIEW, CORRECT (an officer-applied Auditor proposal), APPROVE. Each stores actor, time and the ORIGINAL suggestion (course, credits, status, mapping version). "Confirm mapped" is one batch of CONFIRMs; replays do not duplicate.
+- Final Approve is refused until every relevant row has a resolving action and every sheet check passes. The UI's Approve button stays disabled until then.
+- The sheet (`GET /sheet`) takes its columns and order from `policies/institution.yaml` (`export.columns`); Copy-for-spreadsheet (tab-separated, unconfirmed rows marked) and CSV both re-run the checks first and refuse on failure:
+  each line matches its live mapping record, credits match, policy flags respected, no unresolved row marked confirmed, no duplicate AUD course. Failures name the row.
+- Dummy mappings now cover 15 AP courses; exceptions are AP Calculus AB (conditional on an exam score) and AP Computer Science A (stale). The table re-seeds itself only while every row is still a "dummy-" row.
+- Header shows the student's name and ID (typed at upload or edited via `PATCH /student`; synthetic only), the curriculum, and the selection rule (e.g. "AP courses, per AUD settings"). Zero counts are hidden. The table is quiet; only the cards are amber.
+- Extraction checks are tools (`services/extraction_checks.py`): grading-scale, per-term credit, grade-point and GPA checks on one block, naming the exact cell.
+**Agents (not run against a real model; fake-provider tests only)**
+- Case agent v2 (`case_v2`): the officer can hand ANY unresolved row back with a typed note, a fact or a document (`POST /rows/{id}/evidence`); only that row re-runs, the note goes to the agent and to the matcher's per-subject message. "Send for review" runs it in `review_package` mode
+  (candidates, gaps, questions for the chair). Both are traced and metered.
+- Intake agent (`intake_v1`): after reading, blocks that still fail a check are re-read at 400 dpi in a cropped region (max 3 re-reads per transcript, `INTAKE_MAX_RECHECKS`). Per row, a corrected value is accepted only if its check now passes; otherwise the exact cell gets one specific question
+  (agent-written, or a code template if the agent skips it), shown under the row in the extraction table. Everything is logged to the trace and ledger.
+- Auditor agent (`auditor_v1`): runs only when a sheet check fails (a passing sheet is refused with 409, so no model is called). It reads the transcript row, mapping record and policy result, explains, and PROPOSES corrections; code re-runs the checks on a corrected copy.
+  Nothing applies until the officer clicks "Apply this change", which records a CORRECT action with the original; proposals touching confirmed rows are labelled.

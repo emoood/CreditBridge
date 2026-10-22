@@ -38,6 +38,8 @@ export default function Worklist() {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [qual, setQual] = useState("");
+  const [name, setName] = useState("");
+  const [sid, setSid] = useState("");
   const [quals, setQuals] = useState<string[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [replayOpen, setReplayOpen] = useState(false);
@@ -59,6 +61,8 @@ export default function Worklist() {
             d.pending,
             includeSet(a.id),
             evaluating,
+            d.states,
+            d.actions,
           );
           return {
             app: { ...d.app, replay: a.replay ?? d.app.replay },
@@ -106,7 +110,9 @@ export default function Worklist() {
     setUploading(true);
     setError(null);
     try {
-      const a = await api.upload(f, "", qual);
+      const a = await api.upload(f, name, qual, sid);
+      setName("");
+      setSid("");
       setOpen(a.id);
       await refresh();
     } catch (e) {
@@ -137,6 +143,11 @@ export default function Worklist() {
                 <option key={q}>{q}</option>
               ))}
             </select>
+          </label>
+          <label className="role-pick">
+            Student{" "}
+            <input className="mini" placeholder="Name (synthetic)" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="mini" placeholder="ID" value={sid} onChange={(e) => setSid(e.target.value)} style={{ width: 90 }} />
           </label>
           <input
             ref={fileRef}
@@ -217,11 +228,9 @@ export default function Worklist() {
                 <td>
                   <AppPill s={e.status} />
                 </td>
-                <td className="num">{e.built.counts.mapped}</td>
-                <td className={`num ${e.built.counts.needsYou ? "hot" : ""}`}>
-                  {e.built.counts.needsYou}
-                </td>
-                <td className="num">{e.built.counts.notEvaluated}</td>
+                <td className="num">{e.built.counts.mapped || ""}</td>
+                <td className={`num ${e.built.needsInput.length ? "hot" : ""}`}>{e.built.needsInput.length || ""}</td>
+                <td className="num">{e.built.counts.notEvaluated || ""}</td>
               </tr>
             ))}
           </tbody>

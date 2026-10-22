@@ -26,9 +26,17 @@ export type Job = { id: string; app_id?: string; phase?: 'READING' | 'EVALUATION
   courses: Record<string, string>; errors: Record<string, string>; route: string; model: string;
   llm_calls: number; activity: { ts: number; kind: string; course?: string; tool?: string; stage?: string; role?: string; ok?: boolean; duration_s?: number }[] };
 export type Institution = { institution: string; transfer_credits: number; display: { mark: boolean; school_credits: boolean; aud_credits: boolean; grade_year: boolean } };
-export type Finding = { headline: string; needs?: string; missing_evidence: string[]; gaps: string[]; candidates: { aud_code: string; why: string }[]; review_package: string[]; flags?: string[] };
+export type ActionInfo = { id: number; row_id: string; action: 'CONFIRM' | 'CHANGE' | 'REJECT' | 'NO_CREDIT' | 'SEND_FOR_REVIEW' | 'CORRECT'; actor: string; at: string;
+  original: { aud_code: string | null; credits: number | null; status: string; mapping_version?: string }; chosen: { aud_code?: string; credits?: number }; reason: string; batch: boolean };
+export type SheetLine = { row_id: string; source_course: string; grade: string; aud_code: string | null; aud_equivalent: string; aud_credits: number | null; status: string; action: string };
+export type SheetCheck = { row_id: string; source_course: string; check: string; message: string };
+export type AuditReport = { status: string; summary: string; explanations: { row_id: string; explanation: string }[]; passes_after: boolean; applied: string[];
+  proposals: { row_id: string; source_course: string; why: string; from: { aud_code: string | null; credits: number | null }; to: { aud_code: string; credits: number }; touches_confirmed: boolean }[] };
+export type Sheet = { columns: string[]; headers: string[]; rows: SheetLine[]; checks: SheetCheck[]; ok: boolean; unconfirmed: number; audit: AuditReport | null; unresolved: { row_id: string; title: string; status: string }[]; approved: boolean };
+export type Finding = { headline: string; questions_for_chair?: string[]; needs?: string; missing_evidence: string[]; gaps: string[]; candidates: { aud_code: string; why: string }[]; review_package: string[]; flags?: string[] };
 export type DraftedRequest = { id: string; what: string; why: string; to: string; status: 'DRAFT' | 'SENT' | 'RECEIVED' };
-export type RowStateInfo = { row_id: string; status: 'Mapped' | 'Needs you' | 'Waiting on document' | 'Not evaluated'; kind: string; reason: string; can_include: boolean; included_override: boolean;
+export type RowStatus = 'Mapped' | 'Conditional' | 'No mapping' | 'Waiting on document' | 'Not evaluated';
+export type RowStateInfo = { row_id: string; status: RowStatus; kind: string; reason: string; can_include: boolean; included_override: boolean;
   mapping: { aud_code: string; aud_credits: number; version: string; status: string; condition: { type: string; value: unknown; evidence?: string } | null } | null;
   condition_result: { status: string; reason: string; missing: { field: string; evidence: string }[] } | null; finding: Finding | null; requests: DraftedRequest[]; facts: Record<string, unknown> };
 export type Activity = { usage: { calls: number; seconds: number; prompt_tokens: number; output_tokens: number; cost_usd: number; models: string[]; by_stage: Record<string, { calls: number; seconds: number }> };
@@ -37,9 +45,9 @@ export type Subject = { id: string; name: string; code: string; qualification: s
 export type Candidate = Subject & { score: number };
 export type Row = { id: string; code: string; title: string; title_ar: string; credits: string; grade: string; term: string; page: number; evidence_ref: string;
   uncertain_fields: string[]; subject: Subject | null; candidates: Candidate[]; included: boolean; corrected: boolean; auto_linked?: boolean;
-  mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string; source_id?: string };
+  mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string; source_id?: string; questions?: { field: string; question: string }[] };
 export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; program: string; institution: string; courses: number; status: string; decided: number; catalog: string;
-  created_at: string; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
+  created_at: string; student_id?: string; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
   extraction?: { method: string; blocks?: { key: string; status: string; reread?: boolean; flags?: number | null; error?: string }[]; failed_blocks?: number; flags?: string[]; unrecognized?: number; rows_found?: number };
   curriculum?: { available: boolean; error: string | null };
   replay?: { name: string; label: string; recorded_at: string; model: string; live: string[] } | null };
@@ -55,7 +63,7 @@ async function j<T>(r: Response): Promise<T> {
 export const api = {
   applications: () => fetch('/api/v1/applications').then(j<AppInfo[]>),
   application: (id: string) => fetch(`/api/v1/applications/${id}`).then(j<AppInfo>),
-  upload: (file: File, label: string, qualification: string) => { const f = new FormData(); f.append('file', file); f.append('student_label', label); f.append('qualification', qualification);
+  upload: (file: File, label: string, qualification: string, studentId = '') => { const f = new FormData(); f.append('file', file); f.append('student_label', label); f.append('student_id', studentId); f.append('qualification', qualification);
     return fetch('/api/v1/applications', { method: 'POST', body: f, headers: { 'X-Role': 'admissions' } }).then(j<AppInfo>); },
   patchRow: (id: string, row: string, body: Record<string, unknown>) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<Row>),
   addRow: (id: string) => fetch(`/api/v1/applications/${id}/rows`, { method: 'POST' }).then(j<Row>),
@@ -64,12 +72,20 @@ export const api = {
   previewUrl: (id: string, page: number) => `/api/v1/applications/${id}/preview/${page}`,
   qualifications: () => fetch('/api/v1/curriculum/qualifications').then(j<{ qualifications: string[]; available: boolean; error: string | null }>),
   subjects: (q: string, qualification: string) => fetch(`/api/v1/curriculum/subjects?q=${encodeURIComponent(q)}&qualification=${encodeURIComponent(qualification)}&limit=15`.replace('&qualification=&', '&')).then(j<Subject[]>),
-  results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null; pending_units?: { key: string; status: string; error_code: string }[]; status?: string; states?: Record<string, RowStateInfo> }>),
+  results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null; pending_units?: { key: string; status: string; error_code: string }[]; status?: string; states?: Record<string, RowStateInfo>; actions?: Record<string, ActionInfo>; selection_rule?: string }>),
   confirm: (id: string, role: string) => fetch(`/api/v1/applications/${id}/confirm`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({}) }).then(j<{ job_id: string; already_confirmed: boolean }>),
   resume: (jobId: string, role: string) => fetch(`/api/v1/jobs/${jobId}/resume`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
   include: (id: string, row: string, role: string) => fetch(`/api/v1/applications/${id}/rows/${row}/include`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
-  evidence: (id: string, row: string, role: string, facts: Record<string, unknown>, file?: File | null) => { const f = new FormData(); f.append('facts', JSON.stringify(facts)); if (file) f.append('file', file);
+  evidence: (id: string, row: string, role: string, facts: Record<string, unknown>, file?: File | null, note = '') => { const f = new FormData(); f.append('facts', JSON.stringify(facts)); f.append('note', note); if (file) f.append('file', file);
     return fetch(`/api/v1/applications/${id}/rows/${row}/evidence`, { method: 'POST', headers: { 'X-Role': role, 'X-Actor': 'Admissions officer' }, body: f }).then(j<{ job_id: string }>); },
+  rowAction: (id: string, row: string, role: string, body: { action: string; aud_code?: string; credits?: number; reason?: string }) => fetch(`/api/v1/applications/${id}/rows/${row}/action`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify(body) }).then(j<ActionInfo & { job_id?: string }>),
+  confirmMapped: (id: string, role: string) => fetch(`/api/v1/applications/${id}/confirm-mapped`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ confirmed: number }>),
+  sheet: (id: string) => fetch(`/api/v1/applications/${id}/sheet`).then(j<Sheet>),
+  approve: (id: string, role: string) => fetch(`/api/v1/applications/${id}/approve`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ approved: boolean }>),
+  runAudit: (id: string, role: string) => fetch(`/api/v1/applications/${id}/audit`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
+  applyAudit: (id: string, role: string, rowIds: string[]) => fetch(`/api/v1/applications/${id}/audit/apply`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ row_ids: rowIds }) }).then(j<{ applied: string[]; sheet_ok: boolean }>),
+  searchCatalog: (q: string) => fetch(`/api/v1/catalog/search?q=${encodeURIComponent(q)}`).then(j<{ code: string; title: string; level: number }[]>),
+  setStudent: (id: string, name: string, studentId: string) => fetch(`/api/v1/applications/${id}/student`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify({ name, student_id: studentId }) }).then(j<AppInfo>),
   activity: (id: string) => fetch(`/api/v1/applications/${id}/activity`).then(j<Activity>),
   institution: () => fetch('/api/v1/config/institution').then(j<Institution>),
   recordings: () => fetch('/api/v1/recordings').then(j<Recording[]>),

@@ -47,14 +47,15 @@ type Field = 'title' | 'credits' | 'grade' | 'term';
 function XRow({ appId, r, quals, qual, wrap, display }: { display: Institution['display']; appId: string; r: Row; quals: string[]; qual: string; wrap: (f: () => Promise<unknown>) => Promise<void> }) {
   const [picker, setPicker] = useState(false);
   const flagged = (r.flags?.length ?? 0) > 0;
+  const asked = (f: string) => (r.questions ?? []).some(q => q.field === f);
   const cell = (k: Field, low: boolean, w?: number) =>
     <input defaultValue={r[k]} className={`cell ${low ? 'low' : ''}`} style={w ? { width: w } : undefined} aria-label={k}
       onBlur={e => { if (e.target.value !== r[k]) wrap(() => api.patchRow(appId, r.id, { [k]: e.target.value })); }} />;
   return <>
     <tr className={`${r.included ? '' : 'off'} ${r.subject ? '' : 'nocur'}`}>
       <td><input type="checkbox" checked={r.included} aria-label="Include" onChange={e => wrap(() => api.patchRow(appId, r.id, { included: e.target.checked }))} /></td>
-      <td>{cell('title', r.uncertain_fields.includes('title'))}{flagged && <small className="rowflag" title={r.flags?.join('\n')}>Check: {r.flags?.[0]}</small>}</td>
-      <td>{cell('grade', r.uncertain_fields.includes('grade') || flagged, 56)}</td>
+      <td>{cell('title', r.uncertain_fields.includes('title'))}{(r.questions ?? []).map((q, i) => <small className="rowq" key={i}>? {q.question}</small>)}{flagged && !(r.questions?.length) && <small className="rowflag" title={r.flags?.join('\n')}>Check: {r.flags?.[0]}</small>}</td>
+      <td>{cell('grade', r.uncertain_fields.includes('grade') || asked('grade') || flagged, 56)}</td>
       {display.mark && <td className={`num ${flagged ? 'lowtext' : ''}`}>{r.mark ?? ''}</td>}
       {display.school_credits && <td>{cell('credits', r.uncertain_fields.includes('credits'), 56)}</td>}
       {display.grade_year && <td>{cell('term', r.uncertain_fields.includes('term'), 90)}</td>}

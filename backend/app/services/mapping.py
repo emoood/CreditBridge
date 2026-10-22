@@ -4,6 +4,7 @@
 
 Statuses: Mapped | Conditional | No mapping | Waiting on document | Not evaluated.
 No mapping, an unmet or unprovable condition, a stale mapping, or a rule failure are unresolved: the Case agent works those rows (the officer sees them as "Needs your input")."""
+import json
 from pathlib import Path
 from typing import Any
 
@@ -50,14 +51,24 @@ def selection_rule(rows: list[dict[str, Any]], curriculum: str | None = None) ->
 
 # ------------------------------------------------------------------------------------------------------- mapping table
 def seed_mappings(db: Session) -> int:
-    if db.scalar(select(CourseMapping.id).limit(1)) is not None:
-        return 0
+    """Seed the DUMMY table from policies/dummy_mappings.yaml. Re-seeds when the file changed, but only if every row is still a dummy row
+    (version starts with "dummy-"), so a real table is never overwritten."""
     data = yaml.safe_load((ROOT / "policies" / "dummy_mappings.yaml").read_text())["mappings"]
-    for m in data:
-        db.add(CourseMapping(**{"qualification": "Advanced Placement", "aud_credits": 3, "version": "dummy-2026-10", "status": "ACTIVE",
-                                **{k: v for k, v in m.items() if v is not None}}))
+    rows = [{"qualification": "Advanced Placement", "aud_credits": 3, "version": "dummy-2026-10", "status": "ACTIVE", **{k: v for k, v in m.items() if v is not None}} for m in data]
+    existing = list(db.scalars(select(CourseMapping)))
+    key = lambda m: (m["subject_code"], m["aud_code"], m["status"], json.dumps(m.get("condition"), sort_keys=True))
+    if existing:
+        if not all(e.version.startswith("dummy-") for e in existing):
+            return 0
+        if sorted(key({"subject_code": e.subject_code, "aud_code": e.aud_code, "status": e.status, "condition": e.condition}) for e in existing) == sorted(key(r) for r in rows):
+            return 0
+        for e in existing:
+            db.delete(e)
+        db.flush()
+    for r in rows:
+        db.add(CourseMapping(**r))
     db.commit()
-    return len(data)
+    return len(rows)
 
 
 def mapping_dict(m: CourseMapping) -> dict[str, Any]:
