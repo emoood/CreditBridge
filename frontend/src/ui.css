@@ -84,3 +84,4 @@
 .xtable .subj{display:flex;gap:8px;align-items:center;justify-content:space-between}.xtable .subj-chosen small{display:block;color:#7a8aa3;font-size:10.5px}
 .xtable td.lowcell{background:#fff1c9}
 .xtable td:nth-child(2){min-width:230px}
+.xtable tr.nocur td{color:#8b97aa}.xtable tr.nocur .cell{color:#8b97aa}.xtable tr.nocur .unrec{color:#8b97aa;font-weight:600}.xtable td.lowcell{background:#f1f4f9!important}

@@ -48,7 +48,7 @@ export function classify(row: Row | null, result: CaseResult | null, included: b
   if (m.status === 'SCHOOL_SPECIFIC') return make('Not evaluated', 'School-specific subject: no university equivalent, so it is not mapped');
   if (m.status === 'NEEDS_SYLLABUS') {
     if (included || looksAdvanced(title)) return make('Waiting on document', 'No syllabus on file; a request is drafted');
-    return make('Not evaluated', 'No syllabus on file and not an advanced course', { canInclude: true });
+    return make('Not evaluated', 'Not in curriculum: no syllabus on file, and not an advanced course', { canInclude: true });
   }
   if (d?.decision === 'ACCEPTED') return make('Mapped', 'Accepted by the officer');
   if (cat === 'BLOCKED_BY_RULE') return make('Needs you', result.triage.reasons[0] ?? 'Blocked by a policy rule', { finding: `Blocked by a rule: ${result.triage.reasons[0] ?? ''}`, action: { kind: 'open', label: 'Open evidence' } });

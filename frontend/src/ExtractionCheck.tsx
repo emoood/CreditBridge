@@ -11,13 +11,14 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: 
   const rows = app.rows ?? [];
   const ex = app.extraction;
   const wrap = async (f: () => Promise<unknown>) => { setErr(null); try { await f(); await onChanged(); } catch (e) { setErr((e as Error).message); } };
-  const lowRows = rows.filter(r => r.uncertain_fields.length || r.flags?.length || (r.included && !r.subject)).length;
+  const lowRows = rows.filter(r => r.uncertain_fields.length || r.flags?.length).length;
+  const noCur = rows.filter(r => r.included && !r.subject).length;
   const included = rows.filter(r => r.included).length;
   async function confirm() { setBusy(true); await wrap(() => api.confirm(app.id, role)); setBusy(false); }
   return <div className="xcheck">
     <div className="xcheck-top">
       <div><h3>Check the extraction</h3>
-        <p className="muted">{included} courses read. {lowRows ? `${lowRows} row${lowRows === 1 ? '' : 's'} with a highlighted cell: check against the scan.` : 'Nothing looks uncertain.'} Edit any cell by clicking it.</p></div>
+        <p className="muted">{included} courses read. {lowRows ? `${lowRows} row${lowRows === 1 ? '' : 's'} with a highlighted cell: check against the scan.` : 'Nothing looks uncertain.'}{noCur ? ` ${noCur} not in the curriculum (greyed, at the bottom).` : ''} Edit any cell by clicking it.</p></div>
       <button className="primary-button" onClick={confirm} disabled={busy || !included}>{busy ? <Loader2 size={16} className="spin" /> : <Check size={16} />} Confirm extraction</button>
     </div>
     {(ex?.failed_blocks ?? 0) > 0 && <div className="eval-warn"><AlertCircle size={15} /> A part of the page with no course on it (a footer, legend or signature block) could not be read and was skipped. This is not a missing course. Compare the table with the scan; if a course really is missing, add it by hand.</div>}
@@ -30,7 +31,7 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: 
         {app.document ? <img src={api.previewUrl(app.id, page)} alt={`Transcript page ${page}`} /> : <p className="muted">No scan is stored for this application.</p>}</div>
       <div className="vtable-wrap">
         <table className="xtable"><thead><tr><th /><th>Course (as written)</th><th>Grade</th>{display.mark && <th>Mark</th>}{display.school_credits && <th>Credits</th>}{display.grade_year && <th>Grade year</th>}<th>Curriculum course</th><th /></tr></thead>
-          <tbody>{rows.map(r => <XRow key={r.id} appId={app.id} r={r} quals={quals} qual={qual} wrap={wrap} display={display} />)}</tbody></table>
+          <tbody>{[...rows.filter(r => r.subject), ...rows.filter(r => !r.subject)].map(r => <XRow key={r.id} appId={app.id} r={r} quals={quals} qual={qual} wrap={wrap} display={display} />)}</tbody></table>
         {rows.length === 0 && <div className="empty-state">No courses were recognised. Add rows manually.</div>}
         <div className="verify-actions">
           <button className="link-btn" onClick={() => wrap(() => api.addRow(app.id))}><Plus size={13} /> Add a course</button>
@@ -50,14 +51,14 @@ function XRow({ appId, r, quals, qual, wrap, display }: { display: Institution['
     <input defaultValue={r[k]} className={`cell ${low ? 'low' : ''}`} style={w ? { width: w } : undefined} aria-label={k}
       onBlur={e => { if (e.target.value !== r[k]) wrap(() => api.patchRow(appId, r.id, { [k]: e.target.value })); }} />;
   return <>
-    <tr className={r.included ? '' : 'off'}>
+    <tr className={`${r.included ? '' : 'off'} ${r.subject ? '' : 'nocur'}`}>
       <td><input type="checkbox" checked={r.included} aria-label="Include" onChange={e => wrap(() => api.patchRow(appId, r.id, { included: e.target.checked }))} /></td>
       <td>{cell('title', r.uncertain_fields.includes('title'))}{flagged && <small className="rowflag" title={r.flags?.join('\n')}>Check: {r.flags?.[0]}</small>}</td>
       <td>{cell('grade', r.uncertain_fields.includes('grade') || flagged, 56)}</td>
       {display.mark && <td className={`num ${flagged ? 'lowtext' : ''}`}>{r.mark ?? ''}</td>}
       {display.school_credits && <td>{cell('credits', r.uncertain_fields.includes('credits'), 56)}</td>}
       {display.grade_year && <td>{cell('term', r.uncertain_fields.includes('term'), 90)}</td>}
-      <td className={r.subject ? 'subj' : 'subj lowcell'}>{r.subject ? <span className="subj-chosen"><strong>{r.subject.code}</strong><small>{r.subject.qualification}{r.subject.name.trim().toLowerCase() !== (r.title || '').trim().toLowerCase() ? ` · ${r.subject.name}` : ''}</small></span> : <span className="unrec">Not in the curriculum</span>}
+      <td className={r.subject ? 'subj' : 'subj lowcell'}>{r.subject ? <span className="subj-chosen"><strong>{r.subject.code}</strong><small>{r.subject.qualification}{r.subject.name.trim().toLowerCase() !== (r.title || '').trim().toLowerCase() ? ` · ${r.subject.name}` : ''}</small></span> : <span className="unrec">Not in curriculum</span>}
         <button className="link-btn" onClick={() => setPicker(!picker)}>{r.subject ? 'Change' : 'Choose'}</button></td>
       <td><button className="icon-button" aria-label="Remove row" onClick={() => wrap(() => api.deleteRow(appId, r.id))}><X size={14} /></button></td></tr>
     {picker && <tr><td colSpan={5 + (display.mark ? 1 : 0) + (display.school_credits ? 1 : 0) + (display.grade_year ? 1 : 0)}><Picker r={r} quals={quals} qual={qual} onPick={id => { setPicker(false); wrap(() => api.patchRow(appId, r.id, { subject_id: id })); }} /></td></tr>}
