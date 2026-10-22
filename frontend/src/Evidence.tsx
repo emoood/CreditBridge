@@ -51,7 +51,7 @@ function CaseBlock({ appId, r, s, role, onChanged }: { appId: string; r: CaseRes
   }
   return <div className="block case-block"><h4>Case finding <Pill tone={s.status === 'Mapped' ? 'green' : s.status === 'Waiting on document' ? 'blue' : 'amber'}>{s.status}</Pill></h4>
     <p>{f?.headline ?? s.reason}</p>
-    {s.mapping && <p className="muted">Mapping to {s.mapping.aud_code} (version {s.mapping.version}, {s.mapping.status.toLowerCase()}){s.mapping.condition ? ` · condition: ${s.mapping.condition.type.replace(/_/g, ' ')} ${JSON.stringify(s.mapping.condition.value)}` : ''}</p>}
+    {s.mapping && <p className="muted">Placeholder mapping to {s.mapping.aud_code} (version {s.mapping.version}, {s.mapping.status.toLowerCase()}){s.mapping.condition ? ` · condition: ${s.mapping.condition.type.replace(/_/g, ' ')} ${JSON.stringify(s.mapping.condition.value)}` : ''}</p>}
     {s.condition_result && s.condition_result.status !== 'MET' && <p className="muted">Condition check: {s.condition_result.reason}</p>}
     {f && f.missing_evidence.length > 0 && <><small className="lbl">Missing evidence</small><ul>{f.missing_evidence.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
     {f && f.gaps.length > 0 && <><small className="lbl">Gaps</small><ul>{f.gaps.map((x, i) => <li key={i}>{x}</li>)}</ul></>}

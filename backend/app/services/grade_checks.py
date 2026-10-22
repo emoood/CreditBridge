@@ -1,5 +1,6 @@
 """Deterministic cross-checks on what the vision model read: mark -> letter -> grade points, credit totals, quality points,
 GPA. A mismatch only raises a flag for the officer; it never changes a value. The scale is an assumption (see the YAML)."""
+import re
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -16,6 +17,37 @@ TOL_TOTAL = 0.02
 def load_scale(name: str | None = None) -> dict[str, Any]:
     d = yaml.safe_load(SCALES_PATH.read_text())
     return d["scales"][name or d["default"]]
+
+
+BAND = re.compile(r"\b([A-F][+-]?)\s*[:\s]\s*(\d{2,3})\s*(?:-|–|to)\s*(\d{2,3})\b(?:[^|;\n]*?=\s*(\d(?:\.\d)?))?")
+
+
+def scale_from_text(text: str) -> dict[str, Any] | None:
+    """Read a printed grading scale such as 'A 93-100 = 4.0 | A- 90-92 = 3.7 | ...' into bands (min_mark, letter, points). None if fewer than 3 bands are found."""
+    found = {}
+    for m in BAND.finditer(text.replace("\u2013", "-")):
+        letter, lo, _hi, pts = m.group(1), int(m.group(2)), int(m.group(3)), m.group(4)
+        found[letter] = (lo, letter, float(pts) if pts else None)
+    if len(found) < 3:
+        return None
+    bands = sorted(found.values(), key=lambda b: -b[0])
+    default = {b[1]: b[2] for b in load_scale()["bands"]}
+    return {"label": "Grading scale printed on the transcript", "source": "printed", "bands": [[lo, lt, pts if pts is not None else default.get(lt, 0.0)] for lo, lt, pts in bands]}
+
+
+def letter_for_row(row: dict[str, Any], scale: dict[str, Any] | None = None) -> tuple[str | None, str]:
+    """The letter grade a rule should use: the letter column when present; otherwise the numeric mark converted with the scale printed on the
+    transcript (falling back to the default synthetic scale, which is only an assumption). Returns (letter or None, how it was found)."""
+    g = (row.get("grade") or "").strip()
+    if g and not re.fullmatch(r"\d+(\.\d+)?", g):
+        return g.upper(), "letter column"
+    mark = row.get("mark")
+    if mark is None and re.fullmatch(r"\d+(\.\d+)?", g):
+        mark = float(g)
+    if mark is None:
+        return None, "no grade"
+    s = scale or load_scale()
+    return expected_for_mark(float(mark), s)[0], "numeric mark converted with the " + ("printed" if scale and scale.get("source") == "printed" else "default (assumed)") + " grading scale"
 
 
 def expected_for_mark(mark: float, scale: dict[str, Any]) -> tuple[str, float]:

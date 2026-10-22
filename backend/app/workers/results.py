@@ -89,7 +89,7 @@ def mapped_result(sid: str, row: dict[str, Any], state: dict[str, Any], result_i
     m = state["mapping"]
     t = rt().repo.targets.get(m["aud_code"]) or {"code": m["aud_code"], "title": m["aud_code"], "level": 0, "credits": m["aud_credits"]}
     r = _skeleton(sid, row, result_id, "READY_TO_ACCEPT", [state["reason"]], 4,
-                  {"status": "POTENTIAL_MATCH", "target": {"code": t["code"], "title": t["title"], "level": t["level"], "credits": m["aud_credits"], "basis": f"mapping table {m['version']}"},
+                  {"status": "POTENTIAL_MATCH", "target": {"code": t["code"], "title": t["title"], "level": t["level"], "credits": m["aud_credits"], "basis": f"placeholder mapping table {m['version']}"},
                    "flags": ["FROM_MAPPING_TABLE"]}, state)
     r["rules"], r["staff_checklist"] = _rules_for(row, m["aud_code"])
     r["mapping"] = {"version": m["version"], "condition": m["condition"], "condition_result": state.get("condition_result")}

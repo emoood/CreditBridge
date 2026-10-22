@@ -1,0 +1,7 @@
+{
+ "synthetic": true,
+ "generator": "fixtures/generate_demo_v3.py",
+ "never_uploaded": [
+  "transcript_a_live_demo.pdf"
+ ]
+}

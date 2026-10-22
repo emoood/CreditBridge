@@ -1,0 +1,227 @@
+{
+ "label": "SYNTHETIC DEMO DATA: invented students, hand-derived from the generator, not from any model output. Mapping codes are PLACEHOLDER data.",
+ "A_live_demo": {
+  "student": "Maya Okonkwo",
+  "student_id": "SYN-1001",
+  "rows": [
+   {
+    "subject": "AP Calculus AB",
+    "letter": "A",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "AP Psychology",
+    "letter": "A",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "AP Biology",
+    "letter": "A-",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "AP Microeconomics",
+    "letter": "A-",
+    "credits": 0.5,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "Moral Education",
+    "letter": "A",
+    "credits": 0.5,
+    "term": "Fall 2025 (Yr 11)"
+   },
+   {
+    "subject": "AP Computer Science A",
+    "letter": "A-",
+    "credits": 1.0,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Statistics",
+    "letter": "B+",
+    "credits": 1.0,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Chemistry",
+    "letter": "B+",
+    "credits": 1.0,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Physics 1",
+    "letter": "B",
+    "credits": 1.0,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Art History",
+    "letter": "B",
+    "credits": 0.5,
+    "term": "Spring 2026 (Yr 11)"
+   },
+   {
+    "subject": "AP Human Geography",
+    "letter": "A",
+    "credits": 0.5,
+    "term": "Spring 2026 (Yr 11)"
+   }
+  ],
+  "scale_line": "Grading scale: A 93-100 = 4.0 | A- 90-92 = 3.7 | B+ 87-89 = 3.3 | B 83-86 = 3.0 | B- 80-82 = 2.7 | C+ 77-79 = 2.3 | C 73-76 = 2.0",
+  "file": "transcript_a_live_demo.pdf",
+  "text_layer": true,
+  "expected_statuses": {
+   "AP Calculus AB": "Conditional (needs an AP exam score of at least 4)",
+   "AP Computer Science A": "Conditional (stale mapping)",
+   "Moral Education": "Not evaluated (school-specific)",
+   "everything else": "Mapped"
+  }
+ },
+ "B_intake": {
+  "student": "Daniel Ferreira",
+  "student_id": "SYN-1002",
+  "term": "2025-2026 - Grade 12",
+  "rows": [
+   {
+    "subject": "AP Calculus BC",
+    "mark": 92,
+    "letter": "A-",
+    "points": 3.7,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Physics 2",
+    "mark": 88,
+    "letter": "B+",
+    "points": 3.3,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Chemistry",
+    "mark": 85,
+    "letter": "B",
+    "points": 3.0,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Macroeconomics",
+    "mark": 91,
+    "letter": "A-",
+    "points": 3.7,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Spanish Language",
+    "mark": 94,
+    "letter": "A",
+    "points": 4.0,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Biology",
+    "mark": 89,
+    "letter": "B+",
+    "points": 3.3,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Statistics",
+    "mark": 96,
+    "letter": "A",
+    "points": 4.0,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Human Geography",
+    "mark": 90,
+    "letter": "A-",
+    "points": 3.7,
+    "credits": 0.5
+   }
+  ],
+  "term_totals": {
+   "credits": 7.5,
+   "quality_points": 26.85,
+   "gpa": 3.58
+  },
+  "hard_to_read": {
+   "row": "AP Chemistry",
+   "cell": "Mark",
+   "printed_value": 85,
+   "expected_failing_checks": [
+    "grading_scale (mark -> letter B)",
+    "term credit/quality-point totals if the smear also hides the credits"
+   ]
+  },
+  "file": "transcript_b_intake.pdf / .png",
+  "text_layer": false
+ },
+ "C_copy_error": {
+  "student": "Sofia Lindqvist",
+  "student_id": "SYN-1003",
+  "rows": [
+   {
+    "subject": "AP Statistics",
+    "letter": "B+",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 12)"
+   },
+   {
+    "subject": "AP Psychology",
+    "letter": "A-",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 12)"
+   },
+   {
+    "subject": "AP Biology",
+    "letter": "B+",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 12)"
+   },
+   {
+    "subject": "AP Chemistry",
+    "letter": "A-",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 12)"
+   },
+   {
+    "subject": "AP Physics 1",
+    "letter": "B",
+    "credits": 1.0,
+    "term": "Fall 2025 (Yr 12)"
+   },
+   {
+    "subject": "AP Physics 2",
+    "letter": "B+",
+    "credits": 1.0,
+    "term": "Spring 2026 (Yr 12)"
+   },
+   {
+    "subject": "AP Microeconomics",
+    "letter": "A",
+    "credits": 0.5,
+    "term": "Spring 2026 (Yr 12)"
+   },
+   {
+    "subject": "AP Macroeconomics",
+    "letter": "A-",
+    "credits": 0.5,
+    "term": "Spring 2026 (Yr 12)"
+   },
+   {
+    "subject": "AP Human Geography",
+    "letter": "B+",
+    "credits": 0.5,
+    "term": "Spring 2026 (Yr 12)"
+   }
+  ],
+  "scale_line": "Grading scale: A 93-100 = 4.0 | A- 90-92 = 3.7 | B+ 87-89 = 3.3 | B 83-86 = 3.0 | B- 80-82 = 2.7 | C+ 77-79 = 2.3 | C 73-76 = 2.0",
+  "file": "transcript_c_copy_error.pdf",
+  "text_layer": true,
+  "demo": "enable the 'planted for demo' switch after confirming; the sheet checks must fail on one row"
+ }
+}

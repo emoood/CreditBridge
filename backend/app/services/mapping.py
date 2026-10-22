@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db.models import CourseMapping, RowState, now
+from ..services import grade_checks as gc
 from ..services import policy_rules as pr
 from .triage import ENFORCED
 
@@ -89,17 +90,18 @@ def lookup_many(db: Session, codes: list[str]) -> dict[str, CourseMapping]:
 
 
 # ---------------------------------------------------------------------------------------------------------- conditions
-def check_condition(cond: dict[str, Any] | None, grade: str | None, facts: dict[str, Any]) -> dict[str, Any]:
+def check_condition(cond: dict[str, Any] | None, row: dict[str, Any], facts: dict[str, Any], scale: dict[str, Any] | None = None) -> dict[str, Any]:
     """MET | UNMET | MISSING, with exactly what is missing. Deterministic."""
     if not cond:
         return {"status": MET, "reason": "No condition on this mapping.", "missing": []}
     t, v, ev = cond.get("type"), cond.get("value"), cond.get("evidence") or "supporting document"
     if t == "min_grade":
-        ok = pr._grade_meets(pr.Policy.load(), grade or "", str(v))
+        letter, how = gc.letter_for_row(row, scale)  # the letter column if present, else the numeric mark through the transcript's printed scale
+        ok = pr._grade_meets(pr.Policy.load(), letter or "", str(v))
         if ok is None:
-            return {"status": MISSING, "reason": f"Needs a letter grade of at least {v}; the transcript grade '{grade}' is not on the grade scale.",
-                    "missing": [{"field": "letter_grade", "evidence": "a transcript showing the letter grade"}]}
-        return {"status": MET if ok else UNMET, "reason": f"Grade {grade} {'meets' if ok else 'is below'} the required {v}.", "missing": []}
+            return {"status": MISSING, "reason": f"Needs a letter grade of at least {v}; the transcript shows '{row.get('grade')}', which cannot be placed on the grade scale.",
+                    "missing": [{"field": "letter_grade", "evidence": "a transcript showing the letter grade or its grading scale"}]}
+        return {"status": MET if ok else UNMET, "reason": f"Grade {letter} ({how}) {'meets' if ok else 'is below'} the required {v}.", "missing": []}
     if t == "min_exam_score":
         s = facts.get("exam_score")
         if s is None:
@@ -125,7 +127,7 @@ def policy_fails(grade: str | None, aud_code: str, repo) -> list[str]:
 
 
 def decide_row(row: dict[str, Any], mapping: CourseMapping | None, facts: dict[str, Any], override: bool, repo,
-               curriculum: str | None = None, school_specific: bool = False) -> dict[str, Any]:
+               curriculum: str | None = None, school_specific: bool = False, scale: dict[str, Any] | None = None) -> dict[str, Any]:
     """The code verdict for one row. Never calls a model."""
     out: dict[str, Any] = {"status": NOT_EVAL, "kind": "", "reason": "", "can_include": False, "mapping": None, "condition_result": None}
     if not row.get("included", True):
@@ -140,7 +142,7 @@ def decide_row(row: dict[str, Any], mapping: CourseMapping | None, facts: dict[s
     out["mapping"] = mapping_dict(mapping)
     if mapping.status != "ACTIVE":
         return {**out, "status": CONDITIONAL, "kind": "stale", "reason": f"The mapping to {mapping.aud_code} is {mapping.status.lower()} (version {mapping.version}) and needs confirming"}
-    cond = check_condition(mapping.condition, row.get("grade"), facts)
+    cond = check_condition(mapping.condition, row, facts, scale)
     out["condition_result"] = cond
     if cond["status"] == UNMET:
         return {**out, "status": CONDITIONAL, "kind": "condition_unmet", "reason": cond["reason"]}

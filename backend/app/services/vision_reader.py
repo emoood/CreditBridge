@@ -151,4 +151,5 @@ def merge_checked(blocks: list[dict[str, Any]], scale: dict[str, Any]) -> dict[s
     flags = [f for b in blocks for f in b["flags"] if not f.startswith(dropped_prefixes)]  # drop flags that belonged to non-course rows
     flags += term_flags
     flags += gc.check_totals(rows, cum.get("cumulative_credits"), cum.get("cumulative_quality_points"), cum.get("cumulative_gpa"), "cumulative")
-    return {"rows": rows, "flags": flags, "cumulative": cum, "scale": scale["label"], "dropped_rows": len(dropped)}
+    legend = " | ".join(" ".join(str(d.get(k)) for k in ("subject", "letter", "mark", "points") if d.get(k) is not None) for d in dropped)  # a printed grading scale ends up here
+    return {"rows": rows, "flags": flags, "cumulative": cum, "scale": scale["label"], "dropped_rows": len(dropped), "dropped_text": legend}

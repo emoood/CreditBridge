@@ -82,7 +82,7 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
         if st.status != mp.MAPPED or not sug["aud_code"]:
             raise ActionError(409, "There is no mapped suggestion to confirm for this course")
         chosen = {"aud_code": sug["aud_code"], "credits": sug["credits"]}
-    elif action == "CHANGE":
+    elif action in ("CHANGE", "CORRECT"):
         code = aud_code or sug["aud_code"]
         if not code:
             raise ActionError(422, "Pick an AUD course")
@@ -90,9 +90,9 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
             raise ActionError(422, "Credits must be between 1 and 12")
         _check_target(code, row.get("grade"))
         chosen = {"aud_code": code, "credits": credits if credits is not None else (sug["credits"] if code == sug["aud_code"] else transfer_credits())}
-        if code == sug["aud_code"] and chosen["credits"] == sug["credits"]:
+        if action == "CHANGE" and code == sug["aud_code"] and chosen["credits"] == sug["credits"]:
             raise ActionError(422, "Nothing changed: use Confirm instead")
-    elif action not in ("REJECT", "NO_CREDIT", "SEND_FOR_REVIEW", "CORRECT"):
+    elif action not in ("REJECT", "NO_CREDIT", "SEND_FOR_REVIEW"):
         raise ActionError(422, f"Unknown action {action}")
     a = RowAction(app_id=app.id, row_id=row["id"], action=action, actor=actor, actor_role=role, original=sug, chosen=chosen, reason=reason.strip(), batch=batch)
     db.add(a)

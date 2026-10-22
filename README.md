@@ -52,6 +52,18 @@ After a real run reaches review, click **Save this run as a recording for replay
 `data/recordings/<name>/` (gitignored, local only). **Replay a recorded run** loads it at the officer gate without calling the model; you can
 pick up to two subjects to run live. Every replayed result is labelled `Replay of recorded run, <date>, <model>`; live ones are not.
 
+## Demo transcripts (synthetic, invented students)
+
+`fixtures/demo_v3/` (regenerate with `python fixtures/generate_demo_v3.py`; names and IDs in `students.json`, expectations in `expected.json`):
+
+| File | Student | Use |
+|---|---|---|
+| `transcript_a_live_demo.pdf` (text layer) | Maya Okonkwo, SYN-1001 | The live demo case: most rows map; AP Calculus AB is conditional (needs an exam score) and AP Computer Science A is stale. Upload it fresh for the demo. |
+| `transcript_b_intake.pdf` / `.png` (image only, no text layer) | Daniel Ferreira, SYN-1002 | One year block with a smudged mark (AP Chemistry, printed 85), so a check can fail and the Intake recheck has work. |
+| `transcript_c_copy_error.pdf` (text layer) | Sofia Lindqvist, SYN-1003 | Ordinary transcript. After confirming, the footer switch **Demo: plant a copy error** (labelled "planted for demo") changes one confirmed AUD equivalent in the output stage; the sheet checks fail and the Auditor explains it. |
+
+Type the student's name and ID in the boxes next to *Upload transcript*. All AUD codes and credits in the demo are **placeholder mapping data** (`policies/dummy_mappings.yaml`), not AUD's equivalencies.
+
 ## Checks
 
 ```bash

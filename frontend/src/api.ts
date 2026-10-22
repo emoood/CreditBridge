@@ -25,14 +25,15 @@ export type Job = { id: string; app_id?: string; phase?: 'READING' | 'EVALUATION
   flags?: string[]; units?: Unit[]; summary?: { triage_counts?: Record<string, number>; worklist?: string[]; failed?: string[] }; timings?: { total_secs: number | null; per_stage_secs: Record<string, number> };
   courses: Record<string, string>; errors: Record<string, string>; route: string; model: string;
   llm_calls: number; activity: { ts: number; kind: string; course?: string; tool?: string; stage?: string; role?: string; ok?: boolean; duration_s?: number }[] };
-export type Institution = { institution: string; transfer_credits: number; display: { mark: boolean; school_credits: boolean; aud_credits: boolean; grade_year: boolean } };
+export type Institution = { demo_mode?: boolean; institution: string; transfer_credits: number; display: { mark: boolean; school_credits: boolean; aud_credits: boolean; grade_year: boolean } };
 export type ActionInfo = { id: number; row_id: string; action: 'CONFIRM' | 'CHANGE' | 'REJECT' | 'NO_CREDIT' | 'SEND_FOR_REVIEW' | 'CORRECT'; actor: string; at: string;
   original: { aud_code: string | null; credits: number | null; status: string; mapping_version?: string }; chosen: { aud_code?: string; credits?: number }; reason: string; batch: boolean };
 export type SheetLine = { row_id: string; source_course: string; grade: string; aud_code: string | null; aud_equivalent: string; aud_credits: number | null; status: string; action: string };
 export type SheetCheck = { row_id: string; source_course: string; check: string; message: string };
 export type AuditReport = { status: string; summary: string; explanations: { row_id: string; explanation: string }[]; passes_after: boolean; applied: string[];
   proposals: { row_id: string; source_course: string; why: string; from: { aud_code: string | null; credits: number | null }; to: { aud_code: string; credits: number }; touches_confirmed: boolean }[] };
-export type Sheet = { columns: string[]; headers: string[]; rows: SheetLine[]; checks: SheetCheck[]; ok: boolean; unconfirmed: number; audit: AuditReport | null; unresolved: { row_id: string; title: string; status: string }[]; approved: boolean };
+export type Sheet = { columns: string[]; headers: string[]; rows: SheetLine[]; checks: SheetCheck[]; ok: boolean; unconfirmed: number; audit: AuditReport | null; unresolved: { row_id: string; title: string; status: string }[]; approved: boolean;
+  planted: { row_id: string; source_course: string; from: string; to: string; label: string } | null; note?: string };
 export type Finding = { headline: string; questions_for_chair?: string[]; needs?: string; missing_evidence: string[]; gaps: string[]; candidates: { aud_code: string; why: string }[]; review_package: string[]; flags?: string[] };
 export type DraftedRequest = { id: string; what: string; why: string; to: string; status: 'DRAFT' | 'SENT' | 'RECEIVED' };
 export type RowStatus = 'Mapped' | 'Conditional' | 'No mapping' | 'Waiting on document' | 'Not evaluated';
@@ -79,6 +80,7 @@ export const api = {
   evidence: (id: string, row: string, role: string, facts: Record<string, unknown>, file?: File | null, note = '') => { const f = new FormData(); f.append('facts', JSON.stringify(facts)); f.append('note', note); if (file) f.append('file', file);
     return fetch(`/api/v1/applications/${id}/rows/${row}/evidence`, { method: 'POST', headers: { 'X-Role': role, 'X-Actor': 'Admissions officer' }, body: f }).then(j<{ job_id: string }>); },
   rowAction: (id: string, row: string, role: string, body: { action: string; aud_code?: string; credits?: number; reason?: string }) => fetch(`/api/v1/applications/${id}/rows/${row}/action`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify(body) }).then(j<ActionInfo & { job_id?: string }>),
+  plantCopyError: (id: string, role: string, on: boolean) => fetch(`/api/v1/applications/${id}/demo/plant-copy-error`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ on }) }).then(j<{ planted: unknown }>),
   confirmMapped: (id: string, role: string) => fetch(`/api/v1/applications/${id}/confirm-mapped`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ confirmed: number }>),
   sheet: (id: string) => fetch(`/api/v1/applications/${id}/sheet`).then(j<Sheet>),
   approve: (id: string, role: string) => fetch(`/api/v1/applications/${id}/approve`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ approved: boolean }>),

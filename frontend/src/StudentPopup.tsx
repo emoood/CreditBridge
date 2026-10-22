@@ -90,10 +90,14 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
             {i.action?.action === 'SEND_FOR_REVIEW' && !i.resolved && <span className="res-tag">Sent for review</span>}
             {i.objections > 0 && <span className="obj-badge" title="The reviewer objects. Open the row for the full text.">{i.objections} objection{i.objections === 1 ? '' : 's'}</span>}</td></tr>)}</tbody></table>}
 
+      {sheet?.planted && <section className="planted"><strong>PLANTED FOR DEMO</strong> One confirmed AUD equivalent ({sheet.planted.source_course}: {sheet.planted.from} → {sheet.planted.to}) was changed in the output stage only. Your decisions are untouched. The sheet checks below should catch it.{' '}
+        <button className="link-btn" disabled={busy} onClick={() => run(() => api.plantCopyError(appId, role, false))}>Remove</button></section>}
       {sheet && !sheet.ok && <section className="checks"><h4>Sheet checks failed ({sheet.checks.length})</h4>
         <ul>{sheet.checks.map((k, i) => <li key={i}><strong>{k.source_course}</strong> · {k.check.replace(/_/g, ' ')}: {k.message}</li>)}</ul>
         <button className="secondary-button" disabled={busy} onClick={() => run(() => api.runAudit(appId, role))}>Explain with the Auditor</button></section>}
       {sheet?.audit && <AuditBox appId={appId} role={role} audit={sheet.audit} onChanged={reload} />}
+
+      {built.relevant.length > 0 && <p className="muted placeholder-note">AUD codes and credits shown are placeholder mapping data for this demo, not AUD&apos;s real equivalencies.</p>}
 
       {built.needsInput.length > 0 && <section className="needs"><h4>Needs your input <span className="count">{built.needsInput.length}</span></h4>
         <div className="needs-cards">{built.needsInput.map(i => <NeedCard key={i.key} i={i} appId={appId} role={role} busy={busy} onOpen={() => i.result && setEvidenceKey(i.key)} onChanged={reload} />)}</div></section>}
@@ -112,6 +116,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
         <button className="secondary-button" onClick={() => run(() => api.confirmMapped(appId, role))} disabled={busy || !c.confirmable || role !== 'admissions'}>Confirm mapped{c.confirmable ? ` (${c.confirmable})` : ''}</button>
         <button className="primary-button" onClick={() => run(() => api.approve(appId, role))} disabled={busy || !canApprove}
           title={approved ? 'Already approved' : c.unresolved ? `${c.unresolved} relevant row(s) are not resolved yet` : !sheet?.ok ? 'The sheet checks must pass' : role !== 'admissions' ? 'Only an admissions officer can approve' : ''}>Approve</button>
+        {inst.demo_mode && confirmed && !approved && c.resolved > 0 && !sheet?.planted && <button className="link-btn demo-switch" disabled={busy} title="Changes one confirmed AUD equivalent in the output stage so the checks and the Auditor have something to catch" onClick={() => run(() => api.plantCopyError(appId, role, true))}>Demo: plant a copy error</button>}
         <button className="secondary-button" onClick={() => { setActivity(!activity); setEvidenceKey(null); }}>Activity</button>
       </div></footer>}
   </Shell>;

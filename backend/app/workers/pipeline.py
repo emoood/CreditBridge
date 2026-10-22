@@ -62,8 +62,9 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
                 rows = [{"subject": r.title, "code": r.code, "mark": None, "letter": r.grade, "points": None,
                          "credits": float(r.credits) if r.credits is not None else None, "term": r.term, "page": r.page,
                          "flags": [], "uncertain": r.uncertain_fields} for r in res.rows]
-                store.finish_unit(db, u, "DONE", {"rows": rows, "flags": res.warnings, "totals": {}, "reread": False})
+                store.finish_unit(db, u, "DONE", {"rows": rows, "flags": res.warnings, "totals": {}, "reread": False, "scale": res.scale})
             merged = gc_merge([u.result])
+            merged["printed_scale"] = (u.result or {}).get("scale")
             method = "digital_pdf"
         else:
             method = "vision"
@@ -155,7 +156,7 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         store.set_json(app, "extracted_rows", rows)
         failed = [b for b in blocks_meta if b["status"] != "DONE"]
         store.set_json(app, "extraction", {"student_id": (app.extraction or {}).get("student_id", ""), "method": method, "blocks": blocks_meta, "failed_blocks": len(failed), "flags": merged["flags"] + cur_flags,
-                                           "cumulative": merged["cumulative"], "scale": merged["scale"], "unrecognized": unrecognized,
+                                           "cumulative": merged["cumulative"], "scale": merged["scale"], "grading_scale": merged.get("printed_scale") or gc.scale_from_text(merged.get("dropped_text", "")), "unrecognized": unrecognized,
                                            "dropped_non_course_rows": merged.get("dropped_rows", 0),
                                            "rows_found": len(rows)})
         app.status = "EXTRACTION_REVIEW_REQUIRED"
@@ -264,7 +265,7 @@ def _lookup_rows(db, app: Application, rows: list[dict[str, Any]]) -> dict[str, 
     for r in rows:
         old = mp.get_state(db, app.id, r["id"])
         verdict = mp.decide_row(r, maps.get((r.get("subject") or {}).get("code")), (old.facts if old else {}) or {}, bool(old and old.included_override), R.repo,
-                                school_specific=is_school_specific(r.get("title") or ""))
+                                school_specific=is_school_specific(r.get("title") or ""), scale=(app.extraction or {}).get("grading_scale"))
         waiting = old and old.status == mp.WAITING and any(q["status"] in ("DRAFT", "SENT") for q in (old.requests or []))
         if waiting and verdict["status"] in mp.WORKABLE:  # still waiting on the same document: keep the pause
             verdict = {**verdict, "status": mp.WAITING, "reason": old.reason}

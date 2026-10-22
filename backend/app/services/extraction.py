@@ -30,6 +30,7 @@ class ExtractionResult:
     warnings: list[str] = field(default_factory=list)
     unparsed_lines: list[dict] = field(default_factory=list)  # {page, text}
     lines: list[dict] = field(default_factory=list)  # every raw line kept as evidence: {page, n, text}
+    scale: dict | None = None  # the grading scale printed on the transcript, when one was found
 
 
 def normalize(text: str) -> str:
@@ -43,6 +44,8 @@ def normalize_arabic(s: str) -> str:
 def parse_line(line: str) -> dict | None:
     """Return {code,title,credits,grade,term,uncertain} for a plausible course row, else None."""
     line = normalize(line).strip()
+    if re.search(r"(?i)grading scale", line):  # a printed scale is read separately; its letters are not course grades
+        return None
     if len(line) < 4 or HEADER.search(line) and not re.search(r"\b[A-F][+-]?\s*$", line):
         return None
     cols = [c.strip() for c in re.split(r"\s{2,}|\t|\|", line) if c.strip()]
@@ -143,6 +146,8 @@ def _ocr_images(images: list[Image.Image], doc_id: str, res: ExtractionResult) -
 
 
 def _finalize(res: ExtractionResult) -> ExtractionResult:
+    from .grade_checks import scale_from_text
+    res.scale = scale_from_text("\n".join(ln["text"] for ln in res.lines))
     if res.rows and all(r.credits is None for r in res.rows):  # e.g. school records have no credits column
         for r in res.rows:
             r.uncertain_fields = [u for u in r.uncertain_fields if u != "credits"]

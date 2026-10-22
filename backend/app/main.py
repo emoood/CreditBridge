@@ -58,7 +58,7 @@ async def institution():
     from pathlib import Path
 
     import yaml
-    return yaml.safe_load((Path(__file__).resolve().parents[2] / "policies" / "institution.yaml").read_text())
+    return {**yaml.safe_load((Path(__file__).resolve().parents[2] / "policies" / "institution.yaml").read_text()), "demo_mode": get_settings().demo_mode}
 
 
 @app.get("/api/v1/config/runtime")

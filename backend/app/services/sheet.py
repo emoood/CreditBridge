@@ -41,13 +41,18 @@ def _line(row: dict[str, Any], st, act: RowAction | None, override: dict[str, An
 def build(db: Session, app: Application, overrides: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     done = ac.latest(db, app.id)
     lines, checks = [], []
+    plant = (app.extraction or {}).get("planted_copy_error")  # PLANTED FOR DEMO: changes one confirmed AUD equivalent in the output stage only
     for r in app.rows:
         st = mp.get_state(db, app.id, r["id"])
         if st is None or st.status == mp.NOT_EVAL:
             continue
         ln = _line(r, st, done.get(r["id"]), (overrides or {}).get(r["id"]))
+        if plant and plant["row_id"] == r["id"] and not (overrides or {}).get(r["id"]) and not (done.get(r["id"]) and done[r["id"]].action == "CORRECT") and ln["aud_code"]:
+            t = rt().repo.targets.get(plant["to"])
+            ln.update({"aud_code": plant["to"], "aud_equivalent": f"{plant['to']} · {t['title']}" if t else plant["to"], "planted": True})
         lines.append(ln)
-        fail = lambda check, msg, ln=ln: checks.append({"row_id": ln["row_id"], "source_course": ln["source_course"], "check": check, "message": msg})
+        tag = " [planted for demo]" if ln.get("planted") else ""
+        fail = lambda check, msg, ln=ln, tag=tag: checks.append({"row_id": ln["row_id"], "source_course": ln["source_course"], "check": check, "message": msg + tag})
         live = db.get(CourseMapping, st.mapping["id"]) if st.mapping and st.mapping.get("id") else None
         confirmed = ln["status"].startswith("Confirmed")
         if ln["action"] == "CONFIRM":  # a plain confirmation must still equal its mapping record
@@ -77,4 +82,6 @@ def build(db: Session, app: Application, overrides: dict[str, dict[str, Any]] | 
                 seen[ln["aud_code"]] = ln
     cols = columns()
     return {"columns": cols, "headers": [COLUMN_NAMES[c] for c in cols], "rows": lines, "checks": checks, "ok": not checks,
-            "unconfirmed": sum(1 for ln in lines if ln["status"].startswith("Unconfirmed"))}
+            "unconfirmed": sum(1 for ln in lines if ln["status"].startswith("Unconfirmed")),
+            "planted": plant if plant and any(ln.get("planted") for ln in lines) else None,
+            "note": "AUD codes come from placeholder mapping data, not from AUD."}

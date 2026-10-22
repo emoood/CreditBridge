@@ -6,6 +6,7 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from ..config import get_settings
 from ..db.models import Application, Job, RowAction
 from ..db.session import app_session
 from ..runtime import rt
@@ -94,6 +95,41 @@ def get_sheet(app_id: str):
         out["unresolved"] = ac.unresolved(db, app)
         out["approved"] = app.status == "DECISIONS_RECORDED" and any(a.action == "APPROVE" for a in db.scalars(select(RowAction).where(RowAction.app_id == app_id)))
         return out
+
+
+class PlantIn(BaseModel):
+    on: bool = True
+
+
+@router.post("/applications/{app_id}/demo/plant-copy-error")
+def plant_copy_error(app_id: str, body: PlantIn, x_role: str | None = Header(default=None)):
+    """PLANTED FOR DEMO. Changes one confirmed AUD equivalent in the OUTPUT stage only (the stored decisions are untouched), so the normal sheet
+    checks and the Auditor have something real to catch. Refused when demo_mode is off."""
+    _officer(x_role)
+    if not get_settings().demo_mode:
+        raise HTTPException(404, "Demo switches are off")
+    with app_session() as db:
+        app = get_app(db, app_id)
+        _confirmed(app)
+        ex = dict(app.extraction or {})
+        if not body.on:
+            ex.pop("planted_copy_error", None)
+            store.set_json(app, "extraction", ex)
+            db.commit()
+            usage.trace(app_id, "", "code", "planted_for_demo_removed", {})
+            return {"planted": None}
+        done = ac.latest(db, app_id)
+        row = next((r for r in app.rows if done.get(r["id"]) and done[r["id"]].action == "CONFIRM"), None)
+        if row is None:
+            raise HTTPException(409, "Confirm at least one mapped course first")
+        src = done[row["id"]].chosen["aud_code"]
+        tg = rt().repo.targets
+        other = next((c for c in tg if c != src and c.split()[0] == src.split()[0] and tg[c]["level"] <= 200), None) or next(c for c in tg if c != src)
+        ex["planted_copy_error"] = {"row_id": row["id"], "source_course": row.get("title"), "from": src, "to": other, "label": "planted for demo"}
+        store.set_json(app, "extraction", ex)
+        db.commit()
+        usage.trace(app_id, row["id"], "code", "planted_for_demo", {"from": src, "to": other, "note": "PLANTED FOR DEMO: one confirmed AUD equivalent changed in the output stage"})
+        return {"planted": ex["planted_copy_error"]}
 
 
 @router.post("/applications/{app_id}/approve")
