@@ -14,7 +14,7 @@ PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt")
 
 @dataclass
 class MatchResult:
-    status: str  # POTENTIAL_MATCH | POTENTIAL_GENERAL_ELECTIVE | NO_DEFENSIBLE_MATCH | NEEDS_MORE_EVIDENCE |
+    status: str  # POTENTIAL_MATCH | POTENTIAL_GENERAL_ELECTIVE | SCHOOL_SPECIFIC (set by code, never by the model) | NO_DEFENSIBLE_MATCH | NEEDS_MORE_EVIDENCE |
     # NEEDS_SYLLABUS | NEEDS_HUMAN_REVIEW (agent failed)
     output: MatchOutput | None = None
     flags: list[str] = field(default_factory=list)

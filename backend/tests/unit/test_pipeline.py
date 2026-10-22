@@ -293,7 +293,7 @@ async def test_school_specific_subjects_are_flagged_for_the_officer_and_never_re
     await env.worker.idle()
     res = (await env.client.get(f"/api/v1/applications/{up['id']}/results")).json()
     r = next(x for x in res["results"] if x["course"]["title"] == "Film Appreciation")
-    assert r["match"]["status"] == "POTENTIAL_GENERAL_ELECTIVE" and r["triage"]["category"] == "POTENTIAL_GE"
+    assert r["match"]["status"] == "SCHOOL_SPECIFIC" and r["triage"]["category"] == "SCHOOL_SPECIFIC"
     assert "SCHOOL_SPECIFIC_NOT_MAPPED" in r["match"]["flags"] and r["match"]["target"] is None and r["match"]["title_only_suggestions"] == []
     assert r["llm_calls"] == 0 and not any(u == r["course"]["code"] for _, u in env.model.calls) and idx
     assert orchestrator.is_school_specific("Moral Education") is False  # patched list only; the shipped list is tested below

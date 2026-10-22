@@ -5,7 +5,8 @@ import { api, type AppInfo, type CaseResult, type Decision, type Job, type Recor
 const TRIAGE: Record<Triage, { label: string; tone: string }> = {
   READY_TO_ACCEPT: { label: 'Ready to accept', tone: 'green' }, NEEDS_ATTENTION: { label: 'Needs attention', tone: 'amber' },
   POTENTIAL_GE: { label: 'AI: general elective, officer decides', tone: 'amber' }, BLOCKED_BY_RULE: { label: 'Blocked by rule', tone: 'red' },
-  NEEDS_EVIDENCE: { label: 'Needs evidence', tone: 'neutral' }, NO_MATCH: { label: 'No match', tone: 'neutral' } };
+  NEEDS_EVIDENCE: { label: 'Needs evidence', tone: 'neutral' }, NO_MATCH: { label: 'No match', tone: 'neutral' },
+  SCHOOL_SPECIFIC: { label: 'School-specific, not mapped', tone: 'neutral' } };
 const RULE_TONE: Record<string, string> = { PASS: 'green', FAIL: 'red', NEEDS_REVIEW: 'amber', NEEDS_HUMAN_VERIFICATION: 'amber', NOT_APPLICABLE: 'neutral' };
 const Pill = ({ tone, children }: { tone: string; children: React.ReactNode }) => <span className={`status status-${tone}`}><span className="status-dot" />{children}</span>;
 
@@ -199,7 +200,7 @@ function ResultRow({ appId, r, role, onChanged }: { appId: string; r: CaseResult
   const [open, setOpen] = useState(false);
   const t = TRIAGE[r.triage.category];
   const target = r.match.target;
-  const headline = r.match.status === 'POTENTIAL_MATCH' && target ? `${target.code} · ${target.title}` : r.match.status === 'POTENTIAL_GENERAL_ELECTIVE' ? 'AI: general elective, officer decides' : r.match.status === 'NEEDS_SYLLABUS' ? 'Syllabus missing' : t.label;
+  const headline = r.match.status === 'POTENTIAL_MATCH' && target ? `${target.code} · ${target.title}` : r.match.status === 'POTENTIAL_GENERAL_ELECTIVE' ? 'AI: general elective, officer decides' : r.match.status === 'SCHOOL_SPECIFIC' ? 'School-specific, not mapped' : r.match.status === 'NEEDS_SYLLABUS' ? 'Syllabus missing' : t.label;
   return <article className={`result ${open ? 'result-open' : ''}`}>
     <button className="result-top" onClick={() => setOpen(!open)} aria-expanded={open}>
       <div className="result-subject"><strong>{r.course.row_code || r.course.curriculum_qualification || r.course.code}</strong><span>{r.course.title}</span><small dir="auto">{r.course.title_ar}</small></div>

@@ -1,5 +1,5 @@
 // Typed client for the FastAPI backend. All data is synthetic demo data.
-export type Triage = 'READY_TO_ACCEPT' | 'NEEDS_ATTENTION' | 'BLOCKED_BY_RULE' | 'NEEDS_EVIDENCE' | 'POTENTIAL_GE' | 'NO_MATCH';
+export type Triage = 'READY_TO_ACCEPT' | 'NEEDS_ATTENTION' | 'BLOCKED_BY_RULE' | 'NEEDS_EVIDENCE' | 'POTENTIAL_GE' | 'NO_MATCH' | 'SCHOOL_SPECIFIC';
 export type Excerpt = { id: string; text: string };
 export type Course = { code: string; row_code: string; title: string; title_ar: string; credits: string; grade: string; term: string; has_syllabus: boolean; curriculum_subject: string | null; curriculum_qualification: string | null };
 export type Decision = { decision: 'ACCEPTED' | 'DECLINED' | 'MORE_INFORMATION_REQUESTED'; reason: string; actor: string; actor_role: string; at: string; idempotency_key: string };

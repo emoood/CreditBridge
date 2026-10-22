@@ -1,5 +1,5 @@
 # School-specific subjects: they have no university equivalent, so the AI does not try to map them.
-# The officer is told they are a possible general elective and decides. Matched on the transcript title (case-insensitive substring).
+# They are neither mapped nor flagged as general electives (a general elective must be some other, non-school-specific course). Matched on the transcript title (case-insensitive substring).
 # Edit this list freely; no code change needed. (UAE Social Studies is my addition to the four named by the product owner.)
 patterns:
   - moral education

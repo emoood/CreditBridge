@@ -91,8 +91,8 @@ def is_school_specific(title: str) -> bool:
 def school_specific_case(repo: DemoRepo, source_code: str) -> CaseResult:
     from .matching_agent import MatchResult
     case = CaseFile()
-    match = MatchResult("POTENTIAL_GENERAL_ELECTIVE", flags=["SCHOOL_SPECIFIC_NOT_MAPPED"], case=case)
-    t = Triage("POTENTIAL_GE", ["School-specific subject: not mapped to a university course. The officer decides whether it counts as a general elective."], 1)
+    match = MatchResult("SCHOOL_SPECIFIC", flags=["SCHOOL_SPECIFIC_NOT_MAPPED"], case=case)
+    t = Triage("SCHOOL_SPECIFIC", ["School-specific subject: it has no university equivalent and is neither mapped nor suggested as a general elective."], 6)
     return CaseResult(source_code, match, None, [], t, case, flags=match.flags)
 
 

@@ -8,13 +8,15 @@ ENFORCED = {"AUD_MIN_LEVEL", "AUD_GRADE_LOWER", "AUD_GRADE_UPPER", "AUD_RESTRICT
 
 @dataclass
 class Triage:
-    category: str  # READY_TO_ACCEPT | NEEDS_ATTENTION | BLOCKED_BY_RULE | NEEDS_EVIDENCE | POTENTIAL_GE | NO_MATCH
+    category: str  # READY_TO_ACCEPT | NEEDS_ATTENTION | BLOCKED_BY_RULE | NEEDS_EVIDENCE | POTENTIAL_GE | NO_MATCH | SCHOOL_SPECIFIC
     reasons: list[str]
     priority: int  # lower = look at first
 
 
 def triage(match_status: str, evidence_strength: str | None, review_status: str, rules: list[RuleResult],
            declined_precedent: bool, flags: list[str]) -> Triage:
+    if match_status == "SCHOOL_SPECIFIC":
+        return Triage("SCHOOL_SPECIFIC", ["School-specific subject: no university equivalent; not mapped."], 6)
     if match_status in ("NEEDS_SYLLABUS", "NEEDS_MORE_EVIDENCE"):
         return Triage("NEEDS_EVIDENCE", ["Evidence is missing or insufficient."] + flags[:3], 2)
     if match_status == "NO_DEFENSIBLE_MATCH":

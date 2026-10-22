@@ -143,6 +143,7 @@ Not yet tried: a stronger model for the matcher/reviewer (LM Studio or a larger 
 
 ## 2026-10-22 School-specific subjects are not mapped (product owner decision)
 Moral Education, Physical Education, Islamic and Arabic A (and UAE Social Studies, my addition) exist only in the school system; university requirements differ, so they cannot be mapped.
-Transfer credit covers beginner-level major courses and general electives, and electives need an officer check. These subjects now skip the model entirely and come back as POTENTIAL_GENERAL_ELECTIVE
-(flag `SCHOOL_SPECIFIC_NOT_MAPPED`, amber, officer decides). The list is `policies/school_specific_subjects.yaml` (substring match on the transcript title; edit freely).
+Transfer credit covers beginner-level major courses and general electives, and electives need an officer check. These subjects now skip the model entirely and come back as SCHOOL_SPECIFIC
+(flag `SCHOOL_SPECIFIC_NOT_MAPPED`, grey, bottom of the list): not mapped, and NOT flagged as a general elective either. A general elective is a different thing:
+a non-school-specific subject whose university equivalent would be higher level (e.g. a school statistics course, since any probability/statistics course here is upper level) can be flagged POTENTIAL_GENERAL_ELECTIVE by the matcher. The list is `policies/school_specific_subjects.yaml` (substring match on the transcript title; edit freely).
 Effect on demo1: about 9 of 31 rows no longer cost model calls (3 Islamic A took 24-33 s each before).
