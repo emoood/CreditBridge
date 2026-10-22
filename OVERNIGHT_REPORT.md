@@ -4,17 +4,19 @@ Rules followed: work on `main`, push after every part, no force-push, tests and 
 Rollback point: tag `pre-overnight` = `3801f36` (the last commit before this run).
 
 ## Status
+Tag `pre-overnight` = `3801f36` (everything before this run; `git reset --hard pre-overnight` on a branch would roll back).
 | Part | State | Commit |
 |---|---|---|
-| Pre: push unpushed commits, tag `pre-overnight` | done | `3801f36` (tag) |
+| Pre: push unpushed commits, tag | done | `3801f36` |
 | 0. Delete the degraded B recording and files | done | `4711876` |
 | 1. Local model speed set-up | done | `5b8693f` |
 | 2. Transcript A2 (A untouched) | done | `0c6072e` |
-| 3. Planted misread switch, Intake re-reads failed blocks, term-total questions | done | `898902a` |
-| 4. Real runs of A2, B (switch on), C | A2 and C recorded; B run failed, not recorded | `f34b7c6` (driver, recordings extended), this commit (report) |
-| 5. Replay mode, live/replay per application | done | (this commit) |
-| 6. README demo runbook | done | (this commit) |
-| 7. Small tests | alongside each part | |
+| 3. Planted misread, failed-block re-read, term-total questions | done | `898902a` |
+| 4. Real runs: A2, B, C | A2 recorded, C recorded, **B failed and was not recorded** | `f34b7c6` (driver, richer recordings), `ee8a679` (results) |
+| 5. Replay mode | done | `941cfa3` |
+| 6. README runbook | done | `02c3705` |
+| 7. Small tests | added in each part (103 tests pass, lint clean) | |
+| Final: this report, full test and lint run | done | last commit |
 
 ## Part 0
 Deleted `data/recordings/demo_b_intake_degraded`, `fixtures/demo_v3/transcript_b_intake_degraded.*`, the generator's degrade branch and the app record that produced it. A, B and C fixture files were restored byte-for-byte (the generator is not to be rerun for A).
@@ -79,5 +81,35 @@ Driver: `scripts/overnight_runs.py` (raw results in `data/overnight/*.json`, git
 ## Part 6: README runbook
 Added "Demo runbook" to the README: start command, preflight, warm-up, a before/after table (A live; C and A2 replay; B not available), what to say, and the fallback (switch to `demo_a2` and say it is a recording). The runbook says plainly that the Intake recheck has no recording.
 
-## Next
-Part 7 (tests, already added alongside each part) and the final checks.
+## Part 7: tests
+Small fake-provider tests were added with each part: speed defaults and warm-up failure (2), A2 vs A (1), planted misread, failed-block acceptance, per-row total questions (3), replay without a model with recorded marking and one live row (1). Full suite: 103 passed, lint clean, before the final push.
+
+## Summary of every real-model result (qwen3.5:4b, Ollama, thinking off)
+| Run | Outcome | Model calls | s per call | Time |
+|---|---|---|---|---|
+| A2 | clean, recorded `demo_a2` | 7 | 3.34 | table 6.1 s, first result 16.7 s after Confirm, evaluation 26.9 s, scripted run 33.5 s |
+| B (planted misread on) | failed, not recorded | 10 | 5.06 | table 88.5 s |
+| C | clean, recorded `demo_c_copy_error` | 4 (Auditor) | 3.27 | table 2.0 s, Auditor 14.1 s, scripted run 16.4 s |
+
+## What failed or was skipped, and why
+- **B (Intake recheck demo): failed.** The model returned a valid but EMPTY reading for the block holding six of the eight courses (both passes), so the planted misread never had a row to change, the Intake agent re-read the wrong block (the one holding the totals) and made 2 refused `flag_cell` calls (field "GPA"). Per the rules: no retry, no tuning, not recorded. The Intake recheck therefore has no real-model demonstration tonight. Likely fixes (not done, outside this list): treat an empty reading of a block that has ink as a failed block; point the recheck at the block that lost the rows; stop the agent asking to flag a field that is not a cell.
+- **Reading is not stable run to run.** The earlier B reads on the same file (before tonight) found all 8 rows; tonight's read found 2. Treat the vision path as the weak link and keep replay ready.
+- **First result is not instant on A2** (16.7 s after Confirm) because the agent rows are queued before the mapped rows. Not changed (not on the list).
+- **Auditor explanation slip** on C: it said "credits from 1 to 3"; the sheet already had 3. The proposal itself was right.
+- **Skipped:** nothing on the list was skipped. Not done on purpose: no change to prompts or code to make a run pass.
+
+## What is untested
+- The Intake recheck against a real model producing a corrected value that passes (never happened).
+- The planted-misread upload checkbox and the failed-block re-read path in a browser or with a real vision model (unit-tested only).
+- Replay of the older field-test recordings after these changes (they use the legacy path; not re-run).
+- The runbook's live timing on a cold model, and the UI under a real second user.
+- Transcript A through the full live flow (by design: it must stay unprocessed). A2 is its stand-in and passed.
+- Windows and Linux behaviour.
+
+## Transcript A
+`fixtures/demo_v3/transcript_a_live_demo.pdf` is byte-identical to the one committed before this run (sha256 `7e57a9f0f2600688e6e433627e0242724ae180ea1ff3fa8bf46ccf71f9c213eb`).
+**It has no application records**: 0 applications in the local database by its file hash and by the student name or ID (Maya Okonkwo, SYN-1001), and none of the recordings mention it.
+
+## Pushed state
+Everything above is on `main` at the final commit; no force-push or history rewrite; nothing from `data/`, `.env` or any real transcript is tracked (checked with `git ls-files` before the final push).
+
