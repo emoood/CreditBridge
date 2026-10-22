@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, Check, ChevronDown, ChevronRight, CircleDot, Loader2, Play, Plus, Sparkles, UploadCloud, X } from 'lucide-react';
-import { api, type AppInfo, type CaseResult, type Decision, type Job, type Row, type Subject, type Triage } from './api';
+import { AlertCircle, Check, ChevronDown, ChevronRight, CircleDot, History, Loader2, Play, Plus, Sparkles, UploadCloud, X } from 'lucide-react';
+import { api, type AppInfo, type CaseResult, type Decision, type Job, type Recording, type Row, type Subject, type Triage } from './api';
 
 const TRIAGE: Record<Triage, { label: string; tone: string }> = {
   READY_TO_ACCEPT: { label: 'Ready to accept', tone: 'green' }, NEEDS_ATTENTION: { label: 'Needs attention', tone: 'amber' },
@@ -28,6 +28,8 @@ export default function Evaluation() {
   const [qual, setQual] = useState('');
   const [quals, setQuals] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [replayOpen, setReplayOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -40,6 +42,7 @@ export default function Evaluation() {
   }, [appId]);
   useEffect(() => { setResults([]); setReadJob(null); setEvalJob(null); refresh(); }, [refresh]);
   useEffect(() => { api.qualifications().then(q => setQuals(q.qualifications)).catch(() => undefined); }, []);
+  useEffect(() => { api.recordings().then(setRecordings).catch(() => undefined); }, [appId, app?.status]);
   const active = !!app && (BUSY.includes(app.status) || [readJob, evalJob].some(j => j && (j.status === 'QUEUED' || j.status === 'RUNNING')));
   useEffect(() => { if (!active) return; const t = setInterval(refresh, 1500); return () => clearInterval(t); }, [active, refresh]);
 
@@ -68,12 +71,17 @@ export default function Evaluation() {
         <label className="role-pick">Curriculum hint <select value={qual} onChange={e => setQual(e.target.value)}><option value="">Detect from transcript</option>{quals.map(q => <option key={q}>{q}</option>)}</select></label>
         <input ref={fileRef} type="file" accept=".pdf,.png,.jpg,.jpeg" hidden onChange={e => upload(e.target.files?.[0])} />
         <button className="secondary-button" onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? <Loader2 size={16} className="spin" /> : <UploadCloud size={16} />} {uploading ? 'Uploading…' : 'Upload transcript'}</button>
+        <button className="secondary-button" onClick={() => setReplayOpen(!replayOpen)} disabled={!recordings.length} title={recordings.length ? '' : 'No recorded run saved yet'}><History size={16} /> Replay a recorded run</button>
         <label className="role-pick">Acting as <select value={role} onChange={e => setRole(e.target.value)}><option value="admissions">Admissions officer</option><option value="registrar">Registrar (cannot decide)</option></select></label>
         {!isUpload && <button className="primary-button" onClick={() => act(() => api.evaluate(appId, role))} disabled={busy || active}>{active ? <Loader2 size={17} className="spin" /> : <Play size={17} />} {active ? 'Evaluating…' : results.length ? 'Re-run evaluation' : 'Run AI evaluation'}</button>}
         {isUpload && reviewing && <button className="primary-button" onClick={() => act(() => api.confirm(appId, role))} disabled={busy || !app?.courses}><Check size={17} /> Confirm extraction and start evaluation</button>}
         {isUpload && app?.confirmed && !active && app.status !== 'EXTRACTION_REVIEW_REQUIRED' && <button className="secondary-button" onClick={() => act(() => api.evaluate(appId, role))} disabled={busy}>Re-run evaluation</button>}
       </div>
     </section>
+
+    {replayOpen && <ReplayPicker recordings={recordings} role={role} onLoaded={a => { setReplayOpen(false); setAppId(a.id); }} />}
+    {app?.replay && <div className="replay-banner"><History size={15} /> <strong>{app.replay.label}</strong>. The table and the results below were not produced now: they load from a saved run. {app.replay.live.length ? `${app.replay.live.length} subject(s) run live with the model and are not labelled.` : 'Nothing runs live.'}</div>}
+    {isUpload && !app?.replay && (app?.status === 'REVIEW_READY' || app?.status === 'DECISIONS_RECORDED') && <div className="muted save-rec"><button className="link-btn" onClick={() => { const n = window.prompt('Name for this recorded run (saved locally):', `run-${new Date().toISOString().slice(0, 10)}`); if (n) act(async () => { await api.saveRecording(appId, n, role); }); }}>Save this run as a recording for replay</button></div>}
 
     {interrupted && <div className="eval-warn"><AlertCircle size={15} /> The {interrupted.phase === 'READING' ? 'reading' : 'evaluation'} job was {interrupted.status.toLowerCase()}. Finished work is kept.
       <button className="link-btn" onClick={() => act(() => api.resume(interrupted.id, role))}>Resume from the last finished unit</button></div>}
@@ -94,6 +102,23 @@ export default function Evaluation() {
     </>}
     {!results.length && !job && !error && !isUpload && <section className="panel placeholder-panel"><div className="placeholder-icon"><Sparkles size={26} /></div><h2>No evaluation yet</h2><p>Run the AI evaluation on the demo fixtures, or upload a transcript to try your own.</p></section>}
   </div>;
+}
+
+function ReplayPicker({ recordings, role, onLoaded }: { recordings: Recording[]; role: string; onLoaded: (a: AppInfo) => void }) {
+  const [name, setName] = useState(recordings[0]?.name ?? '');
+  const [live, setLive] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const rec = recordings.find(r => r.name === name);
+  const toggle = (id: string) => setLive(l => l.includes(id) ? l.filter(x => x !== id) : l.length < 2 ? [...l, id] : l);
+  async function go() { setBusy(true); setErr(null); try { onLoaded(await api.replay(name, live, role)); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } }
+  return <section className="panel replay-picker">
+    <div className="section-overline">REPLAY A RECORDED RUN</div>
+    <p className="muted">Loads a saved real run without calling the model. Every replayed result is labelled. You can still run up to two subjects live.</p>
+    <select value={name} onChange={e => { setName(e.target.value); setLive([]); }}>{recordings.map(r => <option key={r.name} value={r.name}>{r.label}</option>)}</select>
+    {rec && <div className="live-pick"><small>Run live with the model (optional, max 2):</small>{rec.subjects.map(s => <label key={s.row_id}><input type="checkbox" checked={live.includes(s.row_id)} onChange={() => toggle(s.row_id)} /> {s.title} <span className="muted">({s.duration_s}s when recorded)</span></label>)}</div>}
+    {err && <div className="eval-error"><AlertCircle size={16} /> {err}</div>}
+    <button className="primary-button" onClick={go} disabled={busy || !name}>{busy ? <Loader2 size={16} className="spin" /> : <History size={16} />} Load replay</button>
+  </section>;
 }
 
 function JobPanel({ job, title, note }: { job: Job; title: string; note: string }) {
@@ -179,7 +204,7 @@ function ResultRow({ appId, r, role, onChanged }: { appId: string; r: CaseResult
     <button className="result-top" onClick={() => setOpen(!open)} aria-expanded={open}>
       <div className="result-subject"><strong>{r.course.row_code || r.course.curriculum_qualification || r.course.code}</strong><span>{r.course.title}</span><small dir="auto">{r.course.title_ar}</small></div>
       <div className="result-grade"><small>GRADE</small><strong>{r.course.grade}</strong></div>
-      <div className="result-suggest"><small>SUGGESTION</small><strong>{headline}</strong><span>{r.triage.reasons[0]}</span></div>
+      <div className="result-suggest"><small>SUGGESTION</small><strong>{headline}</strong><span>{r.triage.reasons[0]}</span>{r.replay && <em className="replay-tag">{r.replay.label}</em>}</div>
       <div className="result-state">{r.decision ? <Pill tone={r.decision.decision === 'ACCEPTED' ? 'green' : r.decision.decision === 'DECLINED' ? 'neutral' : 'blue'}>{r.decision.decision.replace(/_/g, ' ').toLowerCase()}</Pill> : <Pill tone={t.tone}>{t.label}</Pill>}</div>
       {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
     </button>
@@ -205,7 +230,8 @@ function Reasoning({ r }: { r: CaseResult }) {
       {r.staff_checklist.length > 0 && <details><summary>Staff checklist ({r.staff_checklist.length} items to confirm manually)</summary><ul>{r.staff_checklist.map(x => <li key={x.rule_id}>{x.reason}</li>)}</ul></details>}</div>}
     {r.syllabus_requests.length > 0 && <div className="block"><h4>Request drafted</h4><p>An in-app request for the missing {r.syllabus_requests[0].missing_fields.join(', ')} was drafted ({r.syllabus_requests[0].status.toLowerCase().replace(/_/g, ' ')}). Nothing was sent.</p></div>}
     <details className="block"><summary>How the agents worked</summary>
-      <p className="muted">{r.provider} · {r.model} · {r.llm_calls} model calls · {r.duration_s}s{r.is_replay ? ' · REPLAY' : ''}</p>
+      {r.replay ? <p className="replay-tag">{r.replay.label}. Not generated now: {r.model}, {r.replay.recorded_llm_calls} model calls and {r.replay.recorded_duration_s}s are from the recorded run.</p>
+        : <p className="muted">{r.provider} · {r.model} · {r.llm_calls} model calls · {r.duration_s}s · generated now</p>}
       {r.case_file.queries.length > 0 && <p><strong>Searches:</strong> {r.case_file.queries.join(' · ')}</p>}
       {Object.entries(r.case_file.targets_read).map(([who, ids]) => <p key={who}><strong>{who} read:</strong> {ids.join(', ')}</p>)}
       {r.case_file.notes.map((n, i) => <p key={i}><strong>{n.by} {n.kind}:</strong> {n.text}</p>)}

@@ -226,3 +226,56 @@ async def test_worker_survives_a_crashing_job(env):
     await w.idle()
     assert w.task and not w.task.done()
     await w.stop()
+
+
+async def test_record_then_replay_labels_every_replayed_result_and_runs_chosen_subjects_live(env, monkeypatch, tmp_path):
+    from backend.app.config import get_settings
+    monkeypatch.setattr(get_settings(), "recordings_root", str(tmp_path))
+    up = await read_to_gate(env)
+    await confirm(env, up["id"])
+    await env.worker.idle()
+    first = (await env.client.get(f"/api/v1/applications/{up['id']}/results")).json()
+    assert len(first["results"]) == 7 and not any(r["is_replay"] for r in first["results"])
+    assert (await env.client.post("/api/v1/recordings", json={"app_id": up["id"], "name": "t1"}, headers={"X-Role": "registrar"})).status_code == 403
+    saved = (await env.client.post("/api/v1/recordings", json={"app_id": up["id"], "name": "t1"}, headers=ADMIN)).json()
+    assert saved["name"] == "t1" and len(saved["subjects"]) == 7 and saved["label"].startswith("Replay of recorded run, ") and saved["label"].endswith(", fake")
+    assert [r["name"] for r in (await env.client.get("/api/v1/recordings")).json()] == ["t1"]
+
+    title = first["results"][0]["course"]["title"]
+    calls_before = len(env.model.calls)
+    rp = (await env.client.post("/api/v1/recordings/t1/replay", json={"live": [title]}, headers=ADMIN)).json()
+    assert rp["status"] == "EXTRACTION_REVIEW_REQUIRED" and rp["replay"]["label"] == saved["label"] and rp["courses"] == 7
+    assert (await env.client.post(f"/api/v1/applications/{rp['id']}/evaluate", headers=ADMIN)).status_code == 409  # the gate still applies
+    assert len(env.model.calls) == calls_before  # starting a replay never calls the model
+    await confirm(env, rp["id"])
+    await env.worker.idle()
+    res = (await env.client.get(f"/api/v1/applications/{rp['id']}/results")).json()
+    assert len(res["results"]) == 7 and res["job"]["status"] == "DONE"
+    live = [r for r in res["results"] if not r["is_replay"]]
+    replayed = [r for r in res["results"] if r["is_replay"]]
+    assert [r["course"]["title"] for r in live] == [title] and len(replayed) == 6
+    assert all(r["replay"]["label"] == saved["label"] for r in replayed) and all("replay" not in r for r in live)
+    new_calls = env.model.calls[calls_before:]
+    assert new_calls and {u for _, u in new_calls} == {live[0]["course"]["code"]}  # the model ran for the live subject only
+    by_title = {r["course"]["title"]: r for r in first["results"]}
+    assert all(r["triage"] == by_title[r["course"]["title"]]["triage"] and r["match"] == by_title[r["course"]["title"]]["match"] for r in replayed)
+
+
+async def test_replay_with_nothing_live_makes_no_model_call_and_a_changed_row_falls_back_to_live(env, monkeypatch, tmp_path):
+    from backend.app.config import get_settings
+    monkeypatch.setattr(get_settings(), "recordings_root", str(tmp_path))
+    up = await read_to_gate(env)
+    await confirm(env, up["id"])
+    await env.worker.idle()
+    await env.client.post("/api/v1/recordings", json={"app_id": up["id"], "name": "t2"}, headers=ADMIN)
+    n = len(env.model.calls)
+    rp = (await env.client.post("/api/v1/recordings/t2/replay", json={}, headers=ADMIN)).json()
+    row = (await env.client.get(f"/api/v1/applications/{rp['id']}")).json()["rows"][0]
+    assert (await env.client.patch(f"/api/v1/applications/{rp['id']}/rows/{row['id']}", json={"title": "Something Else"}, headers=ADMIN)).status_code == 200
+    await confirm(env, rp["id"])
+    await env.worker.idle()
+    res = (await env.client.get(f"/api/v1/applications/{rp['id']}/results")).json()
+    assert sum(r["is_replay"] for r in res["results"]) == 6 and len({u for _, u in env.model.calls[n:]}) == 1  # only the edited row ran live
+    bad = await env.client.post("/api/v1/recordings/t2/replay", json={"live": ["No Such Subject"]}, headers=ADMIN)
+    assert bad.status_code == 422
+    assert (await env.client.post("/api/v1/recordings/nope/replay", json={}, headers=ADMIN)).status_code == 404

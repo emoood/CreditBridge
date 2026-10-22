@@ -15,6 +15,7 @@ export type CaseResult = {
   staff_checklist: { rule_id: string; status: string; reason: string }[];
   case_file: { queries: string[]; notes: { by: string; kind: string; text: string }[]; targets_read: Record<string, string[]>; precedents_seen: unknown[] };
   llm_calls: number; provider: string; model: string; duration_s: number; is_replay: boolean;
+  replay?: { label: string; recorded_at: string; model: string; recorded_duration_s: number; recorded_llm_calls: number };
   syllabus_requests: { missing_fields: string[]; status: string }[];
   decision: (Decision & { stale?: boolean }) | null; version: number;
 };
@@ -31,7 +32,10 @@ export type Row = { id: string; code: string; title: string; title_ar: string; c
 export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; program: string; institution: string; courses: number; status: string; decided: number; catalog: string;
   created_at: string; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
   extraction?: { method: string; blocks?: { key: string; status: string; reread?: boolean; flags?: number | null; error?: string }[]; failed_blocks?: number; flags?: string[]; unrecognized?: number; rows_found?: number };
-  curriculum?: { available: boolean; error: string | null } };
+  curriculum?: { available: boolean; error: string | null };
+  replay?: { name: string; label: string; recorded_at: string; model: string; live: string[] } | null };
+export type Recording = { name: string; recorded_at: string; model: string; label: string; evaluation_s: number | null; reading_s: number | null;
+  subjects: { row_id: string; title: string; triage: string | null; duration_s: number }[] };
 export type DevEvent = Record<string, any> & { id: number; ts: number; kind: string };
 
 const ROLE_HEADERS = (role: string) => ({ 'content-type': 'application/json', 'X-Role': role, 'X-Actor': role === 'admissions' ? 'Admissions officer' : role });
@@ -54,6 +58,9 @@ export const api = {
   results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null; pending_units?: { key: string; status: string; error_code: string }[]; status?: string }>),
   confirm: (id: string, role: string) => fetch(`/api/v1/applications/${id}/confirm`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({}) }).then(j<{ job_id: string; already_confirmed: boolean }>),
   resume: (jobId: string, role: string) => fetch(`/api/v1/jobs/${jobId}/resume`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
+  recordings: () => fetch('/api/v1/recordings').then(j<Recording[]>),
+  saveRecording: (appId: string, name: string, role: string) => fetch('/api/v1/recordings', { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ app_id: appId, name }) }).then(j<Recording>),
+  replay: (name: string, live: string[], role: string) => fetch(`/api/v1/recordings/${encodeURIComponent(name)}/replay`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ live }) }).then(j<AppInfo>),
   job: (id: string) => fetch(`/api/v1/jobs/${id}`).then(j<Job>),
   evaluate: (id: string, role: string) => fetch(`/api/v1/applications/${id}/evaluate`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
   decide: (id: string, course: string, role: string, decision: Decision['decision'], reason: string, version: number) =>

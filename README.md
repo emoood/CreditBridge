@@ -46,6 +46,12 @@ Ctrl+C stops both. Logs are in `data/logs/` and contain no transcript text. Chec
 
 If something stops mid-run (for example you restart the backend), the job is marked **INTERRUPTED**; click *Resume* and it continues from the last finished unit.
 
+## Recorded run (replay, so a demo never depends on the model)
+
+After a real run reaches review, click **Save this run as a recording for replay** (or `POST /api/v1/recordings`). It is stored under
+`data/recordings/<name>/` (gitignored, local only). **Replay a recorded run** loads it at the officer gate without calling the model; you can
+pick up to two subjects to run live. Every replayed result is labelled `Replay of recorded run, <date>, <model>`; live ones are not.
+
 ## Checks
 
 ```bash

@@ -13,6 +13,7 @@ from ..providers.base import LLMProvider
 from ..providers.guard import CallTimeout
 from ..runtime import rt
 from ..services import grade_checks as gc
+from ..services import recording
 from ..services import vision_reader as vr
 from ..services.curriculum import curriculum
 from ..services.extraction import extract_transcript
@@ -166,11 +167,25 @@ async def run_evaluation(job_id: str, provider: LLMProvider) -> None:
         sids = [r["source_id"] for r in rows]
         by_sid = dict(zip(sids, rows, strict=True))
         units = store.plan_units(db, job, "evaluate", sids, reset)
+        replay = (app.extraction or {}).get("replay")  # set when this application was loaded from a recorded run
+        rec = recording.load(replay["name"]) if replay else None
+        rec_units = {e["row_id"]: e for e in rec["evaluation"]["units"]} if rec else {}
+        rec_rows = {r["id"]: r for r in rec["rows"]} if rec else {}
+        if rec:
+            job.summary = {**job.summary, "replay": replay}
+            if not replay["live"]:
+                job.route, job.model = "replay", rec["model"]
+            db.commit()
         store.audit(db, app.id, "system", "evaluation_started", job.id, subjects=len(sids), resumed=not reset)
         for u in units:
             if u.status == "DONE":
                 continue
             row = by_sid[u.unit_key]
+            if rec and row["id"] not in replay["live"] and recording.can_replay(rec_units.get(row["id"]), row, rec_rows.get(row["id"])):
+                store.start_unit(db, job, u, "replay")  # loaded from the saved run: no model call, labelled in the result
+                store.finish_unit(db, u, "DONE", recording.replayed_result(rec, rec_units[row["id"]], row, u.unit_key), method="replay")
+                store.audit(db, app.id, "system", "case_replayed", u.unit_key, recorded_at=rec["recorded_at"])
+                continue
             store.start_unit(db, job, u, "agents")
             store.audit(db, app.id, "system", "stage:evaluate", u.unit_key, status="RUNNING")
             t0 = time.time()

@@ -55,7 +55,8 @@ def app_summary(db: Session, app: Application) -> dict[str, Any]:
     return {"id": app.id, "kind": app.kind, "student": app.student, "program": app.program, "institution": app.institution,
             "courses": sum(1 for r in app.rows if r.get("included")), "status": app_status(db, app), "decided": decided_count(db, app.id),
             "catalog": rt().repo.catalog_label, "created_at": iso(app.created_at), "confirmed": app.confirmed_at is not None,
-            "reading_job_id": reading.id if reading else None, "evaluation_job_id": app.evaluation_job_id}
+            "reading_job_id": reading.id if reading else None, "evaluation_job_id": app.evaluation_job_id,
+            "replay": (app.extraction or {}).get("replay")}
 
 
 def _utc(d: datetime) -> datetime:

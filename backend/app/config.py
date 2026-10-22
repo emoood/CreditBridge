@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     database_url: str = ""  # curriculum database (Supabase), read-only
     app_database_url: str = "postgresql+psycopg:///creditbridge"  # this app's own state: local PostgreSQL, never Supabase
     document_root: str = "./data/documents"
+    recordings_root: str = "./data/recordings"  # recorded real runs for replay (local, gitignored)
     catalog: str = "demo"  # demo (synthetic, used by fixtures/tests) | aud_2026_2027 (real AUD catalog, descriptions only)
 
     llm_default_route: str = "mac_dev"  # mac_dev | mac_quality | home_gpu | fixture_test
