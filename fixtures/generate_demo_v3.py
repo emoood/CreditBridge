@@ -59,7 +59,7 @@ def text_pdf(path: Path, who: str, terms: list[tuple[str, list[tuple[str, str, f
     return truth
 
 
-def image_pdf(stem: str, who: str) -> dict:
+def image_pdf(stem: str, who: str, degrade: bool = False) -> dict:
     """Transcript B: image only. One year block; the Mark cell of AP Chemistry is smeared so it is hard to read (the printed value is 85)."""
     random.seed(23)
     name, sid = STUDENTS[who]
@@ -105,6 +105,11 @@ def image_pdf(stem: str, who: str) -> dict:
     for _ in range(5):
         x0 = random.randint(box[0], box[2] - 20)
         sd.line([(x0, box[1] + random.randint(0, 20)), (x0 + random.randint(10, 60), box[3] - random.randint(0, 20))], fill=random.randint(150, 205), width=random.randint(2, 4))
+    if degrade:  # a worse mark: low resolution (a coarse re-sample) and low contrast, still readable by a person
+        reg = im.crop(box)
+        reg = reg.resize((max(1, reg.width // 4), max(1, reg.height // 4)), Image.BILINEAR).resize(reg.size, Image.BICUBIC)
+        reg = reg.point(lambda v: int(255 - (255 - v) * 0.5))
+        im.paste(reg, box)
     im = im.rotate(0.5, fillcolor=255).filter(ImageFilter.GaussianBlur(0.6))
     im = Image.blend(im, Image.effect_noise(im.size, 12), 0.04)
     im.save(OUT / f"{stem}.png")
@@ -120,6 +125,7 @@ a = text_pdf(OUT / "transcript_a_live_demo.pdf", "A", [
     (TERM_A2, [("AP Computer Science A", "A-", 1.0), ("AP Statistics", "B+", 1.0), ("AP Chemistry", "B+", 1.0), ("AP Physics 1", "B", 1.0),
                ("AP Art History", "B", 0.5), ("AP Human Geography", "A", 0.5)])])
 b = image_pdf("transcript_b_intake", "B")
+b2 = image_pdf("transcript_b_intake_degraded", "B", degrade=True)  # the same page with a lower-resolution, lower-contrast mark
 c = text_pdf(OUT / "transcript_c_copy_error.pdf", "C", [
     ("Fall 2025 (Yr 12)", [("AP Statistics", "B+", 1.0), ("AP Psychology", "A-", 1.0), ("AP Biology", "B+", 1.0), ("AP Chemistry", "A-", 1.0), ("AP Physics 1", "B", 1.0)]),
     ("Spring 2026 (Yr 12)", [("AP Physics 2", "B+", 1.0), ("AP Microeconomics", "A", 0.5), ("AP Macroeconomics", "A-", 0.5), ("AP Human Geography", "B+", 0.5)])])
@@ -129,6 +135,7 @@ c = text_pdf(OUT / "transcript_c_copy_error.pdf", "C", [
                     "expected_statuses": {"AP Calculus AB": "Conditional (needs an AP exam score of at least 4)", "AP Computer Science A": "Conditional (stale mapping)",
                                           "Moral Education": "Not evaluated (school-specific)", "everything else": "Mapped"}},
     "B_intake": {**b, "file": "transcript_b_intake.pdf / .png", "text_layer": False},
+    "B_intake_degraded": {**b2, "file": "transcript_b_intake_degraded.pdf / .png", "text_layer": False},
     "C_copy_error": {**c, "file": "transcript_c_copy_error.pdf", "text_layer": True, "demo": "enable the 'planted for demo' switch after confirming; the sheet checks must fail on one row"},
 }, indent=1))
 (OUT / "students.json").write_text(json.dumps({k: {"name": v[0], "student_id": v[1]} for k, v in STUDENTS.items()}, indent=1))

@@ -160,6 +160,85 @@
   "file": "transcript_b_intake.pdf / .png",
   "text_layer": false
  },
+ "B_intake_degraded": {
+  "student": "Daniel Ferreira",
+  "student_id": "SYN-1002",
+  "term": "2025-2026 - Grade 12",
+  "rows": [
+   {
+    "subject": "AP Calculus BC",
+    "mark": 92,
+    "letter": "A-",
+    "points": 3.7,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Physics 2",
+    "mark": 88,
+    "letter": "B+",
+    "points": 3.3,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Chemistry",
+    "mark": 85,
+    "letter": "B",
+    "points": 3.0,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Macroeconomics",
+    "mark": 91,
+    "letter": "A-",
+    "points": 3.7,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Spanish Language",
+    "mark": 94,
+    "letter": "A",
+    "points": 4.0,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Biology",
+    "mark": 89,
+    "letter": "B+",
+    "points": 3.3,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Statistics",
+    "mark": 96,
+    "letter": "A",
+    "points": 4.0,
+    "credits": 1.0
+   },
+   {
+    "subject": "AP Human Geography",
+    "mark": 90,
+    "letter": "A-",
+    "points": 3.7,
+    "credits": 0.5
+   }
+  ],
+  "term_totals": {
+   "credits": 7.5,
+   "quality_points": 26.85,
+   "gpa": 3.58
+  },
+  "hard_to_read": {
+   "row": "AP Chemistry",
+   "cell": "Mark",
+   "printed_value": 85,
+   "expected_failing_checks": [
+    "grading_scale (mark -> letter B)",
+    "term credit/quality-point totals if the smear also hides the credits"
+   ]
+  },
+  "file": "transcript_b_intake_degraded.pdf / .png",
+  "text_layer": false
+ },
  "C_copy_error": {
   "student": "Sofia Lindqvist",
   "student_id": "SYN-1003",
