@@ -13,7 +13,7 @@ Rollback point: tag `pre-overnight` = `3801f36` (the last commit before this run
 | 3. Planted misread switch, Intake re-reads failed blocks, term-total questions | done | `898902a` |
 | 4. Real runs of A2, B (switch on), C | A2 and C recorded; B run failed, not recorded | `f34b7c6` (driver, recordings extended), this commit (report) |
 | 5. Replay mode, live/replay per application | done | (this commit) |
-| 6. README demo runbook | | |
+| 6. README demo runbook | done | (this commit) |
 | 7. Small tests | alongside each part | |
 
 ## Part 0
@@ -76,5 +76,8 @@ Driver: `scripts/overnight_runs.py` (raw results in `data/overnight/*.json`, git
 - Older recordings (field-test format) still replay through the earlier path.
 - Test: record a fake-model run, replay it with zero model calls and identical statuses and actions, trace marked recorded; replay with one row live: the model is called for that row only and it is not marked as a replay.
 
+## Part 6: README runbook
+Added "Demo runbook" to the README: start command, preflight, warm-up, a before/after table (A live; C and A2 replay; B not available), what to say, and the fallback (switch to `demo_a2` and say it is a recording). The runbook says plainly that the Intake recheck has no recording.
+
 ## Next
-Part 6 (README runbook).
+Part 7 (tests, already added alongside each part) and the final checks.
