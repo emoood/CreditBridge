@@ -9,8 +9,8 @@ from .loop import AgentOutcome, run_bounded_agent
 from .matching_agent import MatchResult
 from .tools.base import ToolContext, ToolRegistry
 
-PROMPT = (Path(__file__).resolve().parent / "prompts" / "reviewer_v1.txt").read_text()
-PROMPT_VERSION = "reviewer_v1"
+PROMPT_VERSION = "reviewer_v2"
+PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
 ENFORCED = {"AUD_MIN_LEVEL", "AUD_GRADE_LOWER", "AUD_GRADE_UPPER", "AUD_RESTRICTED_COURSE_TYPES", "AUD_MAX_50_PERCENT"}
 
 
@@ -23,7 +23,7 @@ class ReviewResult:
 
 
 async def run_review(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, match: MatchResult,
-                     rules: list[RuleResult], max_rounds: int = 2) -> ReviewResult:
+                     rules: list[RuleResult], max_rounds: int = 6) -> ReviewResult:
     if match.status != "POTENTIAL_MATCH" or match.output is None:
         return ReviewResult("NOT_RUN", flags=["NO_RECOMMENDATION_TO_REVIEW"])
     repo, m = ctx.repo, match.output

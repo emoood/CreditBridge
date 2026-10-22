@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, ValidationError
@@ -8,6 +8,8 @@ from ...devlog import events
 from ...providers.base import ToolCall
 from ...services.catalog_retriever import CatalogRetriever
 from ...services.demo_repo import DemoRepo
+from ..case_file import CaseFile
+from ..precedent import PrecedentStore
 
 MAX_RESULT_CHARS = 3000
 
@@ -19,6 +21,8 @@ class ToolContext:
     role: str  # "matcher" | "reviewer"
     source_course_id: str  # resource scope: tools may only touch this course
     match_cited: dict[str, Any] | None = None  # reviewer: the matcher's cited pairs
+    case: CaseFile = field(default_factory=CaseFile)
+    precedent: PrecedentStore = field(default_factory=PrecedentStore)
 
 
 @dataclass

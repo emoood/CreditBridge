@@ -3,7 +3,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-MatchRecommendation = Literal["POTENTIAL_MATCH", "NO_DEFENSIBLE_MATCH", "NEEDS_MORE_EVIDENCE"]
+# POTENTIAL_GENERAL_ELECTIVE is only a flag for the admissions officer: no specific course fits, the AI does not
+# judge elective eligibility. The human decides.
+MatchRecommendation = Literal["POTENTIAL_MATCH", "POTENTIAL_GENERAL_ELECTIVE", "NO_DEFENSIBLE_MATCH", "NEEDS_MORE_EVIDENCE"]
 ReviewVerdict = Literal["SUPPORTED_FOR_HUMAN_REVIEW", "CHALLENGED", "INSUFFICIENT_EVIDENCE"]
 
 
@@ -42,6 +44,8 @@ class MatchOutput(BaseModel):
     supported_outcomes: list[SupportedOutcome] = Field(default_factory=list)
     missing_or_weaker_outcomes: list[str] = Field(default_factory=list)
     concerns: list[str] = Field(default_factory=list)
+    evidence_strength: Literal["STRONG", "PARTIAL", "WEAK"] = "WEAK"  # how much of the target the evidence covers
+    response_to_objections: str | None = None  # only set in the revision round
 
 
 class Objection(BaseModel):

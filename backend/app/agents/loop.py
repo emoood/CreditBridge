@@ -45,6 +45,7 @@ async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: 
     submit = _submit_tool(final_model)
     repaired = False
     rounds = 0
+    total_turns = 0
 
     async def call(tools):
         out.llm_calls += 1
@@ -87,7 +88,12 @@ async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: 
         if final_turn:  # tools requested after budget exhausted
             out.error = "TOOL_BUDGET_EXCEEDED"
             return out
-        rounds += 1
+        if any(c.name != "add_case_note" for c in resp.tool_calls):  # note-taking is free; investigating is budgeted
+            rounds += 1
+        total_turns += 1
+        if total_turns > 3 * max_tool_rounds + 5:
+            out.error = "TOOL_BUDGET_EXCEEDED"
+            return out
         messages.append({"role": "assistant", "content": resp.content or "",
                          "tool_calls": [{"function": {"name": c.name, "arguments": c.arguments}} for c in resp.tool_calls]})
         for c in resp.tool_calls:

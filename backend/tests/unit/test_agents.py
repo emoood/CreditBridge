@@ -146,3 +146,12 @@ async def test_reviewer_runs_only_on_potential_match_and_flags_bad_citations(rep
     assert "explanation" not in json.dumps(payload["matcher_recommendation"])  # narrative withheld
     none = await run_review(FakeLLMProvider([]), REG, c, await run_matching(FakeLLMProvider([submit(recommendation="NO_DEFENSIBLE_MATCH")]), REG, ctx(repo)), rules)
     assert none.status == "NOT_RUN"
+
+
+async def test_general_elective_is_only_a_flag_and_skips_reviewer(repo):
+    p = FakeLLMProvider([submit(recommendation="POTENTIAL_GENERAL_ELECTIVE", target_course_id="CS101")])
+    m = await run_matching(p, REG, ctx(repo))
+    assert m.status == "POTENTIAL_GENERAL_ELECTIVE" and m.output.target_course_id is None
+    assert "GENERAL_ELECTIVE_FLAG_FOR_HUMAN" in m.flags
+    rv = await run_review(FakeLLMProvider([]), REG, ctx(repo, role="reviewer"), m, [])
+    assert rv.status == "NOT_RUN"

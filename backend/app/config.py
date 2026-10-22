@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     llm_default_route: str = "mac_dev"  # mac_dev | mac_quality | home_gpu | fixture_test
     llm_allow_fallback: bool = True
     llm_fallback_route: str = "mac_dev"
-    matcher_max_tool_rounds: int = 3
-    reviewer_max_tool_rounds: int = 2
+    matcher_max_tool_rounds: int = 10
+    reviewer_max_tool_rounds: int = 6
     llm_context_tokens: int = 8192
     llm_temperature: float = 0.0
     llm_call_timeout_seconds: float = 120
