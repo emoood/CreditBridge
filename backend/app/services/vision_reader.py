@@ -155,11 +155,18 @@ def layout(img: Image.Image, max_h: int) -> list[tuple[tuple[int, int], tuple[in
     return out
 
 
+def clean_background(img: Image.Image, level: int = 215) -> Image.Image:
+    """Whiten the pale background (a diagonal watermark, light table fills, scanner tint) so the print stands out; dark print and dark header fills are untouched."""
+    a = np.asarray(img.convert("RGB")).copy()
+    a[(a > level).all(axis=2)] = 255
+    return Image.fromarray(a)
+
+
 def crop_png_b64(img: Image.Image, span: tuple[int, int], scale: float = 1.0, xr: tuple[int, int] | None = None) -> str:
     a, b = int(span[0] * scale), int(span[1] * scale)
     x0, x1 = (int(xr[0] * scale), int(xr[1] * scale)) if xr else (0, img.width)
     buf = io.BytesIO()
-    img.crop((x0, a, min(img.width, x1), min(img.height, b))).save(buf, "PNG")
+    clean_background(img.crop((x0, a, min(img.width, x1), min(img.height, b)))).save(buf, "PNG")
     return base64.b64encode(buf.getvalue()).decode()
 
 

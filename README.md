@@ -70,6 +70,23 @@ If something stops mid-run (for example you restart the backend), the job is mar
 
 **Reset between rehearsals:** use Transcript A2 or a recording for rehearsals; Transcript A is only for the live run. Remove a rehearsal application by restarting from the worklist (they are harmless) or run `POST /api/v1/dev/reset` (dev only; it wipes all applications).
 
+## Demo mode (prepared runs, no model wait)
+
+Header switch **Demo** (off by default; **Alt+D**). When on, a "Demo mode" chip shows next to the synthetic-data banner, with a stage speed (**Fast**, about 0.5 s per stage, is the default; **Instant**) and **Reset** (clears every application so the demo can be repeated).
+
+How it works: a prepared run is a finished real run saved at the model boundary (`fixtures/prepared_runs/<name>.json`, synthetic data only). An upload is matched to a prepared run by file hash, then by file name; nothing matches means the message "No prepared run for this file" and nothing is shown. The agents and all tools still run live in code, so row statuses, program-aware mapping, sheet checks, officer actions, copy and CSV are real; only the model's replies are recorded. Submitting a missing exam score resumes only that row (code, no model). Planted switches work: the copy error on any case, the misread on a case that has a misread prepared run. No Ollama and no network are needed (the curriculum links come from the prepared run). The activity drawer streams the agents' tool calls as they run, tagged *recorded*.
+
+Make a prepared run: with the backend in demo mode, run the real model once through `python scripts/overnight_runs.py a2|c|d|dp` (clean runs only are saved).
+
+**Presenter script (order: D first, then C for the Auditor catch)**: *prepared runs exist for A2 only so far; C and D are in the plan below once they are recorded.*
+1. Turn Demo on (Alt+D). Say: "The model's side is pre-recorded so we are not waiting on it; everything else is live."
+2. Pick the case, upload its transcript. Say: "The Intake agent plans which blocks to read, reads them, and code checks every number."
+3. Confirm extraction. Say: "Relevance gate: only externally examined qualifications. Mapping lookup: code. The Case agent works only the rows code could not settle and reviews the whole case."
+4. Submit the exam score on the conditional row. Say: "Only this row resumes, and no model is involved."
+5. *Confirm mapped*, then *Copy for spreadsheet*. Say: "Every export goes through the Auditor first."
+6. For the Auditor catch (case C): after *Confirm mapped* press *Demo: plant a copy error*, then copy. Say: "One cell was changed after my decision. The sheet check catches it, and the Auditor proposes the fix; I decide."
+7. Reset between runs; repeated runs give the same result (covered by a test).
+
 ## Recorded run (replay, so a demo never depends on the model)
 
 After a real run reaches review, click **Save this run as a recording for replay** (or `POST /api/v1/recordings`). It is stored under
