@@ -7,7 +7,7 @@ from typing import Any
 
 from ..agents.auditor_agent import run_auditor
 from ..agents.case_agent import run_case_agent, run_case_review
-from ..agents.intake_agent import run_intake_agent
+from ..agents.intake_agent import IntakeContext, run_code_only, run_intake_agent
 from ..agents.orchestrator import is_school_specific, no_evidence_case, run_case, school_specific_case
 from ..config import get_settings
 from ..db.models import Application, Job
@@ -15,7 +15,7 @@ from ..db.session import app_session
 from ..providers.base import LLMProvider
 from ..providers.guard import CallTimeout
 from ..runtime import rt
-from ..services import extraction_checks as xc
+from ..services import cross_check as cc
 from ..services import grade_checks as gc
 from ..services import mapping as mp
 from ..services import recording, usage
@@ -53,11 +53,12 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         job.stage = "render"
         db.commit()
         digital = path.lower().endswith(".pdf") and await asyncio.to_thread(_has_text_layer, path)
+        intake_info: dict[str, Any] = {}
         blocks_meta: list[dict[str, Any]] = []
         merged: dict[str, Any]
         plant_cfg: dict[str, Any] | None = None
         planted_log: list[dict[str, Any]] = []
-        if digital:
+        if digital and not s.vision_reads_digital:  # the older reader: the text layer IS the reader (only when vision for digital files is switched off)
             (u,) = store.plan_units(db, job, "parse", ["digital"], reset)
             if u.status != "DONE":
                 store.start_unit(db, job, u, "digital_pdf")
@@ -75,68 +76,41 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
             spans = [(pi + 1, bi + 1, sp) for pi, img in enumerate(pages) for bi, sp in enumerate(vr.split_blocks(img, s.vision_max_block_px))]
             keys = [f"p{p}b{b}" for p, b, _ in spans]
             units = store.plan_units(db, job, "read", keys, reset)
-            hi_pages: dict[int, Any] = {}
+            record = (app.extraction or {}).get("student_record") or {}
             plant_cfg = (app.extraction or {}).get("planted_misread")
-            for (pg, _bi, span), u in zip(spans, units, strict=True):
+            ictx = IntakeContext(R.repo, R.retriever, "intake", "", app_id=app.id, provider=usage.MeteredProvider(provider, app.id, ""), path=path, scale=scale,
+                                 spans={f"p{p}b{b}": (p, sp) for p, b, sp in spans}, plant=plant_cfg, record_name=record.get("name"),
+                                 recovery_left=max(0, s.intake_recovery_rounds - job.summary.get("recovery_used", 0)))
+            ictx.imgs[s.vision_dpi] = pages
+            ictx.lines = {f"p{p}b{b}": vr.count_text_lines(pages[p - 1], sp) for p, b, sp in spans}
+            ictx.text = await asyncio.to_thread(cc.text_rows, path, app.id) if digital else None  # the text layer is only a cross-check on what vision reads
+            for u in units:
+                if u.status == "DONE" and u.result:  # resumed job: finished blocks are not read again
+                    ictx.blocks[u.unit_key] = u.result
+            job.stage = "intake"
+            db.commit()
+            await (run_intake_agent(ictx) if s.intake_agent else run_code_only(ictx))
+            for u in units:  # one stored result per block
                 if u.status == "DONE":
                     continue
                 store.start_unit(db, job, u, "vision")
-                store.audit(db, app.id, "system", "stage:read", u.unit_key, status="RUNNING")
-                best: dict[str, Any] | None = None
-                err = ""
-                for attempt in (1, 2):  # 2nd attempt = one re-read at higher resolution
-                    u.attempts = attempt
-                    try:
-                        if attempt == 1:
-                            b64 = vr.crop_png_b64(pages[pg - 1], span)
-                        else:
-                            if pg not in hi_pages:
-                                hi_pages[pg] = (await asyncio.to_thread(vr.render_pages, path, s.vision_reread_dpi))[pg - 1]
-                            b64 = vr.crop_png_b64(hi_pages[pg], span, s.vision_reread_dpi / s.vision_dpi)
-                        reading = await vr.read_block(provider, b64, u.unit_key)
-                        if plant_cfg:  # PLANTED FOR DEMO (both passes of the normal reader, never the Intake agent's focused re-read)
-                            rec_p = vr.plant_misread(reading, plant_cfg)
-                            if rec_p:
-                                if not planted_log:
-                                    usage.trace(app.id, "", "code", "planted_for_demo", {**rec_p, "note": "PLANTED FOR DEMO: one correctly read mark was replaced with a wrong value before the extraction checks ran"})
-                                planted_log.append(rec_p)
-                        checked = vr.check_block(reading, scale)
-                        checked["reread"] = attempt == 2
-                        if best is None or len(checked["flags"]) < len(best["flags"]):
-                            best = checked
-                        err = ""
-                        if not vr.needs_reread(best):
-                            break
-                    except Exception as e:  # noqa: BLE001  timeout, bad output or model error: try once more, then give up on this block
-                        err = _err_code(e)
-                if best is None:
-                    store.finish_unit(db, u, "FAILED_RETRYABLE", error=err or "model_error")
+                b = ictx.blocks.get(u.unit_key)
+                if u.unit_key in ictx.skipped:
+                    store.finish_unit(db, u, "DONE", {"rows": [], "flags": [], "totals": {}, "skipped": ictx.skipped[u.unit_key], "page": ictx.spans[u.unit_key][0]}, method="skipped")
+                elif b and not b.get("failed"):
+                    u.attempts = 2 if b.get("reread") else 1
+                    store.finish_unit(db, u, "DONE", b, method="vision_recheck" if b.get("recovered") else "vision_reread" if b.get("reread") else "vision")
                 else:
-                    best["page"] = pg
-                    store.finish_unit(db, u, "DONE", best, method="vision_reread" if best["reread"] else "vision")
-                blocks_meta.append({"key": u.unit_key, "status": u.status})
-            if s.intake_agent:  # re-read only blocks that still fail a check, a few times per transcript; sheets that pass never reach it
-                read_units = [u for u in store.units_of(db, job.id) if u.stage == "read"]
-                blocks = {u.unit_key: u.result if (u.status == "DONE" and u.result) else {"rows": [], "flags": [], "totals": {}, "failed": True, "error": u.error_code}
-                          for u in read_units}  # a block that failed outright is a failing block too
-                if any(xc.failures_in(blocks, k, scale) for k in blocks):
-                    job.stage = "recheck"
-                    db.commit()
-                    used = job.summary.get("rechecks_used", 0)
-                    budget = max(0, s.intake_max_rechecks - used)
-                    ictx = await run_intake_agent(usage.MeteredProvider(provider, app.id, ""), R.repo, R.retriever, app.id, blocks,
-                                                  {f"p{p}b{b}": (p, sp) for p, b, sp in spans}, lambda pg, dpi: vr.render_pages(path, dpi)[pg - 1], scale, budget)
-                    for u in read_units:
-                        b = blocks.get(u.unit_key)
-                        if b is None or b.get("failed"):
-                            continue
-                        store.set_json(u, "result", b)
-                        if u.status != "DONE":  # a block the Intake agent re-read successfully
-                            u.status, u.error_code, u.method = "DONE", "", "vision_recheck"
-                    job.summary = {**job.summary, "rechecks_used": used + budget - ictx.budget, "intake_changes": ictx.changes}
-                    db.commit()
+                    store.finish_unit(db, u, "FAILED_RETRYABLE", error=(b or {}).get("error") or "model_error")
+            planted_log = ictx.planted
+            job.summary = {**job.summary, "recovery_used": job.summary.get("recovery_used", 0) + ictx.recovery_used, "intake_changes": ictx.changes}
+            db.commit()
             done = [u.result for u in store.units_of(db, job.id) if u.stage == "read" and u.status == "DONE"]
             merged = gc_merge(done)
+            intake_info = {"agent": s.intake_agent, "recovery_used": ictx.recovery_used, "changes": ictx.changes, "skipped": ictx.skipped, "read_by_code": ictx.by_code,
+                           "name_check": ictx.name_check, "text_layer_crosscheck": ictx.text is not None, "agent_questions": ictx.questions}
+            if ictx.name_check.get("status") == "mismatch":
+                merged["flags"] = [*merged["flags"], "The name on the transcript does not match the student record"]
             blocks_meta = [{"key": u.unit_key, "status": u.status, "reread": bool(u.result and u.result.get("reread")),
                             "flags": len(u.result["flags"]) if u.result else None, "error": u.error_code}
                            for u in store.units_of(db, job.id) if u.stage == "read"]
@@ -172,7 +146,7 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         store.set_json(app, "rows", rows)
         store.set_json(app, "extracted_rows", rows)
         failed = [b for b in blocks_meta if b["status"] != "DONE"]
-        store.set_json(app, "extraction", {"student_id": (app.extraction or {}).get("student_id", ""), "planted_misread": ({**plant_cfg, "applied": planted_log} if plant_cfg else None), "method": method, "blocks": blocks_meta, "failed_blocks": len(failed), "flags": merged["flags"] + cur_flags,
+        store.set_json(app, "extraction", {"student_id": (app.extraction or {}).get("student_id", ""), "student_record": (app.extraction or {}).get("student_record"), "planted_misread": ({**plant_cfg, "applied": planted_log} if plant_cfg else None), "method": method, "blocks": blocks_meta, "failed_blocks": len(failed), "intake": intake_info, "flags": merged["flags"] + cur_flags,
                                            "cumulative": merged["cumulative"], "scale": merged["scale"], "grading_scale": merged.get("printed_scale") or gc.scale_from_text(merged.get("dropped_text", "")), "unrecognized": unrecognized,
                                            "dropped_non_course_rows": merged.get("dropped_rows", 0),
                                            "rows_found": len(rows)})

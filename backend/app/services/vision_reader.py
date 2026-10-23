@@ -84,6 +84,13 @@ def split_blocks(img: Image.Image, max_h: int) -> list[tuple[int, int]]:
     return [(a, b) for a, b in spans if (ink[a:b] > 2).sum() > 8]
 
 
+def count_text_lines(img: Image.Image, span: tuple[int, int]) -> int:
+    """About how many text lines are printed in this vertical span (runs of ink rows), so a reading that returned far fewer course rows can be questioned."""
+    ink = (np.asarray(img.convert("L"))[span[0]:span[1]] < 140).sum(axis=1)
+    on = ink > 2
+    return int(((on[1:] & ~on[:-1]).sum()) + (1 if on.size and on[0] else 0))
+
+
 def crop_png_b64(img: Image.Image, span: tuple[int, int], scale: float = 1.0) -> str:
     a, b = int(span[0] * scale), int(span[1] * scale)
     buf = io.BytesIO()

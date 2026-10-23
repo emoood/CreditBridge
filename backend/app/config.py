@@ -38,8 +38,8 @@ class Settings(BaseSettings):
     vision_reread_dpi: int = 300
     vision_max_block_px: int = 560
     vision_recheck_dpi: int = 400  # the Intake agent's focused re-read of one block
-    intake_agent: bool = True
-    intake_max_rechecks: int = 3  # re-reads per transcript
+    intake_agent: bool = True  # the Intake agent drives the reading of every upload; False = code reads every block, no planning or recovery
+    vision_reads_digital: bool = True  # digital PDFs are read by vision too; their text layer is only a cross-check
     intake_max_tool_rounds: int = 14  # the whole reading plan: list pages, read blocks, check, recover, submit
     intake_max_seconds: float = 400
     intake_recovery_rounds: int = 2  # recovery re-reads per transcript (tighter crop, higher zoom)

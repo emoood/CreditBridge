@@ -27,11 +27,19 @@ class ToolContext:
 
 
 @dataclass
+class WithImages:
+    """A tool result that also shows the agent one or more images (base64 PNG). The loop adds them as a user message after the tool result."""
+    data: Any
+    images: list[str]
+
+
+@dataclass
 class ToolResult:
     ok: bool
     data: Any = None
     error: str | None = None
     truncated: bool = False
+    images: list[str] = field(default_factory=list)
 
     def to_message(self) -> str:
         payload = {"ok": self.ok, "data": self.data} if self.ok else {"ok": False, "error": self.error}
@@ -68,10 +76,13 @@ class ToolRegistry:
             try:
                 args = tool.input_schema.model_validate(call.arguments)
                 data = await tool.execute(args, ctx)
-                res = ToolResult(True, data)
+                images: list[str] = []
+                if isinstance(data, WithImages):
+                    data, images = data.data, data.images
+                res = ToolResult(True, data, images=images)
                 if len(res.to_message()) > MAX_RESULT_CHARS:
                     res = ToolResult(True, {"truncated": True, "preview": json.dumps(data, ensure_ascii=False)[:MAX_RESULT_CHARS - 200]},
-                                     truncated=True)
+                                     truncated=True, images=images)
             except ValidationError as e:
                 res = ToolResult(False, error="Invalid arguments: " + "; ".join(
                     f"{'.'.join(map(str, x['loc']))}: {x['msg']}" for x in e.errors()))

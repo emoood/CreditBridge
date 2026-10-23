@@ -106,19 +106,6 @@ async def test_a_note_hands_the_row_back_and_is_stored_as_evidence(case_env):
         assert s.facts["_notes"][0]["text"].startswith("Student says") and s.status == "No mapping"
 
 
-async def test_intake_survives_a_failed_reread_and_still_flags_the_cell():
-    from backend.app.agents.intake_agent import run_intake_agent
-    scale = gc.load_scale()
-    blocks = {"p1b1": {"rows": [{"subject": "Chem", "mark": 85, "letter": "A", "points": 4.0, "credits": 1.0}], "flags": [], "totals": {}}}
-    from PIL import Image
-    script = [[ToolCall("1", "reread_block", {"block": "p1b1", "focus": "the letter grade of Chem"})], "not json at all",   # the vision re-read returns garbage
-              [ToolCall("2", "submit_result", {"blocks_checked": ["p1b1"], "note": "could not re-read"})]]
-    R = runtime.rt()
-    ctx = await run_intake_agent(FakeLLMProvider(script), R.repo, R.retriever, "APP-X", blocks, {"p1b1": (1, (0, 50))}, lambda pg, dpi: Image.new("RGB", (400, 400), "white"), scale, 3)
-    q = blocks["p1b1"]["rows"][0]["questions"]
-    assert q and q[0]["field"] == "grade" and ctx.budget == 2   # one re-read spent, nothing accepted, the exact cell has a question
-
-
 def test_block_checks_ignore_headings_and_compare_a_total_with_the_whole_term_not_just_one_block():
     scale = gc.load_scale()
     heading = {"subject": "Subject", "mark": None, "letter": "null", "points": None, "credits": None}

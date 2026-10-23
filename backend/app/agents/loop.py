@@ -26,9 +26,9 @@ class AgentOutcome:
     flags: list[str] = field(default_factory=list)
 
 
-def _submit_tool(model: type[BaseModel]) -> dict:
+def _submit_tool(model: type[BaseModel], name: str = SUBMIT) -> dict:
     return {"type": "function", "function": {
-        "name": SUBMIT, "description": "Submit your final structured result. Call exactly once to finish.",
+        "name": name, "description": "Submit your final structured result. Call exactly once to finish.",
         "parameters": model.model_json_schema()}}
 
 
@@ -41,7 +41,8 @@ def _try_content_json(content: str, model: type[BaseModel]) -> BaseModel | None:
 
 
 async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, *, system: str,
-                            user: str, final_model: type[BaseModel], max_tool_rounds: int, stage: str, max_seconds: float | None = None) -> AgentOutcome:
+                            user: str, final_model: type[BaseModel], max_tool_rounds: int, stage: str, max_seconds: float | None = None,
+                            submit_name: str = SUBMIT) -> AgentOutcome:
     """Investigate with tools; if the model cannot finish, one clean synthesis turn over a compact evidence summary.
     The budget is rounds AND seconds: once either is used up the agent may only submit (the seconds are checked between turns)."""
     evidence: list[str] = []
@@ -49,14 +50,14 @@ async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: 
     run = _loop_json if json_mode else _loop
     ctx_deadline = time.time() + max_seconds if max_seconds else None
     ctx.deadline = ctx_deadline  # tools may look at it too (a long vision call should not start after the deadline)
-    out = await run(provider, registry, ctx, system, user, final_model, max_tool_rounds, stage, evidence)
+    out = await run(provider, registry, ctx, system, user, final_model, max_tool_rounds, stage, evidence, submit_name)
     if out.status == "OK" or not evidence:
         return out
     meta = {"course": ctx.source_course_id}
     summary = "\n".join(evidence)[-7000:]
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": f"{user}\n\nEvidence you already gathered (tool results):\n{summary}\n\n"
-                                            "Do not call any other tool. Call submit_result now with your best conclusion from this "
+                                            f"Do not call any other tool. Call {submit_name} now with your best conclusion from this "
                                             "evidence. Use NEEDS_MORE_EVIDENCE only if the evidence truly cannot support a conclusion."}]
     out.llm_calls += 1
     if json_mode:
@@ -66,8 +67,8 @@ async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: 
         act = parse_action(resp.content)
         sub = ToolCall("", SUBMIT, act[1]) if act and act[0] == "submit" else None
     else:
-        resp = await provider.complete(LLMRequest(messages, [_submit_tool(final_model)], stage + "_synthesis", meta))
-        sub = next((c for c in resp.tool_calls if c.name == SUBMIT), None)
+        resp = await provider.complete(LLMRequest(messages, [_submit_tool(final_model, submit_name)], stage + "_synthesis", meta))
+        sub = next((c for c in resp.tool_calls if c.name == submit_name), None)
     try:
         if sub:
             out.output = final_model.model_validate(sub.arguments)
@@ -91,11 +92,11 @@ def _over(ctx: ToolContext, out: AgentOutcome) -> bool:
 
 
 async def _loop(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, system: str, user: str,
-                final_model: type[BaseModel], max_tool_rounds: int, stage: str, evidence: list[str]) -> AgentOutcome:
+                final_model: type[BaseModel], max_tool_rounds: int, stage: str, evidence: list[str], submit_name: str = SUBMIT) -> AgentOutcome:
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}, {"role": "user", "content": user}]
     out = AgentOutcome("NEEDS_HUMAN_REVIEW")
     meta = {"course": ctx.source_course_id}
-    submit = _submit_tool(final_model)
+    submit = _submit_tool(final_model, submit_name)
     repaired = False
     rounds = 0
     total_turns = 0
@@ -108,7 +109,7 @@ async def _loop(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext,
         final_turn = rounds >= max_tool_rounds or _over(ctx, out)
         tools = [submit] if final_turn else registry.visible_tools(ctx.role) + [submit]
         resp = await call(tools)
-        sub = next((c for c in resp.tool_calls if c.name == SUBMIT), None)
+        sub = next((c for c in resp.tool_calls if c.name == submit_name), None)
         if sub:
             try:
                 out.output, out.status = final_model.model_validate(sub.arguments), "OK"
@@ -120,8 +121,8 @@ async def _loop(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext,
                     out.error = f"INVALID_OUTPUT: {err}"
                     return out
                 repaired = True
-                messages += [{"role": "assistant", "content": "", "tool_calls": [{"function": {"name": SUBMIT, "arguments": sub.arguments}}]},
-                             {"role": "tool", "tool_name": SUBMIT, "content": json.dumps({"ok": False, "error": err})}]
+                messages += [{"role": "assistant", "content": "", "tool_calls": [{"function": {"name": submit_name, "arguments": sub.arguments}}]},
+                             {"role": "tool", "tool_name": submit_name, "content": json.dumps({"ok": False, "error": err})}]
                 out.flags.append("REPAIR_ATTEMPTED")
                 continue
         if not resp.tool_calls:
@@ -136,7 +137,7 @@ async def _loop(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext,
             repaired = True
             out.flags.append("REPAIR_ATTEMPTED")
             messages += [{"role": "assistant", "content": resp.content},
-                         {"role": "user", "content": "Finish now by calling submit_result with the required fields."}]
+                         {"role": "user", "content": f"Finish now by calling {submit_name} with the required fields."}]
             continue
         if final_turn:  # budget exhausted but the model still wants tools: one firm nudge, then fail safely
             if repaired:
@@ -145,7 +146,7 @@ async def _loop(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext,
             repaired = True
             out.flags.append("FORCED_FINAL_NUDGE")
             messages += [{"role": "assistant", "content": resp.content or ""},
-                         {"role": "user", "content": "The tool budget is used up. Call submit_result NOW with your best conclusion "
+                         {"role": "user", "content": f"The tool budget is used up. Call {submit_name} NOW with your best conclusion "
                                                       "from what you have already read. Use NEEDS_MORE_EVIDENCE if you are unsure."}]
             continue
         if any(c.name != "add_case_note" for c in resp.tool_calls):  # note-taking is free; investigating is budgeted
@@ -162,10 +163,12 @@ async def _loop(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext,
             if r.ok and c.name != "add_case_note":
                 evidence.append(f"[{c.name} {json.dumps(c.arguments, ensure_ascii=False)[:120]}] {r.to_message()[:1500]}")
             messages.append({"role": "tool", "tool_name": c.name, "content": r.to_message()})
+            if r.images:  # a tool may show the agent an image (view_page): it arrives as a user message right after the tool result
+                messages.append({"role": "user", "content": f"Image from {c.name}.", "images": r.images})
 
 
 async def _loop_json(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, system: str, user: str,
-                     final_model: type[BaseModel], max_tool_rounds: int, stage: str, evidence: list[str]) -> AgentOutcome:
+                     final_model: type[BaseModel], max_tool_rounds: int, stage: str, evidence: list[str], submit_name: str = SUBMIT) -> AgentOutcome:
     """JSON-action protocol: one constrained JSON action per turn; our code executes tools (no runtime tool-call parser)."""
     tools = registry.visible_tools(ctx.role)
     full, final_only = action_schema(tools, final_model), action_schema(tools, final_model, submit_only=True)
