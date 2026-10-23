@@ -207,4 +207,8 @@ class ModelLog(Base):
     response: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
-from ..services.outbox import OutboxMessage  # noqa: E402, F401
+def __getattr__(name: str):
+    if name == "OutboxMessage":
+        from ..services.outbox import OutboxMessage
+        return OutboxMessage
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -336,7 +336,7 @@ def send_student_email(db: Session, app_id: str, recipient_override: str | None 
             email_sending_enabled = False
 
     # Safeguard 2: Recipient allowlist check
-    if allowlist and effective_recipient.lower() not in allowlist:
+    if allowlist and "*" not in allowlist and effective_recipient.lower() not in allowlist:
         raise PermissionError(f"Recipient '{effective_recipient}' is not on the email allowlist.")
 
     outbox_entry = OutboxMessage(

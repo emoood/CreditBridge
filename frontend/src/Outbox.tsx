@@ -162,9 +162,10 @@ export function OutboxModal({
     }
     setBusy(true);
     setError(null);
+    setToast(null);
     try {
       const res = await outboxApi.send(appId, role, { recipient: toSend });
-      setToast(res.simulated ? 'Simulated send complete.' : 'Email sent successfully via SMTP.');
+      setToast(res.simulated ? 'Simulated send complete.' : `Email sent successfully via SMTP to ${res.recipient}.`);
       await loadData();
       onChanged();
     } catch (e) {
@@ -177,7 +178,8 @@ export function OutboxModal({
   return (
     <div className="pop-backdrop" onClick={onClose}>
       <div className="pop pop-wide" onClick={e => e.stopPropagation()} role="dialog" aria-label="Requests Outbox">
-        <header className="pop-head">
+        <div className="pop-main">
+          <header className="pop-head">
           <div>
             <small>OUTBOX & REQUESTS</small>
             <h2>Student Documentation Request</h2>
@@ -188,23 +190,23 @@ export function OutboxModal({
           </button>
         </header>
 
-        {error && (
-          <div className="eval-error">
-            <AlertCircle size={15} /> {error}
-          </div>
-        )}
-        {toast && (
-          <div className="toast-line" onClick={() => setToast(null)}>
-            <Check size={14} /> {toast}
-          </div>
-        )}
+          {error && (
+            <div className="eval-error" style={{ margin: '0 24px 10px' }}>
+              <AlertCircle size={15} /> {error}
+            </div>
+          )}
+          {toast && (
+            <div className="toast-line" onClick={() => setToast(null)} style={{ margin: '0 24px 10px' }}>
+              <Check size={14} /> {toast}
+            </div>
+          )}
 
         {loading ? (
           <p className="muted pad">
             <Loader2 size={15} className="spin" /> Loading outbox…
           </p>
         ) : (
-          <div className="pop-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div className="pop-body" style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.15fr', gap: '24px', paddingBottom: '24px' }}>
             {/* Left column: Request items management */}
             <div>
               <h3>Request Items ({items.length})</h3>
@@ -404,6 +406,7 @@ export function OutboxModal({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
