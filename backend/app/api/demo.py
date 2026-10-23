@@ -19,9 +19,11 @@ def demo_cases():
     for r in prepared.listing():
         rec = sr.load_record(r["case_number"]) or {}
         c = out.setdefault(r["case_number"], {"case_number": r["case_number"], "name": rec.get("name"), "program": rec.get("program"), "student_id": rec.get("student_id"),
-                                              "filename": r["source"]["filename"], "run": None, "misread_run": None})
-        c["misread_run" if r["planted"]["misread"] else "run"] = {"name": r["name"], "label": r["label"], "recorded_at": r["recorded_at"], "model": r["model"]}
-    return {"demo_mode": get_settings().demo_mode, "stage_seconds": get_settings().demo_stage_seconds, "cases": sorted(out.values(), key=lambda c: c["case_number"])}
+                                              "filename": r["source"]["filename"], "run": None, "misread_run": None, "copy_error_run": None})
+        c[{"misread": "misread_run", "copy_error": "copy_error_run", "clean": "run"}[prepared.variant_of(r)]] = {"name": r["name"], "label": r["label"], "recorded_at": r["recorded_at"], "model": r["model"]}
+    runs = [{"name": r["name"], "case_number": r["case_number"], "variant": prepared.variant_of(r), "label": r["label"], "recorded_at": r["recorded_at"], "model": r["model"],
+             "filename": r["source"]["filename"], "student": (sr.load_record(r["case_number"]) or {}).get("name")} for r in prepared.listing()]
+    return {"runs": runs, "demo_mode": get_settings().demo_mode, "stage_seconds": get_settings().demo_stage_seconds, "cases": sorted(out.values(), key=lambda c: c["case_number"])}
 
 
 class SpeedIn(BaseModel):

@@ -4,6 +4,7 @@ import {
   api,
   type AppInfo,
   type DemoCase,
+  type DemoRun,
   type Recording,
   type StudentRecord,
 } from "./api";
@@ -26,6 +27,8 @@ type Entry = {
   built: Built;
   curriculum: string;
 };
+
+const VARIANT_LABEL: Record<DemoRun["variant"], string> = { clean: "clean run", misread: "with a planted misread", copy_error: "with a copy error (Auditor catch)" };
 
 function includeSet(id: string): Set<string> {
   try {
@@ -53,7 +56,8 @@ export default function Worklist() {
   const inst = useInstitution();
   const demo = useDemo();
   const [cases, setCases] = useState<DemoCase[]>([]);
-  const [selCase, setSelCase] = useState("");
+  const [runs, setRuns] = useState<DemoRun[]>([]);
+  const [selRun, setSelRun] = useState("");
   const [quals, setQuals] = useState<string[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [replayOpen, setReplayOpen] = useState(false);
@@ -125,13 +129,15 @@ export default function Worklist() {
       .demoCases()
       .then((d) => {
         setCases(d.cases);
-        setSelCase((c) => c || d.cases[0]?.case_number || "");
+        setRuns(d.runs ?? []);
+        setSelRun((r) => (d.runs ?? []).some((x) => x.name === r) ? r : (d.runs ?? [])[0]?.name || "");
       })
       .catch(() => setCases([]));
   }, [demo.on]);
-  const picked = cases.find((c) => c.case_number === selCase);
+  const pickedRun = runs.find((r) => r.name === selRun);
+  const picked = cases.find((c) => c.case_number === pickedRun?.case_number);
   useEffect(() => {
-    if (demo.on && !picked?.misread_run) setPlant(false); // a misread can only be played for a case that has a prepared misread run
+    if (demo.on) setPlant(false); // in Demo mode a variant is chosen by the run picked
   }, [demo.on, picked]);
 
   async function upload(f: File | undefined) {
@@ -145,8 +151,9 @@ export default function Worklist() {
         qual,
         sid,
         plant,
-        demo.on ? selCase : rec ? caseNo : "",
+        demo.on ? pickedRun?.case_number ?? "" : rec ? caseNo : "",
         demo.on ? demo.speed : "",
+        demo.on ? selRun : "",
       );
       setPlant(false);
       setCaseNo("");
@@ -184,18 +191,18 @@ export default function Worklist() {
             </span>
           )}
           {demo.on ? (
-            <label className="role-pick" title="Cases that have a prepared run">
-              Case{" "}
+            <label className="role-pick" title="Prepared runs: the clean run and its variants">
+              Run{" "}
               <select
-                value={selCase}
-                onChange={(e) => setSelCase(e.target.value)}
+                value={selRun}
+                onChange={(e) => setSelRun(e.target.value)}
               >
-                {cases.length === 0 && (
+                {runs.length === 0 && (
                   <option value="">No prepared runs</option>
                 )}
-                {cases.map((c) => (
-                  <option key={c.case_number} value={c.case_number}>
-                    {c.case_number} · {c.name}
+                {runs.map((r) => (
+                  <option key={r.name} value={r.name}>
+                    {r.case_number} · {r.student} · {VARIANT_LABEL[r.variant]}
                   </option>
                 ))}
               </select>
@@ -265,7 +272,7 @@ export default function Worklist() {
               </label>
             </>
           )}
-          {inst.demo_mode && (!demo.on || picked?.misread_run) && (
+          {inst.demo_mode && !demo.on && (
             <label
               className="role-pick demo-switch"
               title="Demo only: replaces the AP Chemistry mark with a wrong value before the extraction checks run, so the Intake recheck has something to fix (Transcript B)"

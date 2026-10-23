@@ -64,7 +64,7 @@ def save(app_id: str, name: str, case_number: str, notes: str = "") -> dict[str,
         models = sorted({e["response"].get("model", "") for e in log if e["response"].get("model")})
         rec = {"version": VERSION, "name": name, "case_number": case_number, "recorded_at": datetime.now(UTC).isoformat(), "model": ", ".join(models), "notes": notes,
                "label": f"Prepared run, recorded {datetime.now(UTC).date().isoformat()}, {', '.join(models)}",
-               "source": {"filename": doc.get("filename"), "sha256": doc.get("sha256")}, "planted": {"misread": bool(ex.get("planted_misread"))},
+               "source": {"filename": doc.get("filename"), "sha256": doc.get("sha256")}, "planted": {"misread": bool(ex.get("planted_misread")), "copy_error": bool(ex.get("planted_copy_error"))},
                "links": {(r.get("title") or "").strip().lower(): r["subject"] for r in app.rows if r.get("subject")},
                "model_calls": len(log), "model_log": log}
     DIR.mkdir(parents=True, exist_ok=True)
@@ -93,9 +93,17 @@ def listing() -> list[dict[str, Any]]:
     return out
 
 
-def find(sha256: str, filename: str, misread: bool = False) -> dict[str, Any] | None:
-    """The prepared run for an uploaded file: the same file contents first (by hash), then the same filename. The misread variant is a separate prepared run."""
-    runs = [r for r in listing() if bool(r["planted"]["misread"]) == misread]
+def variant_of(r: dict[str, Any]) -> str:
+    return "misread" if r["planted"].get("misread") else "copy_error" if r["planted"].get("copy_error") else "clean"
+
+
+def find(sha256: str, filename: str, misread: bool = False, name: str = "") -> dict[str, Any] | None:
+    """The prepared run for an uploaded file: a run picked by name (it must be for this file), else the same file contents (by hash), then the same filename.
+    The misread and copy-error variants are separate prepared runs; without a name only the clean run (or the misread one, when asked) is chosen."""
+    if name:
+        r = next((r for r in listing() if r["name"] == name), None)
+        return r if r and (r["source"]["sha256"] == sha256 or r["source"]["filename"] == filename) else None
+    runs = [r for r in listing() if variant_of(r) == ("misread" if misread else "clean")]
     return next((r for r in runs if r["source"]["sha256"] == sha256), None) or next((r for r in runs if r["source"]["filename"] == filename), None)
 
 
