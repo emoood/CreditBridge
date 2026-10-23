@@ -24,7 +24,7 @@ class Policy:
 
     @classmethod
     def load(cls, path: Path = POLICY_PATH) -> "Policy":
-        d = yaml.safe_load(path.read_text())
+        d = yaml.safe_load(path.read_text(encoding="utf-8"))
         return cls(d["policy_version_id"], d["source_url"], d["min_level"], d["min_grade_lower"],
                    d["min_grade_upper"], Decimal(str(d["max_transfer_fraction"])),
                    d["restricted_types"], d["grade_scale"], [x.upper() for x in d.get("non_transferable_departments", [])])

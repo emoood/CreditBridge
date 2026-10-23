@@ -34,7 +34,7 @@ def test_retriever_caps_top_k_and_finds_intended_targets():
     import json
 
     from backend.app.services.demo_repo import FIXTURES
-    exp = json.loads((FIXTURES / "expected_results.json").read_text())
+    exp = json.loads((FIXTURES / "expected_results.json").read_text(encoding="utf-8"))
     for sc in exp["scenarios"]:
         src = repo.sources[sc["source_code"]]
         if not src.syllabus_doc_id:
