@@ -66,7 +66,10 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         if run is None:
             raise HTTPException(404, "That prepared run was not recorded for this file" if demo_run.strip() else "No prepared run for this misread variant of this file" if wants_misread and prepared.find(doc["sha256"], file.filename or "") else "No prepared run for this file")
         case_number = case_number.strip() or run["case_number"]
-    rec = sr.load_record(case_number) if case_number.strip() else None
+    try:
+        rec = sr.load_record(case_number) if case_number.strip() else None
+    except sr.UnknownProgram as e:
+        raise HTTPException(422, str(e)) from e
     if case_number.strip() and rec is None:
         raise HTTPException(404, f"No student record for case number {case_number.strip()}")
     if rec:  # the case number loads name, ID, contact, program, term and curriculum from the (demo) student data

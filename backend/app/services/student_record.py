@@ -1,19 +1,18 @@
 """The student record (by case number) and the program plan. Code only; the demo data stands in for the student information system.
 
-A mapped AUD equivalent is classified by policies/program_constraints.yaml, in order:
-  Not applicable               in a blocked area or a blocked course of the program
-  Core course                  one of the program's core courses
-  General elective suggestion  any other mapped course (no list, no cap)"""
+A mapped AUD equivalent is classified by where it can go in the student's plan (services/placement.py): its best slot, and every valid slot.
+No valid slot means Not applicable (not in the plan, or an area blocked as a general elective)."""
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from . import placement
+
 ROOT = Path(__file__).resolve().parents[3]
 
-PROGRAM, ELECTIVE, NOT_APPLICABLE = "Core course", "General elective suggestion", "Not applicable"
-CLASSES = (PROGRAM, ELECTIVE, NOT_APPLICABLE)
+NOT_APPLICABLE = "Not applicable"
 
 
 @lru_cache(maxsize=1)
@@ -21,24 +20,15 @@ def _students() -> dict[str, dict[str, Any]]:
     return yaml.safe_load((ROOT / "policies" / "demo_students.yaml").read_text())["students"]
 
 
-@lru_cache(maxsize=1)
-def _plans() -> dict[str, dict[str, Any]]:
-    return yaml.safe_load((ROOT / "policies" / "program_plans.yaml").read_text())["programs"]
+class UnknownProgram(ValueError):
+    """The student's program has no loaded plan."""
 
 
 def load_record(case_number: str) -> dict[str, Any] | None:
     r = _students().get((case_number or "").strip().upper())
+    if r and placement.plan(r["program"]) is None:
+        raise UnknownProgram(f"No plan is loaded for the program '{r['program']}'")
     return {"case_number": case_number.strip().upper(), **r} if r else None
-
-
-@lru_cache(maxsize=1)
-def _constraints() -> dict[str, dict[str, Any]]:
-    return yaml.safe_load((ROOT / "policies" / "program_constraints.yaml").read_text())["programs"]
-
-
-def constraints_for(program: str) -> dict[str, Any] | None:
-    p = (program or "").strip().lower()
-    return next((c for c in _constraints().values() if p in [n.lower() for n in c.get("names", [])]), None)
 
 
 def case_numbers() -> list[str]:
@@ -46,27 +36,21 @@ def case_numbers() -> list[str]:
 
 
 def plan_for(program: str) -> dict[str, Any] | None:
-    return _plans().get((program or "").strip())
+    return placement.plan(program)
 
 
 def restriction(aud_code: str | None, program: str) -> str | None:
-    """Why this AUD course is not open to the student's program (blocked areas and courses), or None. Plain words, for the officer."""
-    c = constraints_for(program)
-    if not aud_code or c is None:
+    """Why this AUD course has no place in the student's plan (plain words), or None."""
+    if not aud_code or placement.plan(program) is None or placement.options(program, aud_code):
         return None
-    if aud_code.split()[0] in c.get("blocked_areas", []) or aud_code in c.get("blocked_courses", []):
-        return (c.get("reasons") or {}).get("blocked") or f"{aud_code} is not open to {program} programs."
-    return None
+    return placement.why_none(program, aud_code)
 
 
 def classify(aud_code: str | None, program: str) -> dict[str, Any] | None:
-    """The code classification of one AUD equivalent, or None when there is no code or no constraints for the program."""
-    c = constraints_for(program)
-    if not aud_code or c is None:
+    """The code classification of one AUD equivalent: its best slot and every valid slot; None when there is no code or no plan for the program."""
+    if not aud_code or placement.plan(program) is None:
         return None
-    why_not = restriction(aud_code, program)
-    if why_not:
-        return {"value": NOT_APPLICABLE, "why": why_not, "by": "code", "aud_code": aud_code}
-    if aud_code in c.get("core_courses", []):
-        return {"value": PROGRAM, "why": f"Core course in {program}", "by": "code", "aud_code": aud_code}
-    return {"value": ELECTIVE, "why": "Potential general elective", "by": "code", "aud_code": aud_code}
+    opts = placement.options(program, aud_code)
+    if not opts:
+        return {"value": NOT_APPLICABLE, "why": placement.why_none(program, aud_code), "by": "code", "aud_code": aud_code, "slot": None, "options": []}
+    return {"value": placement.group_of(opts[0]), "why": f"Can fill: {', '.join(placement.group_of(o) for o in opts)}", "by": "code", "aud_code": aud_code, "slot": opts[0], "options": opts}

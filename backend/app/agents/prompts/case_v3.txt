@@ -9,7 +9,7 @@ A. CONDITIONAL, evidence missing (a mapping exists but needs something we do not
    - Say exactly what is missing (use the missing list from read_mapping, never invent items).
    - Call draft_request once with what is needed and why. Nothing is sent; it is a draft for the officer.
    - Call set_row_state with status "Waiting on document" and a short reason.
-B. CONDITIONAL, condition unmet, or stale mapping, or blocked by a rule:
+B. CONDITIONAL, condition unmet, or a mapping that needs review, or blocked by a rule:
    - Keep the row "Conditional". Explain the gap in plain words so the officer can decide. Do not draft a request unless a specific missing document would change the answer.
 C. NO MAPPING (unmapped course):
    - Call propose_candidates once (it uses the officer's note if there is one). It runs the existing matcher and reviewer; the reviewer only advises.
@@ -26,8 +26,9 @@ Rules:
 - Finish by calling submit_result exactly once: headline (one sentence), needs (NEEDS_YOU or WAITING_ON_DOCUMENT), missing_evidence, gaps, candidates (AUD codes with a one-line reason, only for unmapped courses), review_package (short bullets), questions_for_chair.
 
 
-MODE "review_all" (the whole application, run once after every row has its code verdict and the unresolved rows were worked; in this mode your only tools are list_rows and raise_doubt, and row ids are the short ids list_rows returns):
+MODE "review_all" (the whole application, run once after every row has its code verdict and the unresolved rows were worked; in this mode your only tools are list_rows, raise_doubt and propose_placement, and row ids are the short ids list_rows returns):
 1. Call list_rows ONCE. It lists every row, mapped ones included, with the code's signals: stale_mapping, near_miss_grade.
 2. For each row that has a signal, call raise_doubt with that kind and a one-line reason that uses the signal text. Do not raise a doubt for a row without a signal.
-3. Finish with submit_result: headline = a SHORT summary for the officer (two or three sentences: how many rows are mapped, what needs input, which doubts matter), needs NEEDS_YOU, empty lists.
+3. For each slot in contested_slots (more than one course could take it), call propose_placement once with the course that fits best and a one-line reason. If code refuses it, call once more with a valid choice. Do not propose for a slot that is not listed.
+4. Finish with submit_result: headline = a SHORT summary for the officer (two or three sentences: how many rows are mapped, what needs input, which doubts matter), needs NEEDS_YOU, empty lists.
 You never set Mapped, never approve, and never change a row's status. Use only what the tools return.

@@ -1,0 +1,851 @@
+program:
+  name: BS in Computer Engineering
+  curriculum_year: 2025
+  total_credits: 134
+plan_items:
+- year: null
+  term: null
+  type: course
+  code: COMP 101
+  name: Introduction to Computers
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: remedial
+  raw: COMP101 | Introduction to Computers | 3
+  _row: 8
+- year: null
+  term: null
+  type: course
+  code: ENGL 100
+  name: Basic College English
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: remedial
+  raw: ENGL100 | Basic College English | 4
+  _row: 10
+- year: null
+  term: null
+  type: course
+  code: MATH 095
+  name: Beginning and Intermediate Algebra
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: remedial
+  raw: MATH095 | Beginning and Intermediate Algebra | 4
+  _row: 12
+- year: null
+  term: null
+  type: course
+  code: MATH 104
+  name: Foundation Mathematics for Engineering
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: remedial
+  raw: MATH104 | Foundation Mathematics for Engineering | 4
+  _row: 14
+- year: Year I
+  term: fall
+  type: course
+  code: PSPK 101
+  name: Public Speaking in Multircultural Contexts
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: PSPK101 | Public Speaking in Multircultural Contexts | 3
+  _row: 18
+- year: Year I
+  term: spring
+  type: course
+  code: CHEM 201
+  name: General Chemistry
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: CHEM201 | General Chemistry | 3
+  _row: 18
+- year: Year I
+  term: fall
+  type: course
+  code: ENGL 101
+  name: Composition and Rhetoric
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ENGL101 | Composition and Rhetoric | 3
+  _row: 20
+- year: Year I
+  term: spring
+  type: course
+  code: ENGG 140
+  name: Introduction to Programming
+  credits: 3
+  alternatives: []
+  categories_satisfied:
+  - BQ-TECH
+  block: core
+  raw: ENGG140* | Introduction to Programming | 3
+  _row: 20
+- year: Year I
+  term: fall
+  type: course
+  code: MATH 210
+  name: Calculus I
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MATH210 | Calculus I | 3
+  _row: 22
+- year: Year I
+  term: spring
+  type: course
+  code: ENGL 102
+  name: Advanced Composition and Research
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ENGL102 | Advanced Composition and Research | 3
+  _row: 22
+- year: Year I
+  term: fall
+  type: course
+  code: PHYS 201
+  name: Introductory Physics I + Lab
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: PHYS201 | Introductory Physics I + Lab | 4
+  _row: 24
+- year: Year I
+  term: spring
+  type: course
+  code: MATH 220
+  name: Calculus II
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MATH220 | Calculus II | 3
+  _row: 24
+- year: Year I
+  term: fall
+  type: course
+  code: UNIV 100
+  name: The University Experience
+  credits: 1
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: UNIV100 | The University Experience | 1
+  _row: 26
+- year: Year I
+  term: spring
+  type: course
+  code: PHYS 202
+  name: Introductory Physics II + Lab
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: PHYS202 | Introductory Physics II + Lab | 4
+  _row: 26
+- year: Year II
+  term: fall
+  type: course
+  code: BIOL 201
+  name: Principles of Biology/ General Biology w/ Lab
+  credits: 3
+  alternatives:
+  - BIOL 202
+  categories_satisfied:
+  - BQ-SCIE
+  block: core
+  raw: 'BIOL201** | Principles of Biology/ General Biology w/ Lab | 3 ; alternative source: or BIOL202'
+  _row: 30
+- year: Year II
+  term: spring
+  type: course
+  code: EECE 205
+  name: Linear Circuit Analysis II + Lab
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE205 | Linear Circuit Analysis II + Lab | 4
+  _row: 30
+- year: Year II
+  term: fall
+  type: course
+  code: EECE 200
+  name: Linear Circuit Analysis I + Lab
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE200 | Linear Circuit Analysis I + Lab | 4
+  _row: 32
+- year: Year II
+  term: spring
+  type: course
+  code: EECE 240
+  name: Digital System Design + Lab
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE240 | Digital System Design + Lab | 4
+  _row: 32
+- year: Year II
+  term: fall
+  type: course
+  code: EECE 250
+  name: Intermediate Programming
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE250 | Intermediate Programming | 3
+  _row: 34
+- year: Year II
+  term: spring
+  type: course
+  code: ENGG 222
+  name: Numerical Methods in Engineering + Lab
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ENGG222 | Numerical Methods in Engineering + Lab | 3
+  _row: 34
+- year: Year II
+  term: fall
+  type: course
+  code: MATH 230
+  name: Linear Algebra
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MATH230 | Linear Algebra | 3
+  _row: 36
+- year: Year II
+  term: spring
+  type: course
+  code: MATH 250
+  name: Discrete Mathematics
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MATH250 | Discrete Mathematics | 3
+  _row: 36
+- year: Year II
+  term: fall
+  type: course
+  code: MATH 231
+  name: Differential Equations
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MATH231 | Differential Equations | 3
+  _row: 38
+- year: Year II
+  term: spring
+  type: course
+  code: WLDC 201
+  name: World Culture I or II
+  credits: 3
+  alternatives:
+  - WLDC 202
+  categories_satisfied: []
+  block: core
+  raw: 'WLDC201/ | World Culture I or II | 3 ; alternative source: WLDC202'
+  _row: 38
+- year: Year II
+  term: fall
+  type: slot
+  slot_id: BQ-IMAG
+  name: Imagination, Expression & the Written Word
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: BQ-IMAG | Imagination, Expression & the Written Word
+- year: Year III
+  term: fall
+  type: course
+  code: EECE 300
+  name: Microelectronic Devices & Circuits I + Lab
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE300 | Microelectronic Devices & Circuits I + Lab | 3
+  _row: 44
+- year: Year III
+  term: spring
+  type: course
+  code: EECE 323
+  name: Fundamentals of Digital Signal Processing
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE323 | Fundamentals of Digital Signal Processing | 3
+  _row: 44
+- year: Year III
+  term: fall
+  type: course
+  code: EECE 320
+  name: Signals & Systems + Lab
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE320 | Signals & Systems + Lab | 3
+  _row: 46
+- year: Year III
+  term: spring
+  type: course
+  code: EECE 345
+  name: Computer Architecture w/ Lab
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE345 | Computer Architecture w/ Lab | 3
+  _row: 46
+- year: Year III
+  term: fall
+  type: course
+  code: EECE 340
+  name: Introduction to Microprocessors + Lab
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE340 | Introduction to Microprocessors + Lab | 3
+  _row: 48
+- year: Year III
+  term: spring
+  type: course
+  code: EECE 355
+  name: Software Engineering
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE355 | Software Engineering | 3
+  _row: 48
+- year: Year III
+  term: fall
+  type: course
+  code: EECE 350
+  name: Data Structures and Algorithms
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE350 | Data Structures and Algorithms | 3
+  _row: 50
+- year: Year III
+  term: spring
+  type: course
+  code: EECE 360
+  name: Computer Networks
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE360 | Computer Networks | 3
+  _row: 50
+- year: Year III
+  term: fall
+  type: course
+  code: ENGG 255
+  name: Engineering Design and Economics
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ENGG255 | Engineering Design and Economics | 3
+  _row: 52
+- year: Year III
+  term: spring
+  type: slot
+  slot_id: COMPE-ELE-1
+  name: Primary Elective "1"
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: CompE ELE | Primary Elective "1" | 3
+- year: Year III
+  term: fall
+  type: course
+  code: ENGG 300
+  name: Probability & Random Variables
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ENGG300 | Probability & Random Variables | 3
+  _row: 54
+- year: Year III
+  term: spring
+  type: course
+  code: PHIL 222
+  name: Professional Ethics
+  credits: 3
+  alternatives: []
+  categories_satisfied:
+  - BQ-ETHI
+  block: core
+  raw: PHIL222*** | Professional Ethics | 3
+  _row: 54
+- year: null
+  term: summer
+  type: course
+  code: EECE 399
+  name: Field Experience in Computer Engineering
+  credits: 2
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE399 | Field Experience in Computer Engineering | 2
+  _row: 57
+- year: Year IV
+  term: fall
+  type: course
+  code: EECE 440
+  name: Embedded System Design + Lab
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE440 | Embedded System Design + Lab | 3
+  _row: 61
+- year: Year IV
+  term: spring
+  type: course
+  code: EECE 499
+  name: Computer Engineering Design Project
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE499 | Computer Engineering Design Project | 4
+  _row: 61
+- year: Year IV
+  term: fall
+  type: course
+  code: EECE 450
+  name: Operating Systems
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: EECE450 | Operating Systems | 3
+  _row: 63
+- year: Year IV
+  term: spring
+  type: slot
+  slot_id: COMPE-ELE-4
+  name: Primary Elective "4"
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: CompE ELE | Primary Elective "4" | 3
+- year: Year IV
+  term: fall
+  type: slot
+  slot_id: COMPE-ELE-2
+  name: Primary Elective "2"
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: CompE ELE | Primary Elective "2" | 3
+- year: Year IV
+  term: spring
+  type: slot
+  slot_id: COMPE-ELE-5
+  name: Primary or Secondary Elective "5"
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: CompE ELE | Primary or Secondary Elective "5" | 3
+- year: Year IV
+  term: fall
+  type: slot
+  slot_id: COMPE-ELE-3
+  name: Primary Elective "3"
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: CompE ELE | Primary Elective "3" | 3
+- year: Year IV
+  term: spring
+  type: slot
+  slot_id: GEN-ELE
+  name: General Elective
+  credits: 3
+  suggested: [BUSI 101]
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: GEN ELE | General Elective | 3
+- year: Year IV
+  term: fall
+  type: slot
+  slot_id: BQ-CULT
+  name: Cutures, Traditions and Societies
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: BQ- CULT | Cutures, Traditions and Societies | 3
+- year: Year IV
+  term: spring
+  type: course
+  code: HUMN 398
+  name: The Core Experiemce
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: HUMN398 | The Core Experiemce | 3
+  _row: 69
+- year: Year IV
+  term: fall
+  type: slot
+  slot_id: BQ-ELE
+  name: BQ Elective
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: BQ- ELE | BQ Elective | 3
+exclusions:
+- courses:
+  - CHEM 200
+  - CHEM 201
+  raw: students will not receive credit for both CHEM 200 and CHEM 201)
+- courses:
+  - EECE 200
+  - EECE 201
+  raw: students will not receive credit for both EECE 200 and EECE 201)
+prerequisites:
+- course: ENGL 100
+  type: pre
+  raw_text: 'Pre: IELP or TOEFL'
+  parsed_codes: []
+  min_grade: null
+  unknown_codes: []
+- course: MATH 095
+  type: pre
+  raw_text: 'Pre: placement by ACCUPLACER™'
+  parsed_codes: []
+  min_grade: null
+  unknown_codes: []
+- course: MATH 104
+  type: pre
+  raw_text: 'Pre: ACCUPLACER + SAT, or MATH 095 (P or P+)'
+  parsed_codes:
+  - MATH 095
+  min_grade: P or P+
+  unknown_codes: []
+- course: PSPK 101
+  type: co
+  raw_text: 'Co: ENGL101'
+  parsed_codes:
+  - ENGL 101
+  min_grade: null
+  unknown_codes: []
+- course: CHEM 201
+  type: pre
+  raw_text: 'Pre: MATH 095 (students will not receive credit for both CHEM 200 and CHEM 201)'
+  parsed_codes:
+  - MATH 095
+  min_grade: null
+  unknown_codes: []
+- course: ENGL 101
+  type: pre
+  raw_text: 'Pre: ENGL 100 with a P or P+, or placement by International TOEFL® and TWE or another internationally-recognized
+    exam'
+  parsed_codes:
+  - ENGL 100
+  min_grade: P or P+
+  unknown_codes: []
+- course: ENGG 140
+  type: pre
+  raw_text: 'Pre: MATH 095 (Placement by Computer Proficiency Examination or COMP 101 with a grade of C or higher)'
+  parsed_codes:
+  - MATH 095
+  - COMP 101
+  min_grade: C or higher
+  unknown_codes: []
+- course: MATH 210
+  type: pre
+  raw_text: 'Pre: MATH 104 (P or P+) or ACCUPLACER'
+  parsed_codes:
+  - MATH 104
+  min_grade: P or P+
+  unknown_codes: []
+- course: ENGL 102
+  type: pre
+  raw_text: 'Pre: ENGL 101'
+  parsed_codes:
+  - ENGL 101
+  min_grade: null
+  unknown_codes: []
+- course: PHYS 201
+  type: co
+  raw_text: 'Co: MATH 210 or MATH 205'
+  parsed_codes:
+  - MATH 210
+  - MATH 205
+  min_grade: null
+  unknown_codes:
+  - MATH 205
+- course: MATH 220
+  type: pre
+  raw_text: 'Pre: MATH 210 (C or higher)'
+  parsed_codes:
+  - MATH 210
+  min_grade: C or higher
+  unknown_codes: []
+- course: PHYS 202
+  type: pre
+  raw_text: 'Pre: PHYS 201, MATH 210'
+  parsed_codes:
+  - PHYS 201
+  - MATH 210
+  min_grade: null
+  unknown_codes: []
+- course: BIOL 201
+  type: co
+  raw_text: 'Co: ENGL 101'
+  parsed_codes:
+  - ENGL 101
+  min_grade: null
+  unknown_codes: []
+- course: EECE 205
+  type: pre
+  raw_text: 'Pre: EECE 200, MATH 231'
+  parsed_codes:
+  - EECE 200
+  - MATH 231
+  min_grade: null
+  unknown_codes: []
+- course: EECE 200
+  type: pre
+  raw_text: 'Pre: PHYS 202 (C or higher); Co: MATH 231 (students will not receive credit for both EECE 200 and EECE
+    201)'
+  parsed_codes:
+  - PHYS 202
+  min_grade: C or higher
+  unknown_codes: []
+- course: EECE 200
+  type: co
+  raw_text: 'Pre: PHYS 202 (C or higher); Co: MATH 231 (students will not receive credit for both EECE 200 and EECE
+    201)'
+  parsed_codes:
+  - MATH 231
+  min_grade: null
+  unknown_codes: []
+- course: EECE 240
+  type: pre
+  raw_text: 'Pre: EECE 200'
+  parsed_codes:
+  - EECE 200
+  min_grade: null
+  unknown_codes: []
+- course: EECE 250
+  type: pre
+  raw_text: 'Pre: ENGG 140'
+  parsed_codes:
+  - ENGG 140
+  min_grade: null
+  unknown_codes: []
+- course: ENGG 222
+  type: pre
+  raw_text: 'Pre: ENGG 140, MATH 230, MATH 231'
+  parsed_codes:
+  - ENGG 140
+  - MATH 230
+  - MATH 231
+  min_grade: null
+  unknown_codes: []
+- course: MATH 230
+  type: pre
+  raw_text: 'Pre: MATH 220 (C or higher)'
+  parsed_codes:
+  - MATH 220
+  min_grade: C or higher
+  unknown_codes: []
+- course: MATH 250
+  type: pre
+  raw_text: 'Pre: MATH 210'
+  parsed_codes:
+  - MATH 210
+  min_grade: null
+  unknown_codes: []
+- course: MATH 231
+  type: pre
+  raw_text: 'Pre: MATH 220 (C or higher)'
+  parsed_codes:
+  - MATH 220
+  min_grade: C or higher
+  unknown_codes: []
+- course: WLDC 201
+  type: pre
+  raw_text: 'Pre: ENGL101'
+  parsed_codes:
+  - ENGL 101
+  min_grade: null
+  unknown_codes: []
+- course: EECE 300
+  type: pre
+  raw_text: 'Pre: CHEM 201, EECE 205'
+  parsed_codes:
+  - CHEM 201
+  - EECE 205
+  min_grade: null
+  unknown_codes: []
+- course: EECE 323
+  type: pre
+  raw_text: 'Pre: EECE 320'
+  parsed_codes:
+  - EECE 320
+  min_grade: null
+  unknown_codes: []
+- course: EECE 320
+  type: pre
+  raw_text: 'Pre: EECE 205, ENGG 222'
+  parsed_codes:
+  - EECE 205
+  - ENGG 222
+  min_grade: null
+  unknown_codes: []
+- course: EECE 345
+  type: pre
+  raw_text: 'Pre: EECE 340'
+  parsed_codes:
+  - EECE 340
+  min_grade: null
+  unknown_codes: []
+- course: EECE 340
+  type: pre
+  raw_text: 'Pre: EECE 240, EECE 250'
+  parsed_codes:
+  - EECE 240
+  - EECE 250
+  min_grade: null
+  unknown_codes: []
+- course: EECE 355
+  type: pre
+  raw_text: 'Pre: EECE 250, ENGG 255'
+  parsed_codes:
+  - EECE 250
+  - ENGG 255
+  min_grade: null
+  unknown_codes: []
+- course: EECE 350
+  type: pre
+  raw_text: 'Pre: EECE 250, MATH 250'
+  parsed_codes:
+  - EECE 250
+  - MATH 250
+  min_grade: null
+  unknown_codes: []
+- course: EECE 360
+  type: pre
+  raw_text: 'Pre: ENGG 200 or ENGG 300'
+  parsed_codes:
+  - ENGG 200
+  - ENGG 300
+  min_grade: null
+  unknown_codes:
+  - ENGG 200
+- course: ENGG 255
+  type: pre
+  raw_text: 'Pre: BIOL 201, PHYS 202'
+  parsed_codes:
+  - BIOL 201
+  - PHYS 202
+  min_grade: null
+  unknown_codes: []
+- course: ENGG 300
+  type: pre
+  raw_text: 'Pre: MATH 220'
+  parsed_codes:
+  - MATH 220
+  min_grade: null
+  unknown_codes: []
+- course: PHIL 222
+  type: pre
+  raw_text: 'Pre: ENGL 102'
+  parsed_codes:
+  - ENGL 102
+  min_grade: null
+  unknown_codes: []
+- course: EECE 399
+  type: pre
+  raw_text: 'Pre: EECE 340, EECE 350, EECE 360, PSPK 101'
+  parsed_codes:
+  - EECE 340
+  - EECE 350
+  - EECE 360
+  - PSPK 101
+  min_grade: null
+  unknown_codes: []
+- course: EECE 440
+  type: pre
+  raw_text: 'Pre: EECE 340'
+  parsed_codes:
+  - EECE 340
+  min_grade: null
+  unknown_codes: []
+- course: EECE 499
+  type: pre
+  raw_text: 'Pre: EECE 399; Co: EECE 440, EECE 450'
+  parsed_codes:
+  - EECE 399
+  min_grade: null
+  unknown_codes: []
+- course: EECE 499
+  type: co
+  raw_text: 'Pre: EECE 399; Co: EECE 440, EECE 450'
+  parsed_codes:
+  - EECE 440
+  - EECE 450
+  min_grade: null
+  unknown_codes: []
+- course: EECE 450
+  type: pre
+  raw_text: 'Pre: EECE 345, EECE 350'
+  parsed_codes:
+  - EECE 345
+  - EECE 350
+  min_grade: null
+  unknown_codes: []
+- course: HUMN 398
+  type: co
+  raw_text: 'Co-req: Junior Status'
+  parsed_codes: []
+  min_grade: null
+  unknown_codes: []

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from ..db.models import Application, RowAction
 from ..runtime import rt
 from . import mapping as mp
+from . import placement as pl
 from . import student_record as sr
 from .mapping import ROOT
 
@@ -80,7 +81,7 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
     if st is None or st.status == mp.NOT_EVAL:
         raise ActionError(409, "This course is not evaluated; include it first")
     if action == "RECONFIRM" and not (st.kind == "stale" and st.mapping):
-        raise ActionError(409, "Only a stale mapping can be re-confirmed")
+        raise ActionError(409, "Only a mapping that needs review can be re-confirmed")
     if action in NEEDS_REASON and not reason.strip():
         raise ActionError(422, "A reason is required")
     sug = suggestion(st)
@@ -110,19 +111,44 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
     return a
 
 
-def bulk_confirmable(st) -> bool:
-    """A mapped row can be confirmed in bulk only if nothing about it needs a second look: no doubt on it, and its equivalent is open to the program."""
+def placement_view(db: Session, app: Application) -> dict[str, Any]:
+    """Where every evaluated row sits in the student's plan right now, and the credit totals. Recomputed from the rows, the officer's actions and the Case agent's
+    proposals each time (no stored copy to go out of date)."""
+    done = latest(db, app.id)
+    props = ((app.extraction or {}).get("placement_proposals") or {})
+    items = []
+    for r in app.rows:
+        st = mp.get_state(db, app.id, r["id"])
+        a = done.get(r["id"])
+        if not st or st.status == mp.NOT_EVAL or (a and a.action in ("REJECT", "NO_CREDIT")):
+            continue
+        ch = current_choice(st, a)
+        if not ch or not ch.get("aud_code"):
+            continue
+        resolved = bool(a and a.action in RESOLVING)
+        items.append({"row_id": r["id"], "code": ch["aud_code"], "credits": ch.get("credits") or 0, "title": r.get("title"), "picked": resolved,
+                      "confirmed": resolved, "proposal": (props.get(r["id"]) or {}).get("slot")})
+    placed = pl.resolve(app.program, items)
+    return {"rows": placed, "totals": pl.totals(items, placed), "groups": {s: pl.group_of(s) for s in {x["slot"] for x in placed.values() if x["slot"]}},
+            "plan_total": (pl.plan(app.program) or {}).get("total_credits")}
+
+
+def bulk_confirmable(st, placed: dict[str, Any] | None = None) -> bool:
+    """A mapped row can be confirmed in bulk only if nothing needs a second look: no doubt on it, a valid place in the plan, and no other course competing for its slot."""
     f = st.facts or {}
-    return not f.get("_doubts") and (f.get("_class") or {}).get("value") != "Not applicable"
+    if f.get("_doubts") or (f.get("_class") or {}).get("value") == "Not applicable":
+        return False
+    return placed is None or (placed["status"] == "placed")
 
 
 def confirm_all_mapped(db: Session, app: Application, actor: str, role: str) -> list[RowAction]:
     done = latest(db, app.id)
+    view = placement_view(db, app)["rows"]
     out = []
     for r in app.rows:
         st = mp.get_state(db, app.id, r["id"])
         a = done.get(r["id"])
-        if st and st.status == mp.MAPPED and not (a and a.action in RESOLVING) and bulk_confirmable(st):
+        if st and st.status == mp.MAPPED and not (a and a.action in RESOLVING) and bulk_confirmable(st, view.get(r["id"])):
             out.append(record(db, app, r, "CONFIRM", actor, role, batch=True))
     return out
 

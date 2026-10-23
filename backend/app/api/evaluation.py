@@ -129,7 +129,7 @@ def get_results(app_id: str):
         job = db.get(Job, app.evaluation_job_id) if app.evaluation_job_id else None
         states = {s.row_id: mp.state_dict(s) for s in db.scalars(select(RowState).where(RowState.app_id == app_id))}
         actions = {a.row_id: ac.action_dict(a) for a in ac.latest(db, app_id).values()}
-        return {"states": states, "actions": actions, "selection_rule": mp.selection_rule(app.rows), "results": rows, "counts": counts, "pending_units": failed, "catalog": rt().repo.catalog_label,
+        return {"states": states, "actions": actions, "placement": ac.placement_view(db, app), "selection_rule": mp.selection_rule(app.rows), "results": rows, "counts": counts, "pending_units": failed, "catalog": rt().repo.catalog_label,
                 "job": job_dict(db, job) if job else None, "status": app_summary(db, app)["status"]}
 
 

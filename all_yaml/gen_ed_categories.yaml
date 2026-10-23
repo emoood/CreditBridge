@@ -1,0 +1,434 @@
+categories:
+- id: BQ-TECH
+  name: Technology and Humanity
+  credits_required: 3
+  eligible_courses:
+  - code: BUAI 140
+    name: Introduction to Programming for Business Applications
+    credits: 3
+    raw: BUAI 140 Introduction to Programming for Business Applications 3
+  - code: COMP 101
+    name: IT and Innovation in Today’s World
+    credits: 3
+    raw: COMP 101 IT and Innovation in Today’s World 3
+  - code: ENGG 140
+    name: Introduction to Programming
+    credits: 3
+    raw: ENGG 140 Introduction to Programming 3
+  - code: HUMN 210
+    name: Introduction to Digital Humanities
+    credits: 3
+    raw: HUMN 210 Introduction to Digital Humanities 3
+  - code: PHIL 225
+    name: Ethics and Artificial Intelligence
+    credits: 3
+    raw: PHIL 225 Ethics and Artificial Intelligence 3
+  - code: SOCI 340
+    name: Technology and Society
+    credits: 3
+    raw: SOCI 340 Technology and Society 3
+- id: BQ-IMAG
+  name: Imagination, Expression and the Written Word
+  credits_required: 3
+  eligible_courses:
+  - code: ENGL 103
+    name: Introduction to Literature
+    credits: 3
+    raw: ENGL 103 Introduction to Literature 3
+  - code: ENGL 210
+    name: Creative Writing
+    credits: 3
+    raw: ENGL 210 Creative Writing 3
+  - code: ENGL 211
+    name: British Literature I
+    credits: 3
+    raw: ENGL 211 British Literature I 3
+  - code: ENGL 212
+    name: British Literature II
+    credits: 3
+    raw: ENGL 212 British Literature II 3
+  - code: ENGL 221
+    name: American Literature I
+    credits: 3
+    raw: ENGL 221 American Literature I 3
+  - code: ENGL 222
+    name: American Literature II
+    credits: 3
+    raw: ENGL 222 American Literature II 3
+  - code: ENGL 231
+    name: World Literature I
+    credits: 3
+    raw: ENGL 231 World Literature I 3
+  - code: ENGL 232
+    name: World Literature II
+    credits: 3
+    raw: ENGL 232 World Literature II 3
+  - code: ENGL 275-78
+    name: Special Topics in Literature
+    credits: 3
+    raw: ENGL 275-78 Special Topics in Literature 3
+  - code: ENGL 311
+    name: World Mythology
+    credits: 3
+    raw: ENGL 311 World Mythology 3
+  - code: ENGL 312
+    name: Biography/Autobiography
+    credits: 3
+    raw: ENGL 312 Biography/Autobiography 3
+  - code: ENGL 313
+    name: Children’s Literature
+    credits: 3
+    raw: ENGL 313 Children’s Literature 3
+  - code: ENGL 314
+    name: Coming-of-Age Novels
+    credits: 3
+    raw: ENGL 314 Coming-of-Age Novels 3
+  - code: ENGL 315
+    name: Contemporary Female Authors
+    credits: 3
+    raw: ENGL 315 Contemporary Female Authors 3
+  - code: MEST 317
+    name: Arabic Literature in Translation
+    credits: 3
+    raw: MEST 317 Arabic Literature in Translation 3
+- id: BQ-CULT
+  name: Cultures, Traditions and Societies
+  credits_required: 3
+  eligible_courses:
+  - code: ANTH 201
+    name: Introduction to Cultural Anthropology
+    credits: 3
+    raw: ANTH 201 Introduction to Cultural Anthropology 3
+  - code: ANTH 311
+    name: Culture and Society in Postcolonial Africa
+    credits: 3
+    raw: ANTH 311 Culture and Society in Postcolonial Africa 3
+  - code: ARTS 101
+    name: Introduction to the Arts
+    credits: 3
+    raw: ARTS 101 Introduction to the Arts 3
+  - code: ARTS 200
+    name: History of Art I
+    credits: 3
+    raw: ARTS 200 History of Art I 3
+  - code: ARTS 201
+    name: History of Art II
+    credits: 3
+    raw: ARTS 201 History of Art II 3
+  - code: ARTS 202
+    name: History of Arts III
+    credits: 3
+    raw: ARTS 202 History of Arts III 3
+  - code: GEOG 101
+    name: World Geography
+    credits: 3
+    raw: GEOG 101 World Geography 3
+  - code: GEOG 310
+    name: Human Geography
+    credits: 3
+    raw: GEOG 310 Human Geography 3
+  - code: HIST 212
+    name: Modern Europe
+    credits: 3
+    raw: HIST 212 Modern Europe 3
+  - code: HIST 251
+    name: World History to 1500 CE
+    credits: 3
+    raw: HIST 251 World History to 1500 CE 3
+  - code: HIST 252
+    name: World History since 1500 CE
+    credits: 3
+    raw: HIST 252 World History since 1500 CE 3
+  - code: HIST 310
+    name: The US in World Affairs
+    credits: 3
+    raw: HIST 310 The US in World Affairs 3
+  - code: HIST 350
+    name: Revolution and Reaction in the Global Cold War
+    credits: 3
+    raw: HIST 350 Revolution and Reaction in the Global Cold War 3
+  - code: MEST 100
+    name: The Arabic Language
+    credits: 3
+    raw: MEST 100 The Arabic Language 3
+  - code: MEST 210
+    name: Introduction to Middle East History
+    credits: 3
+    raw: MEST 210 Introduction to Middle East History 3
+  - code: MEST 280
+    name: The UAE Experience
+    credits: 3
+    raw: MEST 280 The UAE Experience 3
+  - code: MEST 310
+    name: Islamic Civilization
+    credits: 3
+    raw: MEST 310 Islamic Civilization 3
+  - code: MEST 315
+    name: History of the Modern Middle East
+    credits: 3
+    raw: MEST 315 History of the Modern Middle East 3
+  - code: MEST 318
+    name: Cultures of the Middle East
+    credits: 3
+    raw: MEST 318 Cultures of the Middle East 3
+  - code: MEST 319
+    name: Politics in the Middle East
+    credits: 3
+    raw: MEST 319 Politics in the Middle East 3
+  - code: MEST 320
+    name: 'The Qur’an: Text, History, and Meaning'
+    credits: 3
+    raw: 'MEST 320 The Qur’an: Text, History, and Meaning 3'
+  - code: MEST 323
+    name: 'Islam: Historical and Society Aspects'
+    credits: 3
+    raw: 'MEST 323 Islam: Historical and Society Aspects 3'
+  - code: MEST 327
+    name: Islamic Politics
+    credits: 3
+    raw: MEST 327 Islamic Politics 3
+  - code: MEST 329
+    name: Islamic Art and Architecture
+    credits: 3
+    raw: MEST 329 Islamic Art and Architecture 3
+  - code: MEST 350
+    name: Religions of the Middle East
+    credits: 3
+    raw: MEST 350 Religions of the Middle East 3
+  - code: MEST 352
+    name: Conflicts in the Middle East
+    credits: 3
+    raw: MEST 352 Conflicts in the Middle East 3
+  - code: MEST 353
+    name: Women and Gender in the Middle East
+    credits: 3
+    raw: MEST 353 Women and Gender in the Middle East 3
+  - code: MEST 380
+    name: Society and Economics in the Gulf
+    credits: 3
+    raw: MEST 380 Society and Economics in the Gulf 3
+  - code: MEST 381
+    name: 'North Africa: Nation, Society, and Culture'
+    credits: 3
+    raw: 'MEST 381 North Africa: Nation, Society, and Culture 3'
+  - code: MEST 382
+    name: 'The Levant: Arab Lands of the Eastern Mediterranean'
+    credits: 3
+    raw: 'MEST 382 The Levant: Arab Lands of the Eastern Mediterranean 3'
+  - code: PHIL 250
+    name: Political Philosophy
+    credits: 3
+    raw: PHIL 250 Political Philosophy 3
+  - code: POLS 350
+    name: 'Political Violence: A Historical Perspective'
+    credits: 3
+    raw: 'POLS 350 Political Violence: A Historical Perspective 3'
+  - code: SOCI 201
+    name: Introduction to Sociology
+    credits: 3
+    raw: SOCI 201 Introduction to Sociology 3
+  - code: SOCI 301
+    name: Globalization
+    credits: 3
+    raw: SOCI 301 Globalization 3
+  - code: SOCI 332
+    name: Culture and Society in South Asia
+    credits: 3
+    raw: SOCI 332 Culture and Society in South Asia 3
+  - code: SOCI 344
+    name: Gender and Society
+    credits: 3
+    raw: SOCI 344 Gender and Society 3
+  - code: SSCI 275
+    name: Selected Topics in Social Sciences
+    credits: 3
+    raw: SSCI 275 Selected Topics in Social Sciences 3
+  - code: SSCI 475
+    name: Special Topics in Social Sciences
+    credits: 3
+    raw: SSCI 475 Special Topics in Social Sciences 3
+  - code: WLDC 301
+    name: Religions of the World
+    credits: 3
+    raw: WLDC 301 Religions of the World 3
+- id: BQ-ETHI
+  name: Ethics, Thought and Consciousness
+  credits_required: 3
+  eligible_courses:
+  - code: PHIL 105
+    name: Introduction to Critical Thinking
+    credits: 3
+    raw: PHIL 105 Introduction to Critical Thinking 3
+  - code: PHIL 201
+    name: Introduction to Philosophy/Logic
+    credits: 3
+    raw: PHIL 201 Introduction to Philosophy/Logic 3
+  - code: PHIL 222
+    name: Professional Ethics
+    credits: 3
+    raw: PHIL 222 Professional Ethics 3
+  - code: PHIL 225
+    name: Ethics and Artificial Intelligence
+    credits: 3
+    raw: PHIL 225 Ethics and Artificial Intelligence 3
+  - code: PHIL 250
+    name: Political Philosophy
+    credits: 3
+    raw: PHIL 250 Political Philosophy 3
+  - code: PHIL 260
+    name: Introduction to Bioethics
+    credits: 3
+    raw: PHIL 260 Introduction to Bioethics 3
+  - code: PHIL 310
+    name: Ethics and Moral Philosophy
+    credits: 3
+    raw: PHIL 310 Ethics and Moral Philosophy 3
+  - code: PHIL 320
+    name: Metaphysics and the Study of Human Existence
+    credits: 3
+    raw: PHIL 320 Metaphysics and the Study of Human Existence 3
+  - code: PSYC 201
+    name: General Psychology
+    credits: 3
+    raw: PSYC 201 General Psychology 3
+  - code: PSYC 313
+    name: Social Psychology
+    credits: 3
+    raw: PSYC 313 Social Psychology 3
+  - code: WLDC 301
+    name: Religions of the World
+    credits: 3
+    raw: WLDC 301 Religions of the World 3
+- id: BQ-SCIE
+  name: Science and the Nature of Reality
+  credits_required: 3
+  eligible_courses:
+  - code: BIOL 201
+    name: Principles of Biology
+    credits: 3
+    raw: BIOL 201 Principles of Biology 3
+  - code: BIOL 202
+    name: General Biology I W/Lab
+    credits: 4
+    raw: BIOL 202 General Biology I W/Lab 4
+  - code: CHEM 200
+    name: Principles of Chemistry W/Lab
+    credits: 4
+    raw: CHEM 200 Principles of Chemistry W/Lab 4
+  - code: CHEM 201
+    name: General Chemistry
+    credits: 3
+    raw: CHEM 201 General Chemistry 3
+  - code: MATH 310
+    name: History of Mathematics
+    credits: 3
+    raw: MATH 310 History of Mathematics 3
+  - code: PHYS 201
+    name: Introductory Physics I W/Lab
+    credits: 4
+    raw: PHYS 201 Introductory Physics I W/Lab 4
+  - code: SCIE 201
+    name: Life Sciences for Today
+    credits: 3
+    raw: SCIE 201* Life Sciences for Today 3
+  - code: SCIE 211
+    name: Water Sustainability
+    credits: 3
+    raw: SCIE 211 Water Sustainability 3
+  - code: SCIE 241
+    name: Principles of Human Nutrition
+    credits: 3
+    raw: SCIE 241 Principles of Human Nutrition 3
+  - code: SCIE 242
+    name: Women’s Health
+    credits: 3
+    raw: SCIE 242 Women’s Health 3
+  - code: SCIE 251
+    name: Environmental Health and Sustainability
+    credits: 3
+    raw: SCIE 251 Environmental Health and Sustainability 3
+  - code: SCIE 275
+    name: Selected Topics in Natural Sciences
+    credits: 3
+    raw: SCIE 275 Selected Topics in Natural Sciences 3
+  - code: SCIE 341
+    name: Public Health
+    credits: 3
+    raw: SCIE 341 Public Health 3
+bq_elective:
+  count: 1
+  rule: One extra course from any Big Questions category.
+  eligible_categories:
+  - BQ-TECH
+  - BQ-IMAG
+  - BQ-CULT
+  - BQ-ETHI
+  - BQ-SCIE
+exclusions:
+- courses:
+  - SCIE 201
+  - BIOL 201
+  - BIOL 202
+  rule: Credit is allowed for SCIE 201 or one of BIOL 201/BIOL 202, but not for both SCIE 201 and either
+    BIOL course.
+  raw: '*Students are prohibited from earning credit for both SCIE 201 and BIOL 201 or BIOL 202'
+multi_category:
+- code: PHIL 225
+  name: Ethics and Artificial Intelligence
+  categories:
+  - BQ-ETHI
+  - BQ-TECH
+- code: PHIL 250
+  name: Political Philosophy
+  categories:
+  - BQ-CULT
+  - BQ-ETHI
+- code: WLDC 301
+  name: Religions of the World
+  categories:
+  - BQ-CULT
+  - BQ-ETHI
+flags:
+  ranges:
+  - category: BQ-IMAG
+    code: ENGL 275-78
+    name: Special Topics in Literature
+    credits: 3
+    raw: ENGL 275-78 Special Topics in Literature 3
+  special_topics:
+  - category: BQ-IMAG
+    code: ENGL 275-78
+    name: Special Topics in Literature
+    credits: 3
+    raw: ENGL 275-78 Special Topics in Literature 3
+  - category: BQ-CULT
+    code: SSCI 275
+    name: Selected Topics in Social Sciences
+    credits: 3
+    raw: SSCI 275 Selected Topics in Social Sciences 3
+  - category: BQ-CULT
+    code: SSCI 475
+    name: Special Topics in Social Sciences
+    credits: 3
+    raw: SSCI 475 Special Topics in Social Sciences 3
+  - category: BQ-SCIE
+    code: SCIE 275
+    name: Selected Topics in Natural Sciences
+    credits: 3
+    raw: SCIE 275 Selected Topics in Natural Sciences 3
+  credits_other_than_3:
+  - category: BQ-SCIE
+    code: BIOL 202
+    name: General Biology I W/Lab
+    credits: 4
+    raw: BIOL 202 General Biology I W/Lab 4
+  - category: BQ-SCIE
+    code: CHEM 200
+    name: Principles of Chemistry W/Lab
+    credits: 4
+    raw: CHEM 200 Principles of Chemistry W/Lab 4
+  - category: BQ-SCIE
+    code: PHYS 201
+    name: Introductory Physics I W/Lab
+    credits: 4
+    raw: PHYS 201 Introductory Physics I W/Lab 4

@@ -93,20 +93,8 @@ async def test_one_click_include_runs_a_not_evaluated_row_and_the_ledger_is_serv
 def test_student_record_by_case_number():
     from backend.app.services import student_record as sr
     rec = sr.load_record("cb-2026-0102")
-    assert rec["name"] == "Daniel Ferreira" and rec["program"] == "BSc Computer Engineering" and rec["term"] and rec["curriculum"]
+    assert rec["name"] == "Daniel Ferreira" and rec["program"] == "BS in Computer Engineering" and rec["term"] and rec["curriculum"]
     assert sr.load_record("nope") is None
-
-
-def test_classification_is_blocked_then_core_then_general_elective():
-    from backend.app.services import student_record as sr
-    eng, bba = "BSc Computer Engineering", "BBA Business Administration"
-    assert sr.classify("ACCG 201", eng)["value"] == sr.NOT_APPLICABLE and sr.classify("ACCG 201", eng)["why"] == "Business-only courses are not open to engineering programs."
-    assert sr.classify("MATH 210", eng)["value"] == sr.PROGRAM == "Core course"
-    assert sr.classify("ECON 201", eng)["value"] == sr.ELECTIVE  # any other mapped course is a potential general elective: no list, no cap
-    assert sr.classify("ARTS 200", eng)["value"] == sr.ELECTIVE
-    assert sr.classify("ENGG 140", bba)["value"] == sr.NOT_APPLICABLE and sr.classify("MATH 220", bba)["value"] == sr.NOT_APPLICABLE
-    assert sr.classify("ECON 201", bba)["value"] == sr.PROGRAM
-    assert sr.classify("MATH 210", "No such program") is None
 
 
 # ---- the Case agent reviews every application (mapped rows included); code corroborates doubts
@@ -125,7 +113,7 @@ async def _run_with_program(env, program="BSc Computer Engineering"):
 async def test_mapped_rows_run_first_and_carry_a_program_class(case_env):
     app_id = await _run_with_program(case_env)
     st, rows, _res = await states(case_env, app_id)
-    assert st["AP Statistics"]["classification"]["value"] == "General elective suggestion"  # STA201 is not a core course for engineering
+    assert "classification" in st["AP Statistics"]  # the plan-aware class is attached (test programs have no plan, so it is empty here)
     with app_session() as db:
         order = [u.unit_key for u in db.scalars(select(JobUnit).where(JobUnit.app_id == app_id, JobUnit.stage == "evaluate").order_by(JobUnit.id))]
     sid = {r["title"]: r["source_id"] for r in rows}
@@ -222,12 +210,16 @@ async def test_demo_mode_says_so_when_there_is_no_prepared_run_for_a_file(case_e
 # ---- applicability: a course the program cannot take is Not applicable BEFORE conditions and stale checks
 async def test_a_restricted_course_is_not_applicable_and_needs_no_document_or_agent(case_env, monkeypatch):
     from backend.app.services import student_record as sr
-    monkeypatch.setattr(sr, "_constraints", lambda: {"t": {"names": ["BBA Test"], "blocked_areas": [], "blocked_courses": ["CS101"], "core_courses": [],
-                                                           "reasons": {"blocked": "Engineering courses are not open to BBA programs."}}})
+    monkeypatch.setattr(sr, "restriction", lambda code, program: "Engineering courses are not open to BBA programs." if code == "CS101" else None)
+    from backend.app.db.models import CourseMapping
+    with app_session() as db:
+        for m in db.scalars(select(CourseMapping).where(CourseMapping.aud_code == "CS101")):
+            m.status = "ACTIVE"
+        db.commit()
     app_id = await _run_with_program(case_env, "BBA Test")
     st, rows, _res = await states(case_env, app_id)
     csa = st["AP Computer Science A"]
-    assert csa["status"] == "Not evaluated" and csa["kind"] == "not_applicable" and csa["can_include"]   # stale mapping to CS101, but applicability comes first
+    assert csa["status"] == "Not evaluated" and csa["kind"] == "not_applicable" and csa["can_include"]   # no place in the plan: no document, no investigation
     assert csa["reason"] == "Engineering courses are not open to BBA programs." and csa["requests"] == []
     sid = {r["title"]: r["source_id"] for r in rows}
     assert sid["AP Computer Science A"] not in {u for stage, u in case_env.model.calls if stage == "case"}   # no agent investigation
@@ -235,12 +227,12 @@ async def test_a_restricted_course_is_not_applicable_and_needs_no_document_or_ag
     assert (await case_env.client.post(f"/api/v1/applications/{app_id}/rows/{row_id}/include", headers=ADMIN)).status_code == 200   # the officer includes it anyway
     await case_env.worker.idle()
     st2, _r, _x = await states(case_env, app_id)
-    assert st2["AP Computer Science A"]["status"] == "Conditional" and st2["AP Computer Science A"]["kind"] == "stale"   # now it goes through the normal checks
+    assert st2["AP Computer Science A"]["kind"] != "not_applicable"   # now it goes through the normal checks
 
 
 async def test_a_blocked_course_is_refused_as_a_change_and_in_the_picker(case_env, monkeypatch):
     from backend.app.services import student_record as sr
-    monkeypatch.setattr(sr, "_constraints", lambda: {"t": {"names": ["BBA Test"], "blocked_areas": [], "blocked_courses": ["CS101"], "core_courses": [], "reasons": {"blocked": "Engineering courses are not open to BBA programs."}}})
+    monkeypatch.setattr(sr, "restriction", lambda code, program: "Engineering courses are not open to BBA programs." if code == "CS101" else None)
     app_id = await _run_with_program(case_env, "BBA Test")
     _st, rows, _ = await states(case_env, app_id)
     stat = next(r for r in rows if r["title"] == "AP Statistics")
@@ -253,3 +245,68 @@ def test_synopsis_match_is_exact_on_the_normalized_name():
     syn = {"AP Statistics": "x" * 50, "Economics": "y" * 50}
     assert synopsis_for({"title": "Statistics"}, syn) and synopsis_for({"title": "ap  statistics"}, syn) is not None
     assert synopsis_for({"title": "AP Macroeconomics"}, syn) is None and synopsis_for({"title": "AP Human Geography"}, syn) is None
+
+
+# ---- real mapping data and plan placement (Finance and Computer Engineering)
+FIN, CE = "Bachelor of Business Administration - Major in Finance", "BS in Computer Engineering"
+
+
+def _csv_maps(source: str):
+    from backend.app.db.models import CourseMapping
+    from backend.app.services import mapping as mp
+    rows = [r for r in mp.read_mapping_csv() if mp.norm_name(r["source_course"]) == mp.norm_name(source)]
+    return [CourseMapping(id=i + 1, subject_code="AP-X", subject_name=source, aud_code=r["aud_code"], aud_credits=r["aud_credits"], version=r["version"], status=r["status"]) for i, r in enumerate(rows)]
+
+
+def test_mapping_loader_rejects_a_duplicate_row_and_an_unknown_status(tmp_path):
+    import pytest
+    from backend.app.services import mapping as mp
+    head = "source_course,aud_code,aud_name,aud_credits,min_exam_score,notes,version,status,detail_id\n"
+    dup = tmp_path / "dup.csv"
+    dup.write_text(head + "Calculus AB,MATH 200,,3,,,2026-10,active,1\nAP Calculus AB,MATH 200,,3,,,2026-10,active,2\n")
+    with pytest.raises(ValueError, match=r"dup.csv row 3: duplicate"):
+        mp.read_mapping_csv(dup)
+    bad = tmp_path / "bad.csv"
+    bad.write_text(head + "Calculus AB,MATH 200,,3,,,2026-10,maybe,1\n")
+    with pytest.raises(ValueError, match="unknown status"):
+        mp.read_mapping_csv(bad)
+
+
+def test_a_no_credit_row_is_mapped_with_zero_credits(case_env, monkeypatch):
+    from backend.app.services import mapping as mp
+    bio = _csv_maps("Biology")[0]
+    monkeypatch.setattr(mp, "policy_fails", lambda *a, **k: [])  # the test catalog has no BIOL 201
+    v = mp.decide_row({"title": "AP Biology", "grade": "A", "subject": {"qualification": "Advanced Placement"}}, bio, {}, False, runtime.rt().repo, program=FIN)
+    assert v["status"] == mp.MAPPED and v["reason"] == "Mapped, no credit awarded" and bio.aud_credits == 0
+
+
+def test_calculus_ab_gives_math_200_for_finance_and_math_210_for_computer_engineering():
+    from backend.app.services import mapping as mp
+    maps = {"AP-X": _csv_maps("Calculus AB")}
+    row = {"title": "AP Calculus AB", "subject": {"code": "AP-X", "name": "Calculus AB"}}
+    assert mp.choose(maps, row, FIN).aud_code == "MATH 200" and mp.choose(maps, row, CE).aud_code == "MATH 210"
+
+
+def test_chemistry_and_physics_both_stay_candidates_for_bq_scie_and_the_proposal_picks():
+    from backend.app.services import placement as pl
+    items = [{"row_id": "chem", "code": "CHEM 201", "credits": 3}, {"row_id": "phys", "code": "PHYS 201", "credits": 4}]
+    r = pl.resolve(FIN, items)
+    assert "BQ-SCIE" in r["chem"]["options"] and "BQ-SCIE" in r["phys"]["options"]
+    assert r["chem"]["contended"] and r["phys"]["contended"] and r["chem"]["slot"] == r["phys"]["slot"] == "BQ-SCIE" and r["chem"]["winner"] and not r["phys"]["winner"]
+    assert r["phys"]["fallback"] == "BQ-ELE"
+    r2 = pl.resolve(FIN, [{**items[0], "proposal": None}, {**items[1], "proposal": "BQ-SCIE"}])
+    assert r2["phys"]["winner"] and not r2["chem"]["winner"] and r2["chem"]["fallback"] == "BQ-ELE"  # the loser falls to its next option
+
+
+def test_busi_101_is_the_general_elective_suggestion_for_computer_engineering():
+    from backend.app.services import placement as pl
+    assert pl.options(CE, "BUSI 101") == [pl.GEN_ELE] and pl.options(CE, "ACCG 201") == []   # BUSI is no longer blocked; ACCG still is
+    r = pl.resolve(CE, [{"row_id": "b", "code": "BUSI 101", "credits": 3}])
+    assert r["b"]["slot"] == pl.GEN_ELE and r["b"]["suggested"]
+
+
+def test_a_course_below_c_is_not_applicable_with_the_reason(case_env):
+    from backend.app.services import mapping as mp
+    m = _csv_maps("Psychology")[0]
+    v = mp.decide_row({"title": "AP Psychology", "grade": "D", "subject": {"qualification": "Advanced Placement"}}, m, {}, False, runtime.rt().repo, program=FIN)
+    assert v["status"] == mp.NOT_EVAL and v["kind"] == "not_applicable" and v["reason"] == "Grade below C, not eligible for transfer credit" and not v["can_include"]

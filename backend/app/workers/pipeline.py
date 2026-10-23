@@ -281,11 +281,11 @@ def _finish_evaluation(db, job: Job, app: Application) -> None:
 def _lookup_rows(db, app: Application, rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Code only: the relevance gate and the batch mapping lookup for the given rows. Saves each row's state."""
     R = rt()
-    maps = mp.lookup_many(db, [r["subject"]["code"] for r in rows if r.get("subject")], app.program)
+    maps = mp.lookup_many(db, sorted({k for r in rows for k in mp.keys_for(r)}), app.program)
     out: dict[str, dict[str, Any]] = {}
     for r in rows:
         old = mp.get_state(db, app.id, r["id"])
-        verdict = mp.decide_row(r, maps.get((r.get("subject") or {}).get("code")), (old.facts if old else {}) or {}, bool(old and old.included_override), R.repo,
+        verdict = mp.decide_row(r, mp.choose(maps, r, app.program), (old.facts if old else {}) or {}, bool(old and old.included_override), R.repo,
                                 school_specific=is_school_specific(r.get("title") or ""), scale=(app.extraction or {}).get("grading_scale"),
                                 synopsis=(app.extraction or {}).get("synopsis") or None, program=app.program)
         waiting = old and old.status == mp.WAITING and any(q["status"] in ("DRAFT", "SENT") for q in (old.requests or []))

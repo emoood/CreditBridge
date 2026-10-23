@@ -9,6 +9,8 @@ from ...config import get_settings
 from ...db.models import Application, RowState
 from ...db.session import app_session
 from ...providers.base import LLMProvider
+from ...workers import store
+from ...services import actions as ac
 from ...services import doubts
 from ...services import mapping as mp
 from ...services import student_record as sr
@@ -75,7 +77,7 @@ class ReadMapping(AgentTool):
 class ListRows(AgentTool):
     name = "list_rows"
     description = ("List EVERY row of this application, mapped ones included: row id, title, grade, status, mapped AUD course, program class, doubts already raised, and the code's "
-                   "signals (stale mapping, near-miss grade, program mismatch). Also the student's program and the free-elective credits left.")
+                   "signals (mapping that needs review, near-miss grade). Also the student's program and the free-elective credits left.")
     input_schema = EmptyArgs
     roles: ClassVar[set[str]] = {"case"}
 
@@ -92,7 +94,12 @@ class ListRows(AgentTool):
                 rows.append({"row_id": r["id"], "title": r.get("title"), "grade": r.get("grade"), "status": st.status, "aud_code": m.get("aud_code"),
                              "mapping_version": m.get("version"), "program_class": cls["value"] if cls else None, "class_by": cls["by"] if cls else None,
                              "doubts": [d["kind"] for d in (st.facts or {}).get("_doubts", [])], "signals": sig})
-            return {"program": app.program, "entry_term": ((app.extraction or {}).get("student_record") or {}).get("term"), "rows": rows}
+            view = ac.placement_view(db, app)["rows"]
+            contested = {}
+            for rid, v in view.items():
+                if v["contended"] and v["slot"]:
+                    contested.setdefault(v["slot"], []).append({"row_id": rid, "title": next((r.get("title") for r in app.rows if r["id"] == rid), ""), "valid_slots": v["options"]})
+            return {"program": app.program, "entry_term": ((app.extraction or {}).get("student_record") or {}).get("term"), "rows": rows, "contested_slots": contested}
 
 
 class RaiseDoubtArgs(BaseModel):
@@ -121,6 +128,37 @@ class RaiseDoubt(AgentTool):
                 return {"note": "This doubt is already recorded."}
             mp.merge_facts(db, app.id, row["id"], _doubts=[*existing, {"kind": args.kind, "reason": args.reason, "verified": evidence is not None, "evidence": evidence or "", "by": "case_agent"}])
             return {"recorded": True, "verified_by_code": evidence is not None}
+
+
+class ProposePlacementArgs(BaseModel):
+    row_id: str
+    slot: str = Field(min_length=3, max_length=12, description="The slot id from contested_slots, for example BQ-SCIE")
+    why: str = Field(min_length=5, max_length=200, description="One line: why this course should take the slot")
+
+
+class ProposePlacement(AgentTool):
+    name = "propose_placement"
+    description = ("Where one slot has more than one candidate (see contested_slots in list_rows), propose which course takes it, with a one-line reason. Code refuses a slot that is not "
+                   "valid for the course or not contested; if refused, call once more with a valid choice. It is a proposal: the officer approves every row.")
+    input_schema = ProposePlacementArgs
+    roles: ClassVar[set[str]] = {"case"}
+
+    async def execute(self, args: ProposePlacementArgs, ctx: CaseContext):
+        with app_session() as db:
+            app, row, _st = _row(db, ctx, args.row_id)
+            v = ac.placement_view(db, app)["rows"].get(row["id"])
+            if v is None:
+                raise ToolError("This row has no placement.")
+            if args.slot not in v["options"]:
+                raise ToolError(f"{args.slot} is not a valid slot for this course. Valid slots: {', '.join(v['options']) or 'none'}.")
+            if not (v["contended"] and v["slot"] == args.slot):
+                raise ToolError(f"{args.slot} is not contested for this course. Contested slots are listed in list_rows.")
+            ex = dict(app.extraction or {})
+            props = {k: p for k, p in (ex.get("placement_proposals") or {}).items() if p["slot"] != args.slot}
+            props[row["id"]] = {"slot": args.slot, "why": args.why, "by": "case_agent"}
+            store.set_json(app, "extraction", {**ex, "placement_proposals": props})
+            db.commit()
+            return {"recorded": True, "slot": args.slot}
 
 
 class ReadSourceExcerpts(AgentTool):
@@ -246,5 +284,5 @@ class SetRowState(AgentTool):
 
 
 ROW_TOOLS: list[AgentTool] = [ReadMapping(), ReadSourceExcerpts(), ReadTargetExcerpts(), CheckPolicy(), ProposeCandidates(), DraftRequest(), SetRowState()]  # working ONE row
-REVIEW_TOOLS: list[AgentTool] = [ListRows(), RaiseDoubt()]  # the whole-application review
+REVIEW_TOOLS: list[AgentTool] = [ListRows(), RaiseDoubt(), ProposePlacement()]  # the whole-application review
 CASE_TOOLS: list[AgentTool] = [*ROW_TOOLS, *REVIEW_TOOLS]

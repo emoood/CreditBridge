@@ -1,27 +1,11 @@
-# DUMMY program constraints (placeholder data, not AUD's degree plans). Read by Demo mode and live runs.
-# Classification of a mapped AUD equivalent, in order:
-#   1. in blocked_areas or blocked_courses -> Not applicable (hidden; counted in the muted "N courses not applicable" line; officer may Include anyway)
-#   2. in core_courses                     -> Core course
-#   3. anything else mapped                -> General elective suggestion (no allowed list, no cap)
+# Areas that may NOT be a general elective (GEN-ELE) for a program. Applies only to GEN-ELE candidates; whether a course belongs in a plan (core or slot) is decided by the plans.
+# Placeholder admissions data, not AUD policy.
 programs:
-  bba:
-    name: BBA Business Administration
-    names: [BBA Business Administration]
+  business:
+    names: [Bachelor of Business Administration - Major in Finance, Bachelor of Business Administration - Major in Accounting, Bachelor of Business Administration - Major in Artificial Intelligence in Business, Bachelor of Business Administration - Major in Advertizing and Integrated Marketing Communications, Bachelor of Business Administration - Major in Economics, Bachelor of Business Administration - General Business Administration, Bachelor of Business Administration - Major in Management, Bachelor of Business Administration - Major in Marketing]
     blocked_areas: [ENGG, EECE, EMEC, ECVL]
-    blocked_courses: [MATH 210, MATH 220, MATH 230, MATH 231, MATH 240]
-    core_courses: [ECON 201, QUAN 201, PSYC 201, ACCG 201]
-    reasons: {blocked: "Engineering courses are not open to BBA programs."}
+    reasons: {blocked: "Engineering courses cannot be a general elective in a business program."}
   engineering:
-    name: Engineering
-    names: [BSc Computer Engineering, BSc Mechanical Engineering, Engineering]
-    blocked_areas: [ACCG, MGMT, MKTG, FINA, BUSI, BUAI]
-    blocked_courses: []
-    core_courses: [MATH 210, ENGG 140, PHYS 201, CHEM 201]
-    reasons: {blocked: "Business-only courses are not open to engineering programs."}
-  psychology:
-    name: BSc Psychology
-    names: [BSc Psychology]
-    blocked_areas: []
-    blocked_courses: []
-    core_courses: [PSYC 201, BIOL 201, QUAN 201]
-    reasons: {blocked: "This course is not open to psychology programs."}
+    names: [BS in Computer Engineering]
+    blocked_areas: [ACCG, MGMT, MKTG, FINA, BUAI]
+    reasons: {blocked: "Business-only courses cannot be a general elective in an engineering program."}
