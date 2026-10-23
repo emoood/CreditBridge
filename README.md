@@ -70,16 +70,29 @@ If something stops mid-run (for example you restart the backend), the job is mar
 
 **Reset between rehearsals:** use Transcript A2 or a recording for rehearsals; Transcript A is only for the live run. Remove a rehearsal application by restarting from the worklist (they are harmless) or run `POST /api/v1/dev/reset` (dev only; it wipes all applications).
 
-## Demo mode (prepared runs, no model wait)
+## Replay / Live AI (prepared runs, no model wait)
 
-Header switch **Demo** (off by default; **Alt+D**). When on, a "Demo mode" chip shows next to the synthetic-data banner, with a stage speed (**Fast**, about 0.5 s per stage, is the default; **Instant**) and **Reset** (clears every application so the demo can be repeated).
+Header selector **Live AI / Replay** (Live AI by default; **Alt+D** switches). *Live AI*: the model reads and decides now. *Replay*: the model's answers come from a recorded run. A small "Replay" chip shows next to the synthetic-data banner, with a stage speed (**Fast**, about 0.5 s per stage, is the default; **Instant**) and **Reset** (clears every application so the demo can be repeated).
 
 How it works: a prepared run is a finished real run saved at the model boundary (`fixtures/prepared_runs/<name>.json`, synthetic data only). An upload is matched to a prepared run by file hash, then by file name; nothing matches means the message "No prepared run for this file" and nothing is shown. The agents and all tools still run live in code, so row statuses, program-aware mapping, sheet checks, officer actions, copy and CSV are real; only the model's replies are recorded. Submitting a missing exam score resumes only that row (code, no model). Planted switches work: the copy error on any case, the misread on a case that has a misread prepared run. No Ollama and no network are needed (the curriculum links come from the prepared run). The activity drawer streams the agents' tool calls as they run, tagged *recorded*.
 
-Make a prepared run: with the backend in demo mode, run the real model once through `python scripts/overnight_runs.py a2|c|d|dp` (clean runs only are saved).
+**A recording can go out of date, and then it is refused.** Each prepared run stores a `data_version` (a hash of everything in `policies/data/`: the AP mapping, the mapping conditions, the programme plans, the gen-ed categories; line endings do not matter) and a `reading_version` (the Intake prompt version and the block layout). If either differs from the code now, an upload in Replay answers **"Recording out of date: <why>. Re-record it, or switch to Live AI."** instead of replaying answers that no longer fit. `GET /api/v1/demo/recordings` lists every run with `current` and `reason`; in Replay the header shows "N recordings out of date" when any is. A recording made before versions were tracked counts as out of date. Live AI is never affected. After any change to `policies/data/` or to the reading, re-record (`scripts/overnight_runs.py`) before a demo.
+
+**Names:** `demo_ap_<student>_<variant>`, the student's first name in lower case and the variant `clean`, `copy_error` or `misread`. Each planted-error switch is its own named run. `a2c` and `a2m` below are the `scripts/overnight_runs.py` arguments.
+
+| Prepared run (`fixtures/prepared_runs/`) | Student, file | Variant | Shows |
+|---|---|---|---|
+| `demo_ap_rania_clean` | Rania Haddad, `transcript_a2_batch.pdf`, case CB-2026-0104 | clean (`a2`) | The batch case: eleven AP courses over two terms read by the Intake agent, mapping lookup, a conditional row waiting for an exam score, Case agent trace tagged *recorded*. **Out of date until Friend 2 re-records it** (recorded before versions were tracked and before the new block layout). |
+| `demo_ap_rania_copy_error` | same file | copy error (`a2c`) | The same case with the Demo switch that changes one confirmed AUD code after the officer's decision: the sheet check fails and the Auditor explains the exact difference. Not recorded yet. |
+| `demo_ap_rania_misread` | same file | misread (`a2m`) | The same case with one value (AP Chemistry's letter) replaced by a wrong one before the checks run; Intake must re-read it. Recorded only if the repair is genuine. Not recorded yet. |
+| `demo_ap_daniel_clean` | Daniel Ferreira, `transcript_b_intake.pdf` / `.png`, case CB-2026-0102 | clean (`b`) | Image-only scan with a smudged mark (AP Chemistry printed 85): the check fails and the Intake recheck has work. Not recorded yet. |
+| `demo_ap_sofia_copy_error` | Sofia Lindqvist, `transcript_c_copy_error.pdf`, case CB-2026-0103 | copy error (`c`) | Ordinary transcript; the Auditor catch after *Demo: plant a copy error*. Not recorded yet. |
+| `demo_ap_rami_clean`, `demo_ap_rami_misread` | Rami Test-Student, `transcript_d_demo2.pdf`, case CB-2026-0105 | clean, misread (`d`, `dp`) | Second demo student. Not recorded yet. |
+
+Make a prepared run: with the backend in demo mode, run the real model once through `python scripts/overnight_runs.py a2|a2c|a2m|b|c|d|dp`. It saves the run under the name above only when the run is clean by the script's criteria.
 
 **Presenter script (order: D first, then C for the Auditor catch)**: *prepared runs exist for A2 only so far; C and D are in the plan below once they are recorded.*
-1. Turn Demo on (Alt+D). Say: "The model's side is pre-recorded so we are not waiting on it; everything else is live."
+1. Switch to Replay (Alt+D). Say: "The model's side is pre-recorded so we are not waiting on it; everything else is live."
 2. Pick the case, upload its transcript. Say: "The Intake agent plans which blocks to read, reads them, and code checks every number."
 3. Confirm extraction. Say: "Relevance gate: only externally examined qualifications. Mapping lookup: code. The Case agent works only the rows code could not settle and reviews the whole case."
 4. Submit the exam score on the conditional row. Say: "Only this row resumes, and no model is involved."

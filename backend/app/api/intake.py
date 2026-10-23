@@ -93,6 +93,8 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         run = prepared.find(doc["sha256"], file.filename or "", wants_misread, demo_run.strip())
         if run is None:
             raise HTTPException(404, "That prepared run was not recorded for this file" if demo_run.strip() else "No prepared run for this misread variant of this file" if wants_misread and prepared.find(doc["sha256"], file.filename or "") else "No prepared run for this file")
+        if (why := prepared.refusal(run)):  # a recording made against other data or another page reading is refused, never played back
+            raise HTTPException(409, why)
         case_number = case_number.strip() or run["case_number"]
     try:
         rec = sr.load_record(case_number) if case_number.strip() else None
@@ -112,6 +114,13 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         out = {**app_summary(db, app), "job_id": job.id}
     worker.enqueue(out["job_id"])
     return out
+
+
+@router.get("/demo/recordings")
+def demo_recordings():
+    """Every prepared run and whether it can be replayed now, so an out-of-date recording shows before the demo, not during it."""
+    return [{"name": r["name"], "variant": prepared.variant_of(r), "case_number": r["case_number"], "current": prepared.stale_reason(r) is None, "reason": prepared.stale_reason(r),
+             "name_ok": bool(prepared.NAME_RE.match(r["name"]))} for r in prepared.listing()]
 
 
 @router.get("/students/{case_number}")

@@ -111,6 +111,7 @@ export const api = {
   sheet: (id: string) => fetch(`/api/v1/applications/${id}/sheet`).then(j<Sheet>),
   approve: (id: string, role: string) => fetch(`/api/v1/applications/${id}/approve`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ approved: boolean }>),
   runAudit: (id: string, role: string) => fetch(`/api/v1/applications/${id}/audit`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
+  demoRecordings: () => fetch('/api/v1/demo/recordings').then(j<{ name: string; variant: string; case_number: string; current: boolean; reason: string | null; name_ok: boolean }[]>),
   demoCases: () => fetch('/api/v1/demo/cases').then(j<{ demo_mode: boolean; stage_seconds: number; cases: DemoCase[]; runs: DemoRun[] }>),
   setDemoSpeed: (id: string, role: string, speed: string) => fetch(`/api/v1/applications/${id}/demo/speed`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ speed }) }).then(j<{ speed: string }>),
   exportCheck: (id: string, role: string) => fetch(`/api/v1/applications/${id}/export-check`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ ready: boolean; job_id?: string }>),

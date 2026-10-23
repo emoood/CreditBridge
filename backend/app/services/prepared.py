@@ -7,6 +7,7 @@ reply raises NoPreparedRun: nothing is ever invented."""
 import asyncio
 import hashlib
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -20,11 +21,65 @@ from ..providers.base import LLMRequest, LLMResponse, ToolCall
 
 ROOT = Path(__file__).resolve().parents[3]
 DIR = ROOT / "fixtures" / "prepared_runs"
+DATA_DIR = ROOT / "policies" / "data"
 VERSION = 1
+TEXT_SUFFIXES = {".csv", ".yaml", ".yml", ".json", ".md", ".txt"}
+VARIANTS = ("clean", "copy_error", "misread")  # a2c is the copy-error variant, a2m the planted misread; each planted-error switch is its own named run
+NAME_RE = re.compile(r"^demo_ap_[a-z0-9]+_(clean|copy_error|misread)$")
 
 
 class NoPreparedRun(Exception):
     """The prepared run has no recorded reply for this step."""
+
+
+class RecordingOutOfDate(NoPreparedRun):
+    """The recording was made against other data or another page reading than the ones in the code now, so it must not be played back."""
+
+
+def run_name(student: str, variant: str) -> str:
+    """demo_ap_<student>_<variant>: the first name in lower case, and clean, copy_error or misread."""
+    first = re.sub(r"[^a-z0-9]", "", (student.split() or [""])[0].lower())
+    if not first or variant not in VARIANTS:
+        raise ValueError("a prepared run is named demo_ap_<student>_<clean|copy_error|misread>")
+    return f"demo_ap_{first}_{variant}"
+
+
+def data_version() -> str:
+    """A hash of everything under policies/data/ (the AP mapping, the mapping conditions, the programme plans, the gen-ed categories). Line endings are normalised, so a
+    checkout on Windows gives the same value. Changing any of those files after a recording makes the recording out of date."""
+    h = hashlib.sha256()
+    files = sorted(p for p in DATA_DIR.rglob("*") if p.is_file() and not p.name.startswith(".") and not p.name.endswith("~")) if DATA_DIR.exists() else []
+    for p in files:
+        b = p.read_bytes()
+        if p.suffix.lower() in TEXT_SUFFIXES:
+            b = b.replace(b"\r\n", b"\n")
+        h.update(p.relative_to(DATA_DIR).as_posix().encode() + b"\0" + b + b"\0")
+    return h.hexdigest()[:16]
+
+
+def reading_version() -> str:
+    """How a page is read: the Intake prompt version and the block layout. Recorded replies are keyed on block keys and on the agent's first message, so a recording made
+    with another reading would not line up with the calls the code makes now."""
+    from ..agents.intake_agent import PROMPT_VERSION
+    from .vision_reader import LAYOUT_VERSION
+    return f"{PROMPT_VERSION}+layout{LAYOUT_VERSION}"
+
+
+def stale_reason(rec: dict[str, Any]) -> str | None:
+    """Why a recording cannot be played back now, or None."""
+    if not rec.get("data_version") or not rec.get("reading_version"):
+        return "it was recorded before data versions were tracked"
+    if rec["data_version"] != data_version():
+        return "the mapping, condition or plan files in policies/data changed after it was recorded"
+    if rec["reading_version"] != reading_version():
+        return "the page reading (block layout or Intake prompt) changed after it was recorded"
+    return None
+
+
+def refusal(rec: dict[str, Any]) -> str | None:
+    """The message shown instead of a replay when the recording is out of date."""
+    why = stale_reason(rec)
+    return f"Recording out of date: {why}. Re-record it, or switch to Live AI." if why else None
 
 
 def call_key(request: LLMRequest) -> tuple[str, str, int]:
@@ -63,6 +118,7 @@ def save(app_id: str, name: str, case_number: str, notes: str = "") -> dict[str,
         ex = app.extraction or {}
         models = sorted({e["response"].get("model", "") for e in log if e["response"].get("model")})
         rec = {"version": VERSION, "name": name, "case_number": case_number, "recorded_at": datetime.now(UTC).isoformat(), "model": ", ".join(models), "notes": notes,
+               "data_version": data_version(), "reading_version": reading_version(),
                "label": f"Prepared run, recorded {datetime.now(UTC).date().isoformat()}, {', '.join(models)}",
                "source": {"filename": doc.get("filename"), "sha256": doc.get("sha256")}, "planted": {"misread": bool(ex.get("planted_misread")), "copy_error": bool(ex.get("planted_copy_error"))},
                "links": {(r.get("title") or "").strip().lower(): r["subject"] for r in app.rows if r.get("subject")},
@@ -73,7 +129,7 @@ def save(app_id: str, name: str, case_number: str, notes: str = "") -> dict[str,
 
 
 def summary(rec: dict[str, Any]) -> dict[str, Any]:
-    return {k: rec[k] for k in ("name", "case_number", "recorded_at", "model", "label", "source", "planted", "model_calls", "notes") if k in rec}
+    return {k: rec[k] for k in ("name", "case_number", "recorded_at", "model", "label", "source", "planted", "model_calls", "notes", "data_version", "reading_version") if k in rec}
 
 
 def load(name: str) -> dict[str, Any]:
@@ -112,6 +168,8 @@ class DemoProvider:
     is_demo = True
 
     def __init__(self, rec: dict[str, Any], delay: float = 0.5):
+        if (msg := refusal(rec)):
+            raise RecordingOutOfDate(msg)  # never play back a recording made against other data: refuse, do not mis-replay
         self.rec, self.delay = rec, delay
         self.name, self.model = "recorded:" + (rec["model"] or "model"), rec["model"]
         self.table = {(e["stage"], e["runkey"], e["idx"]): e["response"] for e in rec["model_log"]}

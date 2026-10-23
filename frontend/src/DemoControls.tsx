@@ -4,11 +4,20 @@ import { api } from "./api";
 import { setDemo, useDemo } from "./demo";
 import { useInstitution } from "./useApp";
 
-/** Header: the Demo mode switch (off by default; Alt+D toggles it), a small chip when it is on, the stage speed and a reset so the demo can be repeated. */
+/** Header: the Live AI / Replay switch (Live AI by default; Alt+D toggles it), a small chip when Replay is on, the stage speed and a reset so the demo can be repeated.
+ *  Replay answers from a recorded run; a recording that is out of date (data or page reading changed since it was made) is flagged here and refused at upload. */
 export function DemoControls() {
   const demo = useDemo();
   const inst = useInstitution();
   const [msg, setMsg] = useState<string | null>(null);
+  const [stale, setStale] = useState<{ name: string; reason: string | null }[]>([]);
+  useEffect(() => {
+    if (!demo.on) return;
+    api
+      .demoRecordings()
+      .then((r) => setStale(r.filter((x) => !x.current)))
+      .catch(() => setStale([]));
+  }, [demo.on]);
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
       if (e.altKey && e.code === "KeyD") {
@@ -38,18 +47,29 @@ export function DemoControls() {
     <div className="demo-controls">
       <label
         className="demo-toggle"
-        title="Use the prepared run for each file: no model wait. Shortcut: Alt+D"
+        title="Live AI: the model reads and decides now. Replay: the model's answers come from a recorded run, so there is no wait. Shortcut: Alt+D"
       >
-        <input
-          type="checkbox"
-          checked={demo.on}
-          onChange={(e) => setDemo({ on: e.target.checked })}
-        />{" "}
-        Demo
+        <select
+          aria-label="AI mode"
+          value={demo.on ? "replay" : "live"}
+          onChange={(e) => setDemo({ on: e.target.value === "replay" })}
+        >
+          <option value="live">Live AI</option>
+          <option value="replay">Replay</option>
+        </select>
       </label>
       {demo.on && (
         <>
-          <span className="demo-chip">Demo mode</span>
+          <span className="demo-chip">Replay</span>
+          {stale.length > 0 && (
+            <span
+              className="demo-chip"
+              style={{ background: "#fef3c7", color: "#92400e" }}
+              title={stale.map((x) => `${x.name}: ${x.reason}`).join("\n")}
+            >
+              {stale.length} recording{stale.length === 1 ? "" : "s"} out of date
+            </span>
+          )}
           <select
             aria-label="Stage speed"
             value={demo.speed}

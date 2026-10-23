@@ -181,7 +181,7 @@ def run_a2(variant: str = "clean") -> None:
         ok = ok and match
         log["audit_planted"] = sh["audit"]
     collect_activity(app_id)
-    name = {"clean": "demo_a2", "copy": "demo_a2_copy_error", "misread": "demo_a2_misread"}[variant]
+    name = {"clean": "demo_ap_rania_clean", "copy": "demo_ap_rania_copy_error", "misread": "demo_ap_rania_misread"}[variant]
     if variant == "misread":
         ok = ok and log.get("repair_genuine", False)
     finish("a2" if variant == "clean" else f"a2_{variant}", name if ok else None, ok, "CB-2026-0104")
@@ -205,7 +205,7 @@ def run_b() -> None:
         evaluate_phase(app_id)
         log["states_after_evaluation"] = snapshot_states(app_id)
         collect_activity(app_id)
-    finish("b", "demo_b_intake", log["recheck_really_fixed"], "CB-2026-0102")
+    finish("b", "demo_ap_daniel_clean", log["recheck_really_fixed"], "CB-2026-0102")
 
 
 def run_d(plant: bool = False) -> None:
@@ -239,7 +239,7 @@ def run_d(plant: bool = False) -> None:
     log["rows_final"] = [{k: r.get(k) for k in ("title", "grade", "mark", "credits", "term")} for r in c.get(f"/applications/{app_id}").json()["rows"]]
     collect_activity(app_id)
     ok = (not plant) or log.get("repair_genuine", False)
-    finish("d_planted" if plant else "d", ("demo_d_misread" if plant else "demo_d") if ok else None, ok, "CB-2026-0105")
+    finish("d_planted" if plant else "d", ("demo_ap_rami_misread" if plant else "demo_ap_rami_clean") if ok else None, ok, "CB-2026-0105")
 
 
 def run_c() -> None:
@@ -267,7 +267,7 @@ def run_c() -> None:
     log["auditor_proposal_fixes_it"] = bool((audit["audit"] or {}).get("passes_after")) and any(p["row_id"] == log["planted"]["planted"]["row_id"] and p["to"]["aud_code"] == log["planted"]["planted"]["from"] for p in proposals)
     if not log["auditor_proposal_fixes_it"]:
         log["problems"].append("the Auditor's proposal does not restore the original equivalent (or the corrected sheet does not pass)")
-    finish("c", "demo_c", ok_detect and log["auditor_proposal_fixes_it"], "CB-2026-0103")
+    finish("c", "demo_ap_sofia_copy_error", ok_detect and log["auditor_proposal_fixes_it"], "CB-2026-0103")
 
 
 if __name__ == "__main__":
