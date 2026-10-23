@@ -122,3 +122,15 @@ export const api = {
   devEvents: () => fetch('/api/v1/dev/events?limit=300').then(j<DevEvent[]>),
   reset: () => fetch('/api/v1/dev/reset', { method: 'POST' }).then(j<{ reset: boolean }>),
 };
+
+
+export const outboxApi = {
+  requests: (id: string) => fetch(`/api/v1/applications/${id}/requests`).then(r => r.json()),
+  addRequest: (id: string, row: string, role: string, body: any) => fetch(`/api/v1/applications/${id}/rows/${row}/requests`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify(body) }).then(r => r.json()),
+  removeRequest: (id: string, row: string, reqId: string, role: string) => fetch(`/api/v1/applications/${id}/rows/${row}/requests/${reqId}`, { method: 'DELETE', headers: ROLE_HEADERS(role) }).then(r => r.json()),
+  editRequest: (id: string, row: string, reqId: string, role: string, body: any) => fetch(`/api/v1/applications/${id}/rows/${row}/requests/${reqId}`, { method: 'PATCH', headers: ROLE_HEADERS(role), body: JSON.stringify(body) }).then(r => r.json()),
+  preview: (id: string) => fetch(`/api/v1/applications/${id}/outbox/preview`).then(r => r.json()),
+  send: (id: string, role: string, body: any) => fetch(`/api/v1/applications/${id}/outbox/send`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify(body) }).then(r => r.json()),
+  history: (id: string) => fetch(`/api/v1/applications/${id}/outbox`).then(r => r.json()),
+  reviewSyllabus: (id: string, row: string, role: string, body: any) => fetch(`/api/v1/applications/${id}/rows/${row}/syllabus-review`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify(body) }).then(r => r.json()),
+};

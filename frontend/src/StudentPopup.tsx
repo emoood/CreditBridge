@@ -235,3 +235,5 @@ function Shell({ children, onClose, side, wide }: { children: React.ReactNode; o
   return <div className="pop-backdrop" onClick={onClose}><div className={`pop ${wide ? 'pop-wide' : ''} ${side ? 'pop-with-side' : ''}`} onClick={e => e.stopPropagation()} role="dialog" aria-label="Student">
     <div className="pop-main">{children}</div>{side}</div></div>;
 }
+
+export { OutboxModal, OutboxButton } from './Outbox';

@@ -286,3 +286,4 @@ class SetRowState(AgentTool):
 ROW_TOOLS: list[AgentTool] = [ReadMapping(), ReadSourceExcerpts(), ReadTargetExcerpts(), CheckPolicy(), ProposeCandidates(), DraftRequest(), SetRowState()]  # working ONE row
 REVIEW_TOOLS: list[AgentTool] = [ListRows(), RaiseDoubt(), ProposePlacement()]  # the whole-application review
 CASE_TOOLS: list[AgentTool] = [*ROW_TOOLS, *REVIEW_TOOLS]
+from ...services.syllabus_compare import CompareSyllabus; CASE_TOOLS.append(CompareSyllabus()); ROW_TOOLS.append(CompareSyllabus())

@@ -205,3 +205,6 @@ class ModelLog(Base):
     runkey: Mapped[str] = mapped_column(String(20))
     idx: Mapped[int] = mapped_column(Integer, default=0)
     response: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+from ..services.outbox import OutboxMessage  # noqa: E402, F401

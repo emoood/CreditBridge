@@ -116,3 +116,6 @@ async def dev_stream():
             events.unsubscribe(q)
 
     return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+from .api.outbox import router as outbox_router; app.include_router(outbox_router)
