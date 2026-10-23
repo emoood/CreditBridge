@@ -8,7 +8,7 @@ from .loop import AgentOutcome, run_bounded_agent
 from .tools.base import ToolContext, ToolRegistry
 
 PROMPT_VERSION = "matching_v2"
-PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
+PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text(encoding="utf-8")
 
 
 @dataclass

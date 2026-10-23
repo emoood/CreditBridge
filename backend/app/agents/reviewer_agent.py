@@ -10,7 +10,7 @@ from .matching_agent import MatchResult
 from .tools.base import ToolContext, ToolRegistry
 
 PROMPT_VERSION = "reviewer_v2"
-PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
+PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text(encoding="utf-8")
 ENFORCED = {"AUD_MIN_LEVEL", "AUD_GRADE_LOWER", "AUD_GRADE_UPPER", "AUD_RESTRICTED_COURSE_TYPES", "AUD_MAX_50_PERCENT"}
 
 

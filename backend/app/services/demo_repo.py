@@ -23,14 +23,14 @@ class SourceCourse:
 class DemoRepo:
     def __init__(self, fixtures: Path = FIXTURES):
         self.store = EvidenceStore()
-        cat = json.loads((fixtures / "catalog.json").read_text())
+        cat = json.loads((fixtures / "catalog.json").read_text(encoding="utf-8"))
         self.catalog_version, self.catalog_label = cat["catalog_version"], cat["label"]
         self.targets = {c["code"]: c for c in cat["courses"]}
         for c in cat["courses"]:
             self.store.add(f"tgt-{c['code']}-desc", c["document_id"], 1, c["description"])
             for o in c["outcomes"]:
                 self.store.add(o["id"], c["document_id"], 1, o["text"])
-        truth = json.loads((fixtures / "expected_results.json").read_text())["extraction_truth"]
+        truth = json.loads((fixtures / "expected_results.json").read_text(encoding="utf-8"))["extraction_truth"]
         self.sources: dict[str, SourceCourse] = {}
         for t in truth:
             code = t["source_code"]
