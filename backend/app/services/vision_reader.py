@@ -15,6 +15,7 @@ from ..providers.base import LLMProvider, LLMRequest
 from . import grade_checks as gc
 
 SUBMIT = "submit_block"
+LAYOUT_VERSION = 2  # how a page is cut into blocks. Prepared runs are keyed on block keys (p1b1...), so a recording made with another layout cannot be played back: bump this when the layout changes
 PROMPT = (
     "You read ONE block of a school transcript image. Copy EXACTLY what is printed; never guess, round or infer. "
     "Include EVERY subject row in the block, even unusual or non-standard subjects; never skip a row. Use null for anything unreadable or absent. Subject names are copied as printed. Marks are numbers; letters are the "
@@ -66,8 +67,27 @@ def render_pages(path: str, dpi: int) -> list[Image.Image]:
     return [Image.open(path).convert("RGB")]
 
 
+def cut_row(ink: np.ndarray, lo: int, hi: int) -> int:
+    """Where to cut between rows lo and hi: the middle of the widest run of blank rows. A table or term boundary has more white space than the gap between
+    two course rows, so a block ends with a whole table instead of in the middle of one. Among equally wide gaps the lowest one wins, so a block is filled up
+    to the limit (fewer reads) rather than cut at the first row gap. With no blank row in the window: the least inky row."""
+    seg = ink[lo:hi]
+    best_w, best_mid, i = 0, None, 0
+    while i < len(seg):
+        if seg[i] > 2:
+            i += 1
+            continue
+        j = i
+        while j < len(seg) and seg[j] <= 2:
+            j += 1
+        if j - i >= best_w:
+            best_w, best_mid = j - i, lo + (i + j) // 2
+        i = j
+    return best_mid if best_mid is not None else lo + int(np.argmin(seg))
+
+
 def split_blocks(img: Image.Image, max_h: int) -> list[tuple[int, int]]:
-    """Vertical (top, bottom) spans of content, each at most max_h tall, cut where the page is emptiest (never mid-row if
+    """Vertical (top, bottom) spans of content, each at most max_h tall, cut in the widest white gap near the limit (never mid-row if
     avoidable). Blank pages give no blocks."""
     ink = (np.asarray(img.convert("L")) < 140).sum(axis=1).astype(float)
     ink = np.convolve(ink, np.ones(5) / 5, mode="same")
@@ -77,10 +97,10 @@ def split_blocks(img: Image.Image, max_h: int) -> list[tuple[int, int]]:
     top, bottom = max(0, int(rows[0]) - 12), min(len(ink), int(rows[-1]) + 12)
     spans, start = [], top
     while bottom - start > max_h:
-        lo, hi = start + int(max_h * 0.55), start + max_h
-        cut = lo + int(np.argmin(ink[lo:hi]))
+        cut = cut_row(ink, start + int(max_h * 0.55), start + max_h)
         spans.append((start, cut))
-        start = cut
+        inked = np.where(ink[cut:bottom] > 2)[0]
+        start = max(cut, cut + int(inked[0]) - 12) if inked.size else bottom  # the next block begins at its first inked row: a white gap never uses up the height limit
     spans.append((start, bottom))
     return [(a, b) for a, b in spans if (ink[a:b] > 2).sum() > 8]
 

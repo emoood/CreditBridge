@@ -34,8 +34,17 @@ from ..services.usage import trace
 from .loop import run_bounded_agent
 from .tools.base import AgentTool, LoggedRegistry, ToolContext, ToolError, WithImages
 
-PROMPT_VERSION = "intake_v3"
-PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
+BASE_PROMPT_VERSION = "intake_v3"
+# The file prompts/intake_v3.txt plus the changes below. The addendum lives here because backend/app/agents/prompts/ is not in chunk C1's file list; fold it into
+# a new intake_v4.txt when that folder is open to the next chunk.
+ADDENDUM = """
+CHANGES IN THIS VERSION (they replace the matching steps above)
+- The listing of pages and blocks is already in the first message (field `listing`). Do not call list_pages first. Start with read_block on every block that holds course rows (several keys in one call).
+- A block that shows a course row cannot be skipped. A block that is only a cover, legend or footer can.
+- Code asks the officer about every cell that fails a code check, by itself. Do not call flag_cell with kind check_failure. Use flag_cell only for your own observations (visual, repeated_course, term_out_of_order, odd_grade, other).
+"""
+PROMPT_VERSION = f"{BASE_PROMPT_VERSION}+c1"
+PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{BASE_PROMPT_VERSION}.txt").read_text() + ADDENDUM
 SUBMIT = "submit_courses"
 MIN_LINES_FOR_EMPTY_FAILURE = 4  # an empty reading of a block with only a few lines of print is a footer or a legend, not a lost table
 FIELD_ALIASES = {"letter": "grade", "mark": "grade", "subject": "title", "course": "title", "name": "title", "gpa": "points", "grade points": "points", "quality points": "points",
@@ -249,29 +258,35 @@ class EmptyArgs(BaseModel):
     pass
 
 
+def page_listing(ctx: IntakeContext) -> dict[str, Any]:
+    """The pages and their blocks (key, size, text lines, status and, with a text layer, a short preview). Sent in the agent's first message and returned by list_pages."""
+    pages: dict[int, list[dict[str, Any]]] = {}
+    digital = ctx.text is not None
+    doc = None
+    if digital:
+        import pymupdf
+        doc = pymupdf.open(ctx.path)
+    dpi = get_settings().vision_dpi
+    for key in sorted(ctx.spans, key=ctx.okey):
+        pg, (a, b) = ctx.spans[key]
+        item: dict[str, Any] = {"key": key, "height_px": b - a, "text_lines": ctx.lines.get(key, 0), "status": status_of(ctx, key)}
+        if doc is not None:
+            import pymupdf
+            x0, x1 = (v * 72 / dpi for v in ctx.xr[key]) if key in ctx.xr else (0, doc[pg - 1].rect.width)
+            words = doc[pg - 1].get_text("text", clip=pymupdf.Rect(x0, a * 72 / dpi, x1, b * 72 / dpi)).split("\n")
+            item["preview"] = " / ".join(w.strip() for w in words if w.strip())[:90]
+        pages.setdefault(pg, []).append(item)
+    return {"text_layer": digital, "pages": [{"page": p, "blocks": bl} for p, bl in sorted(pages.items())], "recovery_rounds_left": ctx.recovery_left}
+
+
 class ListPages(AgentTool):
     name = "list_pages"
-    description = "List the pages and their blocks: key, size, text lines, status (unread / read / empty / failed / skipped) and, for a file with a text layer, a short preview."
+    description = "List the pages and their blocks: key, size, text lines, status (unread / read / empty / failed / skipped) and, for a file with a text layer, a short preview. The first listing is already in your first message."
     input_schema = EmptyArgs
     roles: ClassVar[set[str]] = {"intake"}
 
     async def execute(self, args, ctx: IntakeContext):
-        pages: dict[int, list[dict[str, Any]]] = {}
-        digital = ctx.text is not None
-        doc = None
-        if digital:
-            import pymupdf
-            doc = pymupdf.open(ctx.path)
-        dpi = get_settings().vision_dpi
-        for key in sorted(ctx.spans, key=ctx.okey):
-            pg, (a, b) = ctx.spans[key]
-            item: dict[str, Any] = {"key": key, "height_px": b - a, "text_lines": ctx.lines.get(key, 0), "status": status_of(ctx, key)}
-            if doc is not None:
-                import pymupdf
-                words = doc[pg - 1].get_text("text", clip=pymupdf.Rect(0, a * 72 / dpi, doc[pg - 1].rect.width, b * 72 / dpi)).split("\n")
-                item["preview"] = " / ".join(w.strip() for w in words if w.strip())[:90]
-            pages.setdefault(pg, []).append(item)
-        return {"text_layer": digital, "pages": [{"page": p, "blocks": bl} for p, bl in sorted(pages.items())], "recovery_rounds_left": ctx.recovery_left}
+        return page_listing(ctx)
 
 
 class ViewPageArgs(BaseModel):
@@ -556,7 +571,7 @@ async def run_intake_agent(ctx: IntakeContext) -> IntakeContext:
     """The agent drives the reading; whatever it leaves is finished by code. A failure of the agent never stops the reading."""
     s = get_settings()
     pages = len({p for p, _ in ctx.spans.values()})
-    brief = {"pages": pages, "blocks": len(ctx.spans), "text_layer": ctx.text is not None, "recovery_rounds": ctx.recovery_left}
+    brief = {"pages": pages, "blocks": len(ctx.spans), "text_layer": ctx.text is not None, "recovery_rounds": ctx.recovery_left, "listing": page_listing(ctx)["pages"]}
     try:
         out = await run_bounded_agent(ctx.provider, IntakeRegistry([ListPages(), ViewPage(), CropRegion(), ReadBlock(), RunChecks(), FlagCell()]), ctx, system=PROMPT, user=json.dumps(brief),
                                       final_model=IntakeReport, max_tool_rounds=s.intake_max_tool_rounds, stage="intake", max_seconds=s.intake_max_seconds, submit_name=SUBMIT)
