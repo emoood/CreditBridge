@@ -113,3 +113,6 @@ Small fake-provider tests were added with each part: speed defaults and warm-up 
 ## Pushed state
 Everything above is on `main` at the final commit; no force-push or history rewrite; nothing from `data/`, `.env` or any real transcript is tracked (checked with `git ls-files` before the final push).
 
+
+## Agents-as-drivers change (not yet measured)
+Code complete and covered by fake-provider tests (118 pass). **No real-model run of this version has been completed**: the B run, the clean/messy timing comparison and any recording are still to do. A2 was started once and stopped on request before it produced a result; nothing from it is recorded or reported. Transcript A was not touched.

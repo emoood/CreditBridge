@@ -33,10 +33,10 @@ def wait(job_id: str, every: float = 2.0) -> dict:
         time.sleep(every)
 
 
-def upload(file: str, name: str, sid: str, plant: bool = False) -> tuple[str, str]:
+def upload(file: str, name: str, sid: str, plant: bool = False, case_number: str = "") -> tuple[str, str]:
     p = V3 / file
     r = c.post("/applications", files={"file": (file, p.read_bytes(), "application/pdf")}, headers=H,
-               data={"student_label": name, "student_id": sid, **({"plant_misread": "1"} if plant else {})}).json()
+               data={"student_label": name, "student_id": sid, **({"case_number": case_number} if case_number else {}), **({"plant_misread": "1"} if plant else {})}).json()
     log["app_id"] = r["id"]
     return r["id"], r["job_id"]
 
@@ -44,7 +44,7 @@ def upload(file: str, name: str, sid: str, plant: bool = False) -> tuple[str, st
 def read_phase(app_id: str, job_id: str) -> dict:
     j = wait(job_id)
     log["steps"]["time_to_table_s"] = now()
-    log["reading"] = {"status": j["status"], "stage_secs": j["timings"]["per_stage_secs"], "total_s": j["timings"]["total_secs"], "summary": {k: v for k, v in j["summary"].items() if k in ("rechecks_used", "intake_changes")}}
+    log["reading"] = {"status": j["status"], "stage_secs": j["timings"]["per_stage_secs"], "total_s": j["timings"]["total_secs"], "summary": {k: v for k, v in j["summary"].items() if k in ("recovery_used", "intake_changes")}}
     if j["status"] != "DONE":
         log["problems"].append(f"reading job {j['status']} {j['flags']}")
     app = c.get(f"/applications/{app_id}").json()
@@ -109,7 +109,7 @@ def finish(name: str, rec_name: str | None, ok: bool) -> None:
 
 
 def run_a2() -> None:
-    app_id, job = upload("transcript_a2_batch.pdf", "Rania Haddad", "SYN-1004")
+    app_id, job = upload("transcript_a2_batch.pdf", "Rania Haddad", "SYN-1004", case_number="CB-2026-0104")
     read_phase(app_id, job)
     evaluate_phase(app_id)
     log["states_after_evaluation"] = snapshot_states(app_id)
@@ -123,24 +123,36 @@ def run_a2() -> None:
     log["calc_after"] = snapshot_states(app_id)["AP Calculus AB"]
     log["confirm_mapped"] = c.post(f"/applications/{app_id}/confirm-mapped", headers=H).json()
     log["states_final"] = snapshot_states(app_id)
+    t = now()
+    chk = c.post(f"/applications/{app_id}/export-check", headers=H).json()
+    if chk.get("job_id"):
+        wj = wait(chk["job_id"])
+        if wj["flags"]:
+            log["problems"].append(f"export audit flags {wj['flags']}")
+    log["steps"]["export_audit_s"] = round(now() - t, 1)
+    sh = c.get(f"/applications/{app_id}/sheet").json()
+    log["export_audit"] = {k: (sh["audit"] or {}).get(k) for k in ("clean", "summary", "warnings", "differences", "proposals", "flags", "agent_comment")}
+    log["sheet_ok"] = sh["ok"]
     collect_activity(app_id)
-    finish("a2", "demo_a2", log["calc_after"]["status"] == "Mapped")
+    finish("a2", "demo_a2_agents", log["calc_after"]["status"] == "Mapped")
     if log["calc_after"]["status"] != "Mapped":
         log["problems"].append("AP Calculus AB did not become Mapped after the exam score")
 
 
 def run_b() -> None:
-    app_id, job = upload("transcript_b_intake.pdf", "Daniel Ferreira", "SYN-1002", plant=True)
+    app_id, job = upload("transcript_b_intake.pdf", "Daniel Ferreira", "SYN-1002", plant=True, case_number="CB-2026-0102")
     app = read_phase(app_id, job)
     collect_activity(app_id)
     chem = next((r for r in app["rows"] if "Chemistry" in (r["title"] or "")), None)
-    log["chemistry_final"] = chem and {"mark": chem.get("mark"), "grade": chem["grade"], "questions": chem.get("questions")}
-    changes = log["reading"]["summary"].get("intake_changes") or []
-    fixed = any("Chemistry" in str(c_.get("row")) and c_.get("field") == "mark" and c_.get("to") == 85 for c_ in changes)
-    reread = any(n == "reread_block" and ok for _, n, ok in log["tool_calls"])
-    log["recheck_really_fixed"] = bool(fixed and reread and chem and chem.get("mark") == 85 and not (chem.get("flags")))
+    log["chemistry_final"] = chem and {"mark": chem.get("mark"), "grade": chem["grade"], "flags": chem.get("flags"), "questions": chem.get("questions")}
+    intake = app["extraction"].get("intake") or {}
+    planted = (app["extraction"].get("planted_misread") or {}).get("applied") or []
+    changes = intake.get("changes") or []
+    log["planted_applied"] = planted
+    fixed = bool(planted) and any(str(c_.get("row")) == str(planted[0]["subject"]) and c_.get("field") == "mark" and c_.get("to") == planted[0]["from"] for c_ in changes)
+    log["recheck_really_fixed"] = bool(fixed and intake.get("recovery_used", 0) >= 1 and chem and chem.get("mark") == planted[0]["from"] and not chem.get("flags"))
     if not log["recheck_really_fixed"]:
-        log["problems"].append("the Intake recheck did not re-read the block and produce a corrected value that passes the check: not recorded")
+        log["problems"].append("no genuine repair: the planted wrong mark was not replaced by a re-read value that passes its check, so B is not recorded")
     if log["recheck_really_fixed"]:
         evaluate_phase(app_id)
         log["states_after_evaluation"] = snapshot_states(app_id)
@@ -149,7 +161,7 @@ def run_b() -> None:
 
 
 def run_c() -> None:
-    app_id, job = upload("transcript_c_copy_error.pdf", "Sofia Lindqvist", "SYN-1003")
+    app_id, job = upload("transcript_c_copy_error.pdf", "Sofia Lindqvist", "SYN-1003", case_number="CB-2026-0103")
     read_phase(app_id, job)
     evaluate_phase(app_id)
     log["states_after_evaluation"] = snapshot_states(app_id)

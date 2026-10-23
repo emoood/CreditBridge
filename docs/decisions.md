@@ -208,3 +208,9 @@ Not run against a real model yet (by request); tests use fake providers. The map
 Not covered: a term-total failure names no exact cell, so no question is attached to a cell (only the cross-check note); a FAILED block is not re-read by the Intake agent (it only handles blocks that read but fail a check).
 
 (2026-10-23, overnight run) The degraded B files and the recording `demo_b_intake_degraded` were deleted: that run showed a failed read and junk rows, not a repaired mark.
+
+## Agents drive every application (2026-10-23)
+- Intake agent reads every upload through tools (list_pages, view_page, crop_region, read_block, run_checks, flag_cell, submit_courses); vision is the reader, the text layer is a cross-check only; an empty reading is a failed read; 2 recovery rounds; code accepts a re-read value only where its check passes and reads any block the agent leaves.
+- Case agent also reviews every application (list_rows, raise_doubt, set_classification); code corroborates each doubt; mapped rows run first. Program plans are dummy data in policies/program_plans.yaml.
+- Auditor runs on every export; explanations are built from the verified diff; code re-checks every proposed fix; the officer still clicks Apply.
+- Budgets in rounds and seconds per agent (config); every tool call is in the usage ledger.
