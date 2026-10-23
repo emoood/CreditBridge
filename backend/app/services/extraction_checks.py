@@ -86,6 +86,99 @@ def cell_failures(blocks: dict[str, dict[str, Any]], scale: dict[str, Any]) -> l
     return out
 
 
+# ----------------------------------------------------------------------------------------------- the extraction header (chunk C1, step 2)
+# One field, "Institution / curriculum": a curriculum for a school transcript, a university name for a university transcript. Student type follows from it.
+# The bare tokens AP and IB match upper case only (so the word "ap" never counts); the spelled-out names match in any case.
+CURRICULA = [("AP", r"(?i:advanced placement)|\bAP\b"), ("IB", r"(?i:international baccalaureate)|\bIB\b"), ("A Level", r"(?i:\bgce\b|\ba[- ]?levels?\b|\bas[- ]levels?\b)"),
+             ("French Bac", r"(?i:baccalaur[eé]at\b|\bfrench bac\b|\bbac\b)")]
+UNIVERSITY = re.compile(r"(?i)\b(universit(?:y|é|ät|à)|college|institute of technology|polytechnic|école|hochschule)\b")
+MAJOR_LINE = re.compile(r"(?im)^\s*(?:major|field of study|degree program(?:me)?|program(?:me)? of study)\s*[:\-]\s*(\S.*?)\s*$")
+TABLE_HEAD = re.compile(r"(?i)^\s*(subject|course|module|title)\b.*\b(grade|credits?|mark|result)\b")
+
+
+def curriculum_of(text: str | None) -> str | None:
+    """The canonical curriculum a text names (AP, IB, A Level, French Bac), or None. 'Advanced Placement', 'AP' and 'A-Level' all normalise."""
+    t = (text or "").strip()
+    return next((name for name, pattern in CURRICULA if re.search(pattern, t)), None)
+
+
+def student_type_of(value: str | None) -> str | None:
+    """'school' when the value is a curriculum, 'university' when it names a university; None when it is neither (the officer decides)."""
+    if not (value or "").strip():
+        return None
+    if curriculum_of(value):
+        return "school"
+    return "university" if UNIVERSITY.search(value or "") else None
+
+
+def normalise_header_value(value: str | None) -> str | None:
+    """A curriculum is stored under its canonical name; a university keeps the name as printed; blank is None."""
+    v = re.sub(r"\s+", " ", (value or "").strip(" .:-"))
+    if not v or v.lower() in ("null", "none", "n/a", "unknown"):
+        return None
+    return curriculum_of(v) or v[:120]
+
+
+def header_lines(text: str, limit: int = 14) -> list[str]:
+    """The lines printed above the first table (at most `limit`): where an institution, a curriculum or a major would be printed."""
+    out: list[str] = []
+    for ln in text.splitlines():
+        if TABLE_HEAD.match(ln) or len(out) >= limit:
+            break
+        if ln.strip():
+            out.append(ln.strip())
+    return out
+
+
+def header_from_text(path: str, titles: list[str]) -> dict[str, Any]:
+    """What the text layer of a digital PDF says about the header: {'value', 'basis', 'major'} (each may be None). Only a cross-check, or the fallback when the agent
+    read nothing; image-only files have no text layer and give None everywhere. A curriculum is looked for in the header lines, then inferred from the course names
+    (most of them start with 'AP ' or carry HL / SL)."""
+    out: dict[str, Any] = {"value": None, "basis": None, "major": None}
+    if not path.lower().endswith(".pdf"):
+        return out
+    try:
+        import pymupdf
+        text = "\n".join(p.get_text() for p in pymupdf.open(path))
+    except Exception:  # noqa: BLE001  an unreadable file just has no text layer
+        return out
+    if len(text) < 80:
+        return out
+    head = "\n".join(header_lines(text))
+    if (c := curriculum_of(head)):
+        return {**out, "value": c, "basis": "printed in the header"}
+    uni = next((ln for ln in head.splitlines() if UNIVERSITY.search(ln) and len(ln) < 90), None)
+    if uni:
+        m = MAJOR_LINE.search(head)
+        return {**out, "value": uni.title() if uni.isupper() else uni, "basis": "printed in the header", "major": m.group(1).strip()[:120] if m else None}
+    named = [t for t in titles if t]
+    if named and sum(1 for t in named if re.match(r"AP\s", t.strip())) >= max(2, len(named) // 2):
+        return {**out, "value": "AP", "basis": "inferred: most course names start with 'AP'"}
+    if named and sum(1 for t in named if re.search(r"\b(HL|SL)\b", t)) >= max(2, len(named) // 2):
+        return {**out, "value": "IB", "basis": "inferred: most course names carry HL or SL"}
+    return out
+
+
+def curriculum_check(record_curriculum: str | None, value: str | None) -> dict[str, Any]:
+    """The curriculum on the transcript against the one on the case record. A university transcript is not compared (the record's curriculum is a school one)."""
+    rec = curriculum_of(record_curriculum)
+    seen = curriculum_of(value)
+    if not rec or not value:
+        return {"status": "unchecked", "record": rec, "seen": seen or value}
+    if seen is None:
+        return {"status": "unchecked", "record": rec, "seen": value}
+    return {"status": "match" if seen == rec else "mismatch", "record": rec, "seen": seen}
+
+
+def credits_view(student_type: str | None, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Credits per the requirements: a school transcript shows them only if printed (and needs none otherwise); a university transcript requires them, so an included row
+    without credits is 'credits missing'. {'show', 'required', 'missing': [row ids]}."""
+    printed = any(str(r.get("credits") or "").strip() for r in rows)
+    required = student_type == "university"
+    return {"show": required or printed, "required": required,
+            "missing": [r["id"] for r in rows if required and r.get("included", True) and not str(r.get("credits") or "").strip()]}
+
+
 def question_for(f: dict[str, Any]) -> str:
     if f["check"] in TOTAL_FIELD:
         return (f"The printed term {f['label']} total is {f['printed']} but the rows add up to {f['computed']}. "

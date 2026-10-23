@@ -42,6 +42,7 @@ CHANGES IN THIS VERSION (they replace the matching steps above)
 - The listing of pages and blocks is already in the first message (field `listing`). Do not call list_pages first. Start with read_block on every block that holds course rows (several keys in one call).
 - A block that shows a course row cannot be skipped. A block that is only a cover, legend or footer can.
 - Code asks the officer about every cell that fails a code check, by itself. Do not call flag_cell with kind check_failure. Use flag_cell only for your own observations (visual, repeated_course, term_out_of_order, odd_grade, other).
+- Header: look at the page header once (view_page, the same look that gives you the student's name). In submit_courses give institution_curriculum: the curriculum the transcript belongs to (AP, IB, A Level or French Bac) or, for a university transcript, the university's name, as printed. Give major only for a university transcript, as printed. Use null for anything you did not see: never guess, code checks it against the text layer and the case record.
 """
 PROMPT_VERSION = f"{BASE_PROMPT_VERSION}+c1"
 PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{BASE_PROMPT_VERSION}.txt").read_text() + ADDENDUM
@@ -84,7 +85,8 @@ class IntakeContext(ToolContext):
     imgs: dict[int, list[Image.Image]] = field(default_factory=dict)  # dpi -> rendered pages
     record_name: str | None = None
     text_has_totals: bool = True  # False when the file has a text layer that prints no total or GPA line anywhere
-    name_check: dict[str, Any] = field(default_factory=dict)
+    name_check: dict[str, Any] = field(default_factory=dict)  # the pipeline stores this whole dict, so the extraction header travels in it under "header"
+    header: dict[str, Any] = field(default_factory=dict)
     by_code: list[str] = field(default_factory=list)  # blocks code had to read itself
     submitted: dict[str, Any] | None = None
 
@@ -508,6 +510,8 @@ class IntakeReport(AgentOutput):
     blocks_read: list[str] = Field(default_factory=list)
     skipped: list[SkippedBlock] = Field(default_factory=list)
     name_seen: str | None = Field(default=None, description="The student's name as printed in the header, if you looked at it")
+    institution_curriculum: str | None = Field(default=None, description="The curriculum (AP, IB, A Level or French Bac) or, for a university transcript, the university's name, as printed in the header. null if you did not see it")
+    major: str | None = Field(default=None, description="University transcripts only: the major or program printed in the header. null if none is printed")
     note: str = ""
 
 
@@ -531,6 +535,29 @@ def name_check(record: str | None, seen: str | None, path: str) -> dict[str, Any
     if layer is None:
         return {"status": "unchecked", "why": "the agent did not read the name and the file has no text layer"}
     return {"status": "match" if layer else "mismatch", "source": "text layer (cross-check)"}
+
+
+def _close(a: str, b: str) -> bool:
+    return difflib.SequenceMatcher(None, re.sub(r"[^a-z0-9 ]", "", a.lower()), re.sub(r"[^a-z0-9 ]", "", b.lower())).ratio() >= 0.8
+
+
+def build_header(ctx: IntakeContext) -> dict[str, Any]:
+    """The extraction header: "Institution / curriculum" and, for a university transcript, the major. The agent's reading of the page decides; the text layer is a
+    cross-check and only fills a value the agent did not give (and says so). Student type, the comparison with the case record and the missing-major mark are worked out
+    from this when the officer looks, so an edit takes effect at once."""
+    sub = ctx.submitted or {}
+    titles = [r.get("subject") or "" for b in ctx.ordered().values() for r in b.get("rows", []) if not xc.is_non_course(r)]
+    layer = xc.header_from_text(ctx.path, titles)
+    seen = xc.normalise_header_value(sub.get("institution_curriculum"))
+    h: dict[str, Any] = {"value": seen, "source": "agent (vision)" if seen else None, "basis": None, "text_layer": layer["value"], "major": None, "major_source": None}
+    if seen is None and layer["value"]:
+        h.update(value=layer["value"], source="text layer (code)", basis=layer["basis"])
+    elif seen and layer["value"] and not _close(seen, layer["value"]):
+        h["disagrees"] = {"text_layer": layer["value"], "basis": layer["basis"]}
+    if xc.student_type_of(h["value"]) == "university":
+        major = (sub.get("major") or "").strip()[:120]
+        h["major"], h["major_source"] = (major, "agent (vision)") if major else (layer["major"], "text layer (code)" if layer["major"] else None)
+    return h
 
 
 def skip_allowed(ctx: IntakeContext, key: str) -> bool:
@@ -563,8 +590,10 @@ async def finish(ctx: IntakeContext) -> None:
         if not any(q["field"] == f["field"] for q in b["rows"][f["row"]].get("questions", [])):
             attach_question(b, f["row"], f["field"], xc.question_for(f) if f["check"] != "text_layer_crosscheck" else f"Check the {f['field']} of '{f['subject']}' against the scan: {f['detail']}")
             n += 1
+    ctx.header = build_header(ctx)
+    ctx.name_check = {**ctx.name_check, "header": ctx.header}
     trace(ctx.app_id, "", "code", "intake_summary", {"changes": len(ctx.changes), "agent_questions": ctx.questions, "code_questions": n, "recovery_used": ctx.recovery_used,
-                                                    "read_by_code": ctx.by_code, "skipped": sorted(ctx.skipped)})
+                                                    "read_by_code": ctx.by_code, "skipped": sorted(ctx.skipped), "header": {k: ctx.header.get(k) for k in ("value", "source", "major_source")}})
 
 
 async def run_intake_agent(ctx: IntakeContext) -> IntakeContext:

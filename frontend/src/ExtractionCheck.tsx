@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, Check, Loader2, Plus, X } from 'lucide-react';
-import { api, type AppInfo, type Institution, type Row, type Subject } from './api';
+import { api, type AppInfo, type ExtractionHeader, type Institution, type Row, type Subject } from './api';
 
 /** Step before the worklist view: the scan beside the table, only low-confidence cells highlighted, one Confirm button. */
 export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: { display: Institution['display']; app: AppInfo; quals: string[]; qual: string; role: string; onChanged: () => void }) {
@@ -14,6 +14,7 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: 
   const lowRows = rows.filter(r => r.uncertain_fields.length || r.flags?.length).length;
   const noCur = rows.filter(r => r.included && !r.subject).length;
   const included = rows.filter(r => r.included).length;
+  const showCredits = display.school_credits || !!ex?.credits?.show;   // C1: a university transcript always shows credits; a school one only when the page prints them
   async function confirm() { setBusy(true); await wrap(() => api.confirm(app.id, role)); setBusy(false); }
   return <div className="xcheck">
     <div className="xcheck-top">
@@ -24,7 +25,8 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: 
     {ex?.intake && <p className="muted intake-line">Intake agent: {ex.intake.recovery_used} recovery re-read{ex.intake.recovery_used === 1 ? '' : 's'}{ex.intake.changes.length ? `, ${ex.intake.changes.length} value${ex.intake.changes.length === 1 ? '' : 's'} corrected (kept only where the check passes)` : ''}{ex.intake.read_by_code.length ? ` · ${ex.intake.read_by_code.length} block(s) read by code, not the agent` : ''}{Object.keys(ex.intake.skipped).length ? ` · skipped: ${Object.entries(ex.intake.skipped).map(([k, v]) => `${k} (${v})`).join(', ')}` : ''}{ex.intake.text_layer_crosscheck ? ' · text layer used as a cross-check only' : ''}</p>}
     {ex?.intake?.name_check?.status === 'mismatch' && <div className="eval-warn"><AlertCircle size={15} /> The name on the transcript{ex.intake.name_check.seen ? ` (“${ex.intake.name_check.seen}”)` : ''} does not match the student record ({app.student}). Make sure this is the right transcript.</div>}
     {ex?.intake?.name_check?.status === 'match' && <p className="muted intake-line">Name on the transcript matches the student record.</p>}
-    {ex?.planted_misread?.applied?.length ? <div className="planted"><strong>PLANTED FOR DEMO</strong> The {ex.planted_misread.applied[0].subject} {ex.planted_misread.applied[0].field === 'letter' ? 'grade' : ex.planted_misread.applied[0].field} was read as {String(ex.planted_misread.applied[0].from)} and replaced with {String(ex.planted_misread.applied[0].to)} before the checks ran. The Intake recheck should re-read it.</div> : null}
+    {app.kind === 'upload' && ex?.header && <HeaderBar appId={app.id} h={ex.header} recordName={app.student_record?.name} wrap={wrap} />}
+    {ex?.planted_misread?.applied?.length ?<div className="planted"><strong>PLANTED FOR DEMO</strong> The {ex.planted_misread.applied[0].subject} {ex.planted_misread.applied[0].field === 'letter' ? 'grade' : ex.planted_misread.applied[0].field} was read as {String(ex.planted_misread.applied[0].from)} and replaced with {String(ex.planted_misread.applied[0].to)} before the checks ran. The Intake recheck should re-read it.</div> : null}
     {(ex?.failed_blocks ?? 0) > 0 && <div className="eval-warn"><AlertCircle size={15} /> A part of the page with no course on it (a footer, legend or signature block) could not be read and was skipped. This is not a missing course. Compare the table with the scan; if a course really is missing, add it by hand.</div>}
     {ex?.flags && ex.flags.length > 0 && <div className="eval-warn"><AlertCircle size={15} /> {ex.flags.length} cross-check note{ex.flags.length === 1 ? '' : 's'} (marks, points, credits or GPA do not add up).
       <button className="link-btn" onClick={() => setFlagsOpen(!flagsOpen)}>{flagsOpen ? 'Hide' : 'Show'}</button></div>}
@@ -34,8 +36,8 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: 
       <div className="scan"><div className="scan-tabs">{Array.from({ length: app.document?.page_count ?? 1 }, (_, i) => <button key={i} className={page === i + 1 ? 'on' : ''} onClick={() => setPage(i + 1)}>Page {i + 1}</button>)}</div>
         {app.document ? <img src={api.previewUrl(app.id, page)} alt={`Transcript page ${page}`} /> : <p className="muted">No scan is stored for this application.</p>}</div>
       <div className="vtable-wrap">
-        <table className="xtable"><thead><tr><th /><th>Course (as written)</th><th>Grade</th>{display.mark && <th>Mark</th>}{display.school_credits && <th>Credits</th>}{display.grade_year && <th>Grade year</th>}<th>Curriculum course</th><th /></tr></thead>
-          <tbody>{[...rows.filter(r => r.subject), ...rows.filter(r => !r.subject)].map(r => <XRow key={r.id} appId={app.id} r={r} quals={quals} qual={qual} wrap={wrap} display={display} />)}</tbody></table>
+        <table className="xtable"><thead><tr><th /><th>Course (as written)</th><th>Grade</th>{display.mark && <th>Mark</th>}{showCredits && <th>Credits</th>}{display.grade_year && <th>Grade year</th>}<th>Curriculum course</th><th /></tr></thead>
+          <tbody>{[...rows.filter(r => r.subject), ...rows.filter(r => !r.subject)].map(r => <XRow key={r.id} appId={app.id} r={r} quals={quals} qual={qual} wrap={wrap} display={{ ...display, school_credits: showCredits }} />)}</tbody></table>
         {rows.length === 0 && <div className="empty-state">No courses were recognised. Add rows manually.</div>}
         <div className="verify-actions">
           <button className="link-btn" onClick={() => wrap(() => api.addRow(app.id))}><Plus size={13} /> Add a course</button>
@@ -44,6 +46,25 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: 
         {err && <div className="eval-error"><AlertCircle size={15} /> {err}</div>}
       </div>
     </div>
+  </div>;
+}
+
+/** C1: "Institution / curriculum" (and the major for a university transcript). Filled by Intake, cross-checked by code, editable; an edit is saved on leaving the field and logged. */
+function HeaderBar({ appId, h, recordName, wrap }: { appId: string; h: ExtractionHeader; recordName?: string; wrap: (f: () => Promise<unknown>) => Promise<void> }) {
+  const save = (k: 'value' | 'major', v: string) => { if (v.trim() !== ((k === 'value' ? h.value : h.major) ?? '')) wrap(() => api.patchHeader(appId, { [k]: v })); };
+  const cc = h.curriculum_check;
+  return <div className="xheader" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', alignItems: 'end', margin: '8px 0' }}>
+    <label>Institution / curriculum
+      <input key={`v-${h.value ?? ''}`} defaultValue={h.value ?? ''} className={`cell ${h.value ? '' : 'low'}`} aria-label="Institution / curriculum" placeholder="Not found on the transcript" onBlur={e => save('value', e.target.value)} /></label>
+    {h.student_type === 'university' && <label>Major
+      <input key={`m-${h.major ?? ''}`} defaultValue={h.major ?? ''} className={`cell ${h.major_missing ? 'low' : ''}`} aria-label="Major" placeholder="Major missing" onBlur={e => save('major', e.target.value)} /></label>}
+    <small className="muted">
+      {h.student_type ? `${h.student_type === 'school' ? 'School' : 'University'} transcript` : h.value ? 'Type not recognised: credits follow the school rule' : 'Type unknown'}
+      {h.source ? ` · ${h.edited.value ? `edited by ${h.edited.value.by}` : `read by ${h.source}`}` : ''}{h.basis && !h.edited.value ? ` (${h.basis})` : ''}
+      {h.major_missing ? ' · Major missing: the transcript does not show one' : ''}</small>
+    {h.disagrees && !h.edited.value && <div className="eval-warn"><AlertCircle size={15} /> The text layer of the file says “{h.disagrees.text_layer}”{h.disagrees.basis ? ` (${h.disagrees.basis})` : ''}; the page reading says “{h.value}”. Check the scan.</div>}
+    {cc.status === 'mismatch' && <div className="eval-warn"><AlertCircle size={15} /> The transcript shows {cc.seen} but the case record{recordName ? ` for ${recordName}` : ''} says {cc.record}. Make sure this is the right transcript.</div>}
+    {cc.status === 'match' && <small className="muted">Matches the case record ({cc.record}).</small>}
   </div>;
 }
 
@@ -61,7 +82,7 @@ function XRow({ appId, r, quals, qual, wrap, display }: { display: Institution['
       <td>{cell('title', r.uncertain_fields.includes('title'))}{(r.questions ?? []).map((q, i) => <small className="rowq" key={i}>? {q.question}</small>)}{flagged && !(r.questions?.length) && <small className="rowflag" title={r.flags?.join('\n')}>Check: {r.flags?.[0]}</small>}</td>
       <td>{cell('grade', r.uncertain_fields.includes('grade') || asked('grade') || flagged, 56)}</td>
       {display.mark && <td className={`num ${flagged ? 'lowtext' : ''}`}>{r.mark ?? ''}</td>}
-      {display.school_credits && <td>{cell('credits', r.uncertain_fields.includes('credits'), 56)}</td>}
+      {display.school_credits && <td>{cell('credits', r.uncertain_fields.includes('credits') || !!r.credits_missing, 56)}{r.credits_missing && <small className="rowflag">Credits missing</small>}</td>}
       {display.grade_year && <td>{cell('term', r.uncertain_fields.includes('term'), 90)}</td>}
       <td className={r.subject ? 'subj' : 'subj lowcell'}>{r.subject ? <span className="subj-chosen"><strong>{r.subject.code}</strong><small>{r.subject.qualification}{r.subject.name.trim().toLowerCase() !== (r.title || '').trim().toLowerCase() ? ` · ${r.subject.name}` : ''}</small></span> : <span className="unrec">Not in curriculum</span>}
         <button className="link-btn" onClick={() => setPicker(!picker)}>{r.subject ? 'Change' : 'Choose'}</button></td>

@@ -56,13 +56,18 @@ export type Subject = { id: string; name: string; code: string; qualification: s
 export type Candidate = Subject & { score: number };
 export type Row = { id: string; code: string; title: string; title_ar: string; credits: string; grade: string; term: string; page: number; evidence_ref: string;
   uncertain_fields: string[]; subject: Subject | null; candidates: Candidate[]; included: boolean; corrected: boolean; auto_linked?: boolean;
-  mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string; source_id?: string; questions?: { field: string; question: string }[] };
+  mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string; source_id?: string; questions?: { field: string; question: string }[]; credits_missing?: boolean };
+/** C1: the extraction header ("Institution / curriculum", major for a university transcript) and what credits mean for this student type. */
+export type ExtractionHeader = { value: string | null; student_type: 'school' | 'university' | null; major: string | null; major_missing: boolean; source: string | null; major_source: string | null;
+  basis: string | null; disagrees: { text_layer: string; basis: string | null } | null; curriculum_check: { status: 'match' | 'mismatch' | 'unchecked'; record: string | null; seen: string | null };
+  edited: Record<string, { by: string; at: string }> };
 export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; program: string; institution: string; courses: number; status: string; decided: number; catalog: string;
   created_at: string; student_id?: string; student_record?: StudentRecord | null; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
   extraction?: { method: string; blocks?: { key: string; status: string; reread?: boolean; flags?: number | null; error?: string }[]; failed_blocks?: number; flags?: string[]; unrecognized?: number; rows_found?: number;
     planted_misread?: { subject: string; wrong: number | string; field?: string; applied?: { subject: string; field?: string; from: number | string; to: number | string }[] } | null;
     intake?: { agent: boolean; recovery_used: number; changes: { block: string; row: string; field: string; from: unknown; to: unknown }[]; skipped: Record<string, string>; read_by_code: string[]; text_layer_crosscheck: boolean; agent_questions: number;
       name_check?: { status: 'match' | 'mismatch' | 'unchecked'; source?: string; seen?: string | null; why?: string } };
+    header?: ExtractionHeader; credits?: { show: boolean; required: boolean; missing: number };
     case_summary?: { text: string; by: string; ok?: boolean } };
   curriculum?: { available: boolean; error: string | null };
   replay?: { name: string; label: string; recorded_at: string; model: string; live: string[] } | null };
@@ -81,6 +86,7 @@ export const api = {
   upload: (file: File, label: string, qualification: string, studentId = '', plantMisread = false, caseNumber = '', demoSpeed = '', demoRun = '') => { const f = new FormData(); if (demoSpeed) { f.append('demo', '1'); f.append('demo_speed', demoSpeed); } f.append('file', file); f.append('student_label', label); f.append('student_id', studentId); if (caseNumber) f.append('case_number', caseNumber); if (demoRun) f.append('demo_run', demoRun); if (plantMisread) f.append('plant_misread', '1'); f.append('qualification', qualification);
     return fetch('/api/v1/applications', { method: 'POST', body: f, headers: { 'X-Role': 'admissions' } }).then(j<AppInfo>); },
   patchRow: (id: string, row: string, body: Record<string, unknown>) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<Row>),
+  patchHeader: (id: string, body: { value?: string; major?: string }) => fetch(`/api/v1/applications/${id}/header`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<ExtractionHeader>),
   addRow: (id: string) => fetch(`/api/v1/applications/${id}/rows`, { method: 'POST' }).then(j<Row>),
   deleteRow: (id: string, row: string) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'DELETE' }).then(j<{ deleted: boolean }>),
   link: (id: string, qualification: string | null, relink: boolean) => fetch(`/api/v1/applications/${id}/link`, { method: 'POST', headers: ROLE_HEADERS('admissions'), body: JSON.stringify({ qualification, relink }) }).then(j<AppInfo>),

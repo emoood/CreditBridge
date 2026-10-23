@@ -13,6 +13,7 @@ from sqlalchemy import select
 from ..config import get_settings
 from ..db.models import Application, Job
 from ..db.session import app_session
+from ..services import extraction_checks as xc
 from ..services import prepared
 from ..services import student_record as sr
 from ..services.curriculum import curriculum
@@ -29,9 +30,32 @@ PLANTS = {"B": {"subject": "AP Chemistry", "field": "mark", "wrong": 65}, "D": {
 PLANT_FOR_CASE = {"CB-2026-0105": "D", "CB-2026-0104": "A2"}
 
 
+def header_view(app: Application) -> dict[str, Any]:
+    """The extraction header as the officer sees it: what Intake read (stored in extraction.intake.name_check.header) with the officer's edits laid over it. Student type,
+    the comparison with the case record and the missing-major mark are worked out here, from the value as it stands now."""
+    ex = app.extraction or {}
+    agent = ((ex.get("intake") or {}).get("name_check") or {}).get("header") or {}
+    edits = ex.get("header") or {}
+    value = edits["value"] if "value" in edits else agent.get("value")
+    typ = xc.student_type_of(value)
+    major = (edits["major"] if "major" in edits else agent.get("major")) if typ == "university" else None
+    record = (ex.get("student_record") or {}).get("curriculum") or app.qualification_hint
+    return {"value": value, "student_type": typ, "major": major, "major_missing": typ == "university" and not major,
+            "source": "officer" if "value" in edits else agent.get("source"), "major_source": "officer" if "major" in edits else agent.get("major_source"),
+            "basis": None if "value" in edits else agent.get("basis"), "disagrees": None if "value" in edits else agent.get("disagrees"),
+            "curriculum_check": xc.curriculum_check(record, value) if typ != "university" else {"status": "unchecked", "record": xc.curriculum_of(record), "seen": value},
+            "edited": edits.get("edited") or {}}
+
+
 def _detail(db, app: Application) -> dict[str, Any]:
+    extraction, rows = app.extraction, app.rows
+    if app.kind == "upload" and extraction is not None:  # the header, and what credits mean for this student type, are computed when read so an edit takes effect at once
+        header = header_view(app)
+        cv = xc.credits_view(header["student_type"], rows)
+        rows = [{**r, "credits_missing": r["id"] in cv["missing"]} for r in rows]
+        extraction = {**extraction, "header": header, "credits": {"show": cv["show"], "required": cv["required"], "missing": len(cv["missing"])}}
     return {**app_summary(db, app), "document": app.document and {k: v for k, v in app.document.items() if k != "path"},
-            "extraction": app.extraction, "rows": app.rows, "corrections": app.corrections,
+            "extraction": extraction, "rows": rows, "corrections": app.corrections,
             "curriculum": {"available": curriculum.error is None, "error": curriculum.error}}
 
 
@@ -111,6 +135,31 @@ def patch_student(app_id: str, body: StudentPatch):
             store.set_json(app, "extraction", {**(app.extraction or {}), "student_id": body.student_id.strip()[:40]})
         db.commit()
         return app_summary(db, app)
+
+
+class HeaderPatch(BaseModel):
+    value: str | None = None  # "Institution / curriculum"; blank clears it. Only the fields sent are changed
+    major: str | None = None
+
+
+@router.patch("/applications/{app_id}/header")
+def patch_header(app_id: str, body: HeaderPatch, x_actor: str | None = Header(default=None)):
+    """The officer sets or corrects the header. Intake never overwrites it afterwards; the field then shows who edited it and when."""
+    with app_session() as db:
+        app = _editable(db, app_id)
+        ex = dict(app.extraction or {})
+        edits = dict(ex.get("header") or {})
+        edited = dict(edits.get("edited") or {})
+        who = x_actor or "officer"
+        for f in ("value", "major"):
+            if f in body.model_fields_set:
+                v = getattr(body, f)
+                edits[f] = xc.normalise_header_value(v) if f == "value" else ((v or "").strip()[:120] or None)
+                edited[f] = {"by": who, "at": datetime.now(UTC).isoformat()}
+                store.audit(db, app_id, who, "header_corrected", app_id, field=f)  # values are not logged
+        store.set_json(app, "extraction", {**ex, "header": {**edits, "edited": edited}})
+        db.commit()
+        return header_view(app)
 
 
 class RowPatch(BaseModel):
