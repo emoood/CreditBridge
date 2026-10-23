@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from ..db.models import CourseMapping, RowState, now
 from ..services import grade_checks as gc
 from ..services import policy_rules as pr
+from . import student_record as sr
 from .triage import ENFORCED
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -57,11 +58,11 @@ def seed_mappings(db: Session) -> int:
     data = yaml.safe_load((ROOT / "policies" / "dummy_mappings.yaml").read_text())["mappings"]
     rows = [{"qualification": "Advanced Placement", "aud_credits": 3, "version": "dummy-2026-10", "status": "ACTIVE", **{k: v for k, v in m.items() if v is not None}} for m in data]
     existing = list(db.scalars(select(CourseMapping)))
-    key = lambda m: (m["subject_code"], m["aud_code"], m["status"], json.dumps(m.get("condition"), sort_keys=True))
+    key = lambda m: (m["subject_code"], m["aud_code"], m["status"], json.dumps(m.get("condition"), sort_keys=True), json.dumps(m.get("programs")))
     if existing:
         if not all(e.version.startswith("dummy-") for e in existing):
             return 0
-        if sorted(key({"subject_code": e.subject_code, "aud_code": e.aud_code, "status": e.status, "condition": e.condition}) for e in existing) == sorted(key(r) for r in rows):
+        if sorted(key({"subject_code": e.subject_code, "aud_code": e.aud_code, "status": e.status, "condition": e.condition, "programs": e.programs}) for e in existing) == sorted(key(r) for r in rows):
             return 0
         for e in existing:
             db.delete(e)
@@ -73,18 +74,21 @@ def seed_mappings(db: Session) -> int:
 
 
 def mapping_dict(m: CourseMapping) -> dict[str, Any]:
-    return {"id": m.id, "subject_code": m.subject_code, "aud_code": m.aud_code, "aud_credits": m.aud_credits, "condition": m.condition,
+    return {"programs": m.programs, "id": m.id, "subject_code": m.subject_code, "aud_code": m.aud_code, "aud_credits": m.aud_credits, "condition": m.condition,
             "version": m.version, "status": m.status, "note": m.note}
 
 
-def lookup_many(db: Session, codes: list[str]) -> dict[str, CourseMapping]:
-    """One query for the whole transcript. If a subject has several rows, an ACTIVE one wins, then the newest id."""
+def lookup_many(db: Session, codes: list[str], program: str = "") -> dict[str, CourseMapping]:
+    """One query for the whole transcript. A mapping limited to the student's program beats the general one; otherwise an ACTIVE row wins, then the newest id."""
     if not codes:
         return {}
     best: dict[str, CourseMapping] = {}
+    rank = lambda m: (bool(m.programs), m.status == "ACTIVE", m.id)
     for m in db.scalars(select(CourseMapping).where(CourseMapping.subject_code.in_(codes)).order_by(CourseMapping.id)):
+        if m.programs and program not in m.programs:
+            continue
         cur = best.get(m.subject_code)
-        if cur is None or (m.status == "ACTIVE") >= (cur.status == "ACTIVE"):
+        if cur is None or rank(m) >= rank(cur):
             best[m.subject_code] = m
     return best
 
@@ -135,7 +139,7 @@ def synopsis_for(row: dict[str, Any], synopsis: dict[str, str] | None) -> str | 
 
 def decide_row(row: dict[str, Any], mapping: CourseMapping | None, facts: dict[str, Any], override: bool, repo,
                curriculum: str | None = None, school_specific: bool = False, scale: dict[str, Any] | None = None,
-               synopsis: dict[str, str] | None = None) -> dict[str, Any]:
+               synopsis: dict[str, str] | None = None, program: str = "") -> dict[str, Any]:
     """The code verdict for one row. Never calls a model."""
     out: dict[str, Any] = {"status": NOT_EVAL, "kind": "", "reason": "", "can_include": False, "mapping": None, "condition_result": None}
     if not row.get("included", True):
@@ -148,6 +152,9 @@ def decide_row(row: dict[str, Any], mapping: CourseMapping | None, facts: dict[s
     if mapping is None:
         return {**out, "status": NO_MAPPING, "kind": "unmapped", "reason": "No mapping on file for this course"}
     out["mapping"] = mapping_dict(mapping)
+    why_not = sr.restriction(mapping.aud_code, program)
+    if why_not and not override:  # applicability comes BEFORE the stale check and the conditions: a course the program cannot take needs no document and no investigation
+        return {**out, "status": NOT_EVAL, "kind": "not_applicable", "reason": why_not, "can_include": True}
     if mapping.status != "ACTIVE":
         return {**out, "status": CONDITIONAL, "kind": "stale", "reason": f"The mapping to {mapping.aud_code} is {mapping.status.lower()} (version {mapping.version}) and needs confirming"}
     cond = check_condition(mapping.condition, row, facts, scale)

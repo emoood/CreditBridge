@@ -5,11 +5,12 @@ A mapped AUD equivalent is classified against the student's program plan:
   General elective suggestion  on the plan's general-elective list
   Not applicable               in neither list (the Case agent may judge a borderline one against the free-elective allowance)"""
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import yaml
 
-from .mapping import ROOT
+ROOT = Path(__file__).resolve().parents[3]
 
 PROGRAM, ELECTIVE, NOT_APPLICABLE = "Program course", "General elective suggestion", "Not applicable"
 CLASSES = (PROGRAM, ELECTIVE, NOT_APPLICABLE)
@@ -55,3 +56,15 @@ def classify(aud_code: str | None, program: str) -> dict[str, Any] | None:
 def allowance_left(program: str, used_credits: int) -> int | None:
     plan = plan_for(program)
     return None if plan is None else int(plan.get("free_elective_credits", 0)) - used_credits
+
+
+def restriction(aud_code: str | None, program: str) -> str | None:
+    """Why this AUD course is not open to the student's program (restricted areas in the program plan), or None. Plain words, for the officer."""
+    plan = plan_for(program)
+    if not aud_code or plan is None:
+        return None
+    dept = aud_code.split()[0]
+    if dept in plan.get("restricted_departments", []):
+        return f"{dept} courses are not open to {program.split()[0]} programs"
+    label = (plan.get("restricted_codes") or {}).get(aud_code)
+    return f"{label} ({aud_code}) is not open to {program.split()[0]} programs" if label else None

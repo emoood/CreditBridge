@@ -229,3 +229,21 @@ async def test_demo_mode_says_so_when_there_is_no_prepared_run_for_a_file(case_e
     monkeypatch.setattr(prepared, "DIR", tmp_path)
     r = await _demo_upload(case_env)
     assert r.status_code == 404 and r.json()["detail"] == "No prepared run for this file"
+
+
+# ---- applicability: a course the program cannot take is Not applicable BEFORE conditions and stale checks
+async def test_a_restricted_course_is_not_applicable_and_needs_no_document_or_agent(case_env, monkeypatch):
+    from backend.app.services import student_record as sr
+    monkeypatch.setattr(sr, "_plans", lambda: {"BBA Test": {"required": [], "allowed_electives": [], "general_electives": [], "restricted_codes": {"CS101": "Engineering programming"}}})
+    app_id = await _run_with_program(case_env, "BBA Test")
+    st, rows, _res = await states(case_env, app_id)
+    csa = st["AP Computer Science A"]
+    assert csa["status"] == "Not evaluated" and csa["kind"] == "not_applicable" and csa["can_include"]   # stale mapping to CS101, but applicability comes first
+    assert csa["reason"] == "Engineering programming (CS101) is not open to BBA programs" and csa["requests"] == []
+    sid = {r["title"]: r["source_id"] for r in rows}
+    assert sid["AP Computer Science A"] not in {u for stage, u in case_env.model.calls if stage == "case"}   # no agent investigation
+    row_id = next(x["id"] for x in rows if x["title"] == "AP Computer Science A")
+    assert (await case_env.client.post(f"/api/v1/applications/{app_id}/rows/{row_id}/include", headers=ADMIN)).status_code == 200   # the officer includes it anyway
+    await case_env.worker.idle()
+    st2, _r, _x = await states(case_env, app_id)
+    assert st2["AP Computer Science A"]["status"] == "Conditional" and st2["AP Computer Science A"]["kind"] == "stale"   # now it goes through the normal checks
