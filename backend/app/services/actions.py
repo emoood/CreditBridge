@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from ..db.models import Application, RowAction
 from ..runtime import rt
 from . import mapping as mp
+from . import student_record as sr
 from .mapping import ROOT
 
 RESOLVING = ("CONFIRM", "CHANGE", "REJECT", "NO_CREDIT", "CORRECT", "RECONFIRM")
@@ -61,10 +62,13 @@ def current_choice(st, act: RowAction | None) -> dict[str, Any] | None:
     return {"aud_code": s["aud_code"], "credits": s["credits"]} if s["aud_code"] else None
 
 
-def _check_target(code: str, grade: str | None) -> None:
+def _check_target(code: str, grade: str | None, program: str = "") -> None:
     repo = rt().repo
     if code not in repo.targets:
         raise ActionError(422, f"{code} is not an AUD course")
+    why_not = sr.restriction(code, program)
+    if why_not:
+        raise ActionError(409, why_not)
     fails = mp.policy_fails(grade, code, repo)
     if fails:
         raise ActionError(409, "Blocked by policy: " + "; ".join(fails))
@@ -86,7 +90,7 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
             raise ActionError(409, "There is no mapped suggestion to confirm for this course")
         chosen = {"aud_code": sug["aud_code"], "credits": sug["credits"]}
     elif action == "RECONFIRM":
-        _check_target(sug["aud_code"], row.get("grade"))
+        _check_target(sug["aud_code"], row.get("grade"), app.program)
         chosen = {"aud_code": sug["aud_code"], "credits": sug["credits"]}
     elif action in ("CHANGE", "CORRECT"):
         code = aud_code or sug["aud_code"]
@@ -94,7 +98,7 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
             raise ActionError(422, "Pick an AUD course")
         if credits is not None and not 1 <= credits <= 12:
             raise ActionError(422, "Credits must be between 1 and 12")
-        _check_target(code, row.get("grade"))
+        _check_target(code, row.get("grade"), app.program)
         chosen = {"aud_code": code, "credits": credits if credits is not None else (sug["credits"] if code == sug["aud_code"] else transfer_credits())}
         if action == "CHANGE" and code == sug["aud_code"] and chosen["credits"] == sug["credits"]:
             raise ActionError(422, "Nothing changed: use Confirm instead")
@@ -107,7 +111,7 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
 
 
 def bulk_confirmable(st) -> bool:
-    """A mapped row can be confirmed in bulk only if nothing about it needs a second look: no doubt on it, and its equivalent is not outside the program plan."""
+    """A mapped row can be confirmed in bulk only if nothing about it needs a second look: no doubt on it, and its equivalent is open to the program."""
     f = st.facts or {}
     return not f.get("_doubts") and (f.get("_class") or {}).get("value") != "Not applicable"
 

@@ -1,4 +1,4 @@
-# Restricted areas (restricted_departments, restricted_codes): an AUD course the program cannot take. The row is then "Not applicable" before any condition or stale check.
+# Superseded for classification by policies/program_constraints.yaml; kept as the program record shown with the student.
 # DUMMY program plans (placeholder data, not AUD's degree plans). Used to classify each mapped AUD equivalent for a student's program:
 #   required / allowed_electives  -> "Program course"
 #   general_electives             -> "General elective suggestion"   (counted against free_elective_credits)
@@ -9,14 +9,11 @@ programs:
     allowed_electives: [MATH 240, MATH 250, BIOL 201, ENGG 200]
     general_electives: [ECON 201, ECON 202, PSYC 201, ARTS 200, GEOG 101, SPAN 201, FREN 201]
     free_elective_credits: 6
-    restricted_departments: [ACCG, MGMT, MKTG, FINA, BUSI, BUAI]   # business-only areas
   BBA Business Administration:
     required: [ECON 201, ECON 202, ACCG 201, QUAN 201, MATH 200, MGMT 201, MKTG 201]
     allowed_electives: [PSYC 201, MATH 201]
     general_electives: [ARTS 200, GEOG 101, SPAN 201, FREN 201, BIOL 201, CHEM 201, PHYS 201]
     free_elective_credits: 6
-    restricted_departments: [ENGG, EECE, EMEC, ECVL]   # engineering areas
-    restricted_codes: {MATH 210: Engineering-sequence calculus, MATH 220: Engineering-sequence calculus, MATH 230: Engineering-sequence mathematics, MATH 231: Engineering-sequence mathematics, MATH 240: Engineering-sequence calculus}
   BSc Psychology:
     required: [PSYC 201, BIOL 201, QUAN 201]
     allowed_electives: [MATH 201, MATH 243]
@@ -27,4 +24,3 @@ programs:
     allowed_electives: [MATH 230, MATH 243, ENGG 210, BIOL 201]
     general_electives: [ECON 201, ECON 202, PSYC 201, ARTS 200, GEOG 101, SPAN 201, FREN 201]
     free_elective_credits: 6
-    restricted_departments: [ACCG, MGMT, MKTG, FINA, BUSI, BUAI]   # business-only areas

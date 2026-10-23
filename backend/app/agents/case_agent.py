@@ -72,8 +72,8 @@ def proposal_of(res: dict[str, Any]) -> CaseResult | None:
 
 
 async def run_case_review(provider: LLMProvider, repo, retriever, precedent, app_id: str) -> dict[str, Any]:
-    """The whole-application pass: the Case agent reviews ALL rows (mapped ones too), raises doubts that code corroborates, judges borderline electives
-    against the free-elective allowance and writes a short summary for the officer. It never changes a row's status."""
+    """The whole-application pass: the Case agent reviews ALL rows (mapped ones too), raises doubts that code corroborates, (no elective judging: code classifies every course)
+    and writes a short summary for the officer. It never changes a row's status."""
     ctx = CaseContext(repo, retriever, "case", "", precedent=precedent, app_id=app_id, row_id="", provider=provider)
     s = get_settings()
     outcome = await run_bounded_agent(provider, TracedRegistry(REVIEW_TOOLS), ctx, system=PROMPT, user=json.dumps({"mode": "review_all"}), final_model=CaseFinding,

@@ -10,6 +10,7 @@ from ..config import get_settings
 from ..db.models import Application, Job, RowAction
 from ..db.session import app_session
 from ..runtime import rt
+from ..services import student_record as sr
 from ..services import actions as ac
 from ..services import sheet as sh
 from ..services import usage
@@ -210,8 +211,9 @@ def apply_corrections(app_id: str, body: ApplyIn, x_role: str | None = Header(de
 
 
 @router.get("/catalog/search")
-def search_catalog(q: str, limit: int = 8):
-    """Search AUD courses for a Change. Subject areas that never take transfer credit are never offered."""
+def search_catalog(q: str, limit: int = 8, program: str = ""):
+    """Search AUD courses for a Change. Areas that never take transfer credit, and courses blocked for the student's program, are never offered."""
     R = rt()
     hits = R.retriever.search(q, min(limit, 3)) if q.strip() else []
+    hits = [c for c in hits if not sr.restriction(R.repo.targets[c.course_id]["code"], program)]
     return [{"code": c.course_id, "title": R.repo.targets[c.course_id]["title"], "level": R.repo.targets[c.course_id]["level"]} for c in hits]
