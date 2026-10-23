@@ -26,7 +26,7 @@ export type Job = { id: string; app_id?: string; phase?: 'READING' | 'EVALUATION
   courses: Record<string, string>; errors: Record<string, string>; route: string; model: string;
   llm_calls: number; activity: { ts: number; kind: string; course?: string; tool?: string; stage?: string; role?: string; ok?: boolean; duration_s?: number }[] };
 export type Institution = { demo_mode?: boolean; institution: string; transfer_credits: number; display: { mark: boolean; school_credits: boolean; aud_credits: boolean; grade_year: boolean } };
-export type ActionInfo = { id: number; row_id: string; action: 'CONFIRM' | 'CHANGE' | 'REJECT' | 'NO_CREDIT' | 'SEND_FOR_REVIEW' | 'CORRECT'; actor: string; at: string;
+export type ActionInfo = { id: number; row_id: string; action: 'CONFIRM' | 'CHANGE' | 'REJECT' | 'NO_CREDIT' | 'SEND_FOR_REVIEW' | 'CORRECT' | 'RECONFIRM'; actor: string; at: string;
   original: { aud_code: string | null; credits: number | null; status: string; mapping_version?: string }; chosen: { aud_code?: string; credits?: number }; reason: string; batch: boolean };
 export type SheetLine = { row_id: string; source_course: string; grade: string; aud_code: string | null; aud_equivalent: string; aud_credits: number | null; status: string; action: string };
 export type SheetCheck = { row_id: string; source_course: string; check: string; message: string };
@@ -39,7 +39,7 @@ export type Finding = { headline: string; questions_for_chair?: string[]; needs?
 export type DraftedRequest = { id: string; what: string; why: string; to: string; status: 'DRAFT' | 'SENT' | 'RECEIVED' };
 export type RowStatus = 'Mapped' | 'Conditional' | 'No mapping' | 'Waiting on document' | 'Not evaluated';
 export type RowStateInfo = { row_id: string; status: RowStatus; kind: string; reason: string; can_include: boolean; included_override: boolean;
-  mapping: { aud_code: string; aud_credits: number; version: string; status: string; condition: { type: string; value: unknown; evidence?: string } | null } | null;
+  mapping: { aud_code: string; aud_credits: number; version: string; status: string; programs?: string[] | null; condition: { type: string; value: unknown; evidence?: string } | null } | null;
   condition_result: { status: string; reason: string; missing: { field: string; evidence: string }[] } | null; finding: Finding | null; requests: DraftedRequest[]; facts: Record<string, unknown>;
   classification?: ProgramClass | null; doubts?: Doubt[] };
 export type ProgramClass = { value: 'Program course' | 'General elective suggestion' | 'Not applicable'; why: string; by: 'code' | 'case_agent'; aud_code: string };

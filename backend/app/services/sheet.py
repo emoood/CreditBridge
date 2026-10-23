@@ -13,7 +13,7 @@ from . import actions as ac
 from . import mapping as mp
 
 COLUMN_NAMES = {"source_course": "Source course", "grade": "Grade", "aud_equivalent": "AUD equivalent", "aud_credits": "AUD credits", "status": "Status"}
-CREDITED = ("CONFIRM", "CHANGE", "CORRECT")
+CREDITED = ("CONFIRM", "CHANGE", "CORRECT", "RECONFIRM")
 
 
 def columns() -> list[str]:
@@ -71,7 +71,7 @@ def build(db: Session, app: Application, overrides: dict[str, dict[str, Any]] | 
                     fail("credits_match", f"Sheet says {ln['aud_credits']} credits but the mapping record says {live.aud_credits}")
             if st.status != mp.MAPPED:
                 fail("no_unresolved_confirmed", f"Marked confirmed but the row is now '{st.status}'")
-        if ln["action"] in ("CHANGE", "CORRECT") and not (isinstance(ln["aud_credits"], int) and 1 <= ln["aud_credits"] <= 12):
+        if ln["action"] in ("CHANGE", "CORRECT", "RECONFIRM") and not (isinstance(ln["aud_credits"], int) and 1 <= ln["aud_credits"] <= 12):
             fail("credits_match", f"Credits {ln['aud_credits']} are not a valid number (1 to 12)")
         if confirmed and not ln["aud_code"]:
             fail("no_unresolved_confirmed", "Marked confirmed but has no AUD course")

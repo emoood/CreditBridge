@@ -6,8 +6,8 @@ import type { ActionInfo, AppInfo, CaseResult, Job, ProgramClass, Row, RowStateI
 export type { RowStatus };
 export type AppStatus = 'Processing' | 'Needs you' | 'Waiting on document' | 'Ready';
 
-const RESOLVING = ['CONFIRM', 'CHANGE', 'REJECT', 'NO_CREDIT', 'CORRECT'];
-export const RESOLUTION_LABEL: Record<string, string> = { CONFIRM: 'Confirmed', CHANGE: 'Changed', REJECT: 'Rejected', NO_CREDIT: 'No credit', CORRECT: 'Corrected' };
+const RESOLVING = ['CONFIRM', 'CHANGE', 'REJECT', 'NO_CREDIT', 'CORRECT', 'RECONFIRM'];
+export const RESOLUTION_LABEL: Record<string, string> = { CONFIRM: 'Confirmed', CHANGE: 'Changed', REJECT: 'Rejected', NO_CREDIT: 'No credit', CORRECT: 'Corrected', RECONFIRM: 'Re-confirmed' };
 
 export type Item = {
   key: string;            // result unit key (source id) or row id
@@ -64,7 +64,7 @@ export function classify(row: Row | null, result: CaseResult | null, included: b
 }
 
 export type Built = {
-  items: Item[]; relevant: Item[]; needsInput: Item[]; notEvaluated: Item[]; electives: Item[];
+  items: Item[]; relevant: Item[]; needsInput: Item[]; notEvaluated: Item[]; electives: Item[]; notApplicable: Item[];
   counts: { mapped: number; conditional: number; noMapping: number; waiting: number; notEvaluated: number; resolved: number; unresolved: number; total: number; confirmable: number };
 };
 
@@ -85,8 +85,8 @@ export function build(app: AppInfo, results: CaseResult[], pending: { key: strin
   items.sort((a, b) => Number(a.resolved) - Number(b.resolved) || rank[a.status] - rank[b.status]);
   const relevant = items.filter(i => i.status !== 'Not evaluated');
   const n = (s: RowStatus) => relevant.filter(i => i.status === s).length;
-  return { items, relevant, needsInput: items.filter(i => i.needsInput), notEvaluated: items.filter(i => i.status === 'Not evaluated'), electives: relevant.filter(i => i.cls?.value === 'General elective suggestion'),
-    counts: { mapped: n('Mapped'), conditional: n('Conditional'), noMapping: n('No mapping'), waiting: n('Waiting on document'), notEvaluated: items.length - relevant.length,
+  return { items, relevant, needsInput: items.filter(i => i.needsInput), notEvaluated: items.filter(i => i.status === 'Not evaluated' && i.state?.kind !== 'not_applicable'), notApplicable: items.filter(i => i.state?.kind === 'not_applicable'), electives: relevant.filter(i => i.cls?.value === 'General elective suggestion'),
+    counts: { mapped: n('Mapped'), conditional: n('Conditional'), noMapping: n('No mapping'), waiting: n('Waiting on document'), notEvaluated: items.filter(i => i.status === 'Not evaluated' && i.state?.kind !== 'not_applicable').length,
       resolved: relevant.filter(i => i.resolved).length, unresolved: relevant.filter(i => !i.resolved).length, total: items.length,
       confirmable: relevant.filter(i => i.status === 'Mapped' && !i.resolved && !!i.state && !i.doubts && i.cls?.value !== 'Not applicable').length } };
 }
@@ -124,3 +124,44 @@ export const toTsv = (s: Sheet) => sheetRows(s).map(r => r.map(c => c.replace(/[
 export const toCsv = (s: Sheet) => sheetRows(s).map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
 
 export const CLASS_LABEL: Record<string, string> = { 'Program course': 'Program course', 'General elective suggestion': 'Elective suggestion', 'Not applicable': 'Not in the plan' };
+
+
+// ---- the review modal: what each open row needs, in one plain sentence, and the one button that moves it forward
+export type OpenKind = 'score' | 'document' | 'pick' | 'reconfirm' | 'review';
+export type Need = { sentence: string; primary: string; kind: OpenKind };
+
+/** Ready = decided by the officer, or mapped with nothing to look at. Open = everything else that is relevant. */
+export const isReady = (i: Item) => i.status !== 'Not evaluated' && (i.resolved || (i.status === 'Mapped' && !i.doubts && i.cls?.value !== 'Not applicable'));
+export const isOpen = (i: Item) => i.status !== 'Not evaluated' && !isReady(i);
+
+export function needOf(i: Item, program: string): Need {
+  const s = i.state; const cond = s?.mapping?.condition; const code = s?.mapping?.aud_code ?? '';
+  const missing = s?.condition_result?.missing ?? [];
+  if (i.status === 'Mapped') {
+    const d = s?.doubts?.[0];
+    return { sentence: d ? d.reason : `${code} is not on the ${program || 'program'} plan.`, primary: 'Review', kind: 'review' };
+  }
+  if (i.status === 'Waiting on document') {
+    const req = (s?.requests ?? []).find(q => q.status !== 'RECEIVED');
+    return { sentence: `Waiting on: ${req?.what ?? missing[0]?.evidence ?? 'a document'}.`, primary: 'Add document', kind: 'document' };
+  }
+  if (s?.kind === 'stale') return { sentence: `The mapping to ${code} is out of date (version ${s.mapping?.version}) and needs re-confirming.`, primary: 'Re-confirm mapping', kind: 'reconfirm' };
+  if (s?.kind === 'condition_missing') {
+    if (missing.some(m => m.field === 'exam_score') && cond?.type === 'min_exam_score') return { sentence: `Needs an AP score of ${String(cond.value)} or higher. No score on file.`, primary: 'Add score', kind: 'score' };
+    return { sentence: s.condition_result?.reason ?? s.reason, primary: 'Add document', kind: 'document' };
+  }
+  if (s?.kind === 'condition_unmet') return { sentence: s.condition_result?.reason ?? s.reason, primary: 'Pick a course', kind: 'pick' };
+  if (s?.kind === 'rule_blocked') return { sentence: s.reason, primary: 'Pick a course', kind: 'pick' };
+  return { sentence: s?.kind === 'unmapped' ? 'No AUD course is mapped to this subject yet.' : (s?.reason ?? ''), primary: 'Pick a course', kind: 'pick' };
+}
+
+const KIND_WORDS: Record<OpenKind, string> = { score: 'an exam score', document: 'a document', pick: 'a course', reconfirm: 'a stale mapping to re-confirm', review: 'a second look' };
+/** One plain sentence about the case, built from the current rows. The Case agent's own sentence is used only when every course it names is still open (a recording can be older than the rows). */
+export function plainSummary(b: Built, program: string, agentText: string): string {
+  const open = b.relevant.filter(isOpen);
+  const first = agentText.split(/(?<=[.!?])\s/)[0] ?? '';
+  const names = b.items.filter(i => first.includes(i.title) && i.title.length > 3);
+  if (first && names.every(i => isOpen(i)) && names.length > 0) return first;
+  if (open.length === 0) return b.relevant.length ? 'Every course is ready to confirm.' : '';
+  return `Needs you: ${open.map(i => `${i.title} (${KIND_WORDS[needOf(i, program).kind]})`).join(', ')}.`;
+}

@@ -217,3 +217,15 @@ async def test_propose_fix_is_refused_without_a_failure_and_when_the_recheck_fai
     assert not wrong.ok and "does not hold" in wrong.error        # the record says CS102: the fix still fails the check
     right = await reg.execute(ToolCall("3", "propose_fix", {"row_id": rid["AP Statistics"], "aud_code": "CS102", "why": "match the record"}), ctx)
     assert right.ok and ctx.proposals[rid["AP Statistics"]]["rechecked"]
+
+
+async def test_a_stale_mapping_can_be_reconfirmed_by_the_officer_and_still_passes_the_sheet_checks(case_env):
+    app_id = await run_to_review(case_env)
+    _, rows, _ = await states(case_env, app_id)
+    csa = next(r for r in rows if r["title"] == "AP Computer Science A")
+    r = await case_env.client.post(f"/api/v1/applications/{app_id}/rows/{csa['id']}/action", json={"action": "RECONFIRM"}, headers=ADMIN)
+    assert r.status_code == 200 and r.json()["chosen"]["aud_code"] == "CS101" and r.json()["original"]["kind"] == "stale"
+    stat = next(x for x in rows if x["title"] == "AP Statistics")
+    assert (await case_env.client.post(f"/api/v1/applications/{app_id}/rows/{stat['id']}/action", json={"action": "RECONFIRM"}, headers=ADMIN)).status_code == 409   # only a stale mapping
+    sheet = (await case_env.client.get(f"/api/v1/applications/{app_id}/sheet")).json()
+    assert sheet["ok"] and any(ln["row_id"] == csa["id"] and ln["aud_code"] == "CS101" and ln["status"] == "Confirmed" for ln in sheet["rows"])

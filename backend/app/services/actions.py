@@ -6,6 +6,7 @@ REJECT   refuse the suggestion; no credit (reason required)
 NO_CREDIT  no credit for this course (reason required)
 SEND_FOR_REVIEW  ask for a review package; not a resolution
 CORRECT  an officer-applied auditor correction (shows before and after)
+RECONFIRM  the officer re-confirms a STALE mapping against the catalog (the mapping stays as suggested; the record shows who re-confirmed it)
 APPROVE  the final approval of the whole sheet (all relevant rows resolved, checks passing)"""
 from typing import Any
 
@@ -18,7 +19,7 @@ from ..runtime import rt
 from . import mapping as mp
 from .mapping import ROOT
 
-RESOLVING = ("CONFIRM", "CHANGE", "REJECT", "NO_CREDIT", "CORRECT")
+RESOLVING = ("CONFIRM", "CHANGE", "REJECT", "NO_CREDIT", "CORRECT", "RECONFIRM")
 NEEDS_REASON = ("CHANGE", "REJECT", "NO_CREDIT")
 
 
@@ -74,6 +75,8 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
     st = mp.get_state(db, app.id, row["id"])
     if st is None or st.status == mp.NOT_EVAL:
         raise ActionError(409, "This course is not evaluated; include it first")
+    if action == "RECONFIRM" and not (st.kind == "stale" and st.mapping):
+        raise ActionError(409, "Only a stale mapping can be re-confirmed")
     if action in NEEDS_REASON and not reason.strip():
         raise ActionError(422, "A reason is required")
     sug = suggestion(st)
@@ -81,6 +84,9 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
     if action == "CONFIRM":
         if st.status != mp.MAPPED or not sug["aud_code"]:
             raise ActionError(409, "There is no mapped suggestion to confirm for this course")
+        chosen = {"aud_code": sug["aud_code"], "credits": sug["credits"]}
+    elif action == "RECONFIRM":
+        _check_target(sug["aud_code"], row.get("grade"))
         chosen = {"aud_code": sug["aud_code"], "credits": sug["credits"]}
     elif action in ("CHANGE", "CORRECT"):
         code = aud_code or sug["aud_code"]

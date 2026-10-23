@@ -86,3 +86,6 @@ Per vision call 4 to 13 s per block; vision now reads every upload including dig
 
 ## Note on the A2 prepared run (code changed after it was recorded)
 `demo_a2` was recorded before two reading fixes: credits that the model filed under "points" now move to credits when the letter grade proves it, and totals the model reports for a page whose text layer prints none are dropped. Because Demo mode plays the model's replies through live code, the replayed extraction is clean (11 rows, no flags). The activity drawer still shows four refused `flag_cell` calls, because the recorded agent flagged cells that no longer fail. Re-record A2 with the current code (`python scripts/overnight_runs.py a2`) to remove them.
+
+## Note: Rania's demo data changed after `demo_a2` was recorded
+For Rania (BBA) AP Statistics is now conditional on an exam score of at least 4 and AP Microeconomics has a stale mapping; AP Calculus AB and AP Computer Science A are now "Not applicable" (engineering areas are restricted for BBA programs). The recorded Case agent replies do not cover the two new open rows, so in Demo mode those rows use the code's verdict and sentence (the review modal never shows raw agent text). Re-record A2 to capture the agents' work for the new situation: `python scripts/overnight_runs.py a2`.
