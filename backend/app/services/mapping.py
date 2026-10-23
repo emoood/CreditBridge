@@ -166,6 +166,13 @@ def save_state(db: Session, app_id: str, row_id: str, **fields: Any) -> RowState
     return st
 
 
+def merge_facts(db: Session, app_id: str, row_id: str, **kv: Any) -> None:
+    """Add/replace keys in the row's facts without touching the others (agent judgments live under keys starting with an underscore)."""
+    st = get_state(db, app_id, row_id)
+    if st is not None:
+        save_state(db, app_id, row_id, facts={**(st.facts or {}), **kv})
+
+
 def get_state(db: Session, app_id: str, row_id: str) -> RowState | None:
     return db.scalar(select(RowState).where(RowState.app_id == app_id, RowState.row_id == row_id))
 
@@ -173,4 +180,5 @@ def get_state(db: Session, app_id: str, row_id: str) -> RowState | None:
 def state_dict(st: RowState) -> dict[str, Any]:
     return {"row_id": st.row_id, "status": st.status, "kind": st.kind, "reason": st.reason, "can_include": st.can_include,
             "included_override": st.included_override, "mapping": st.mapping, "condition_result": st.condition_result,
-            "finding": st.finding, "requests": st.requests or [], "facts": st.facts or {}}
+            "finding": st.finding, "requests": st.requests or [], "facts": st.facts or {},
+            "classification": (st.facts or {}).get("_class"), "doubts": (st.facts or {}).get("_doubts", [])}

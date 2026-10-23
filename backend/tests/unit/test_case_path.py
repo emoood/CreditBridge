@@ -87,3 +87,20 @@ async def test_one_click_include_runs_a_not_evaluated_row_and_the_ledger_is_serv
     assert st["Film Appreciation"]["status"] == "No mapping" and st["Film Appreciation"]["included_override"]
     act = (await case_env.client.get(f"/api/v1/applications/{app_id}/activity")).json()
     assert act["usage"]["calls"] > 0 and act["usage"]["cost_usd"] == 0 and any(e["name"] == "lookup" for e in act["trace"])
+
+
+# ---- program-aware mapping and the student record
+def test_student_record_by_case_number():
+    from app.services import student_record as sr
+    rec = sr.load_record("cb-2026-0102")
+    assert rec["name"] == "Daniel Ferreira" and rec["program"] == "BSc Computer Engineering" and rec["term"] and rec["curriculum"]
+    assert sr.load_record("nope") is None
+
+
+def test_classification_against_program_plan():
+    from app.services import student_record as sr
+    eng = "BSc Computer Engineering"
+    assert sr.classify("MATH 210", eng)["value"] == sr.PROGRAM
+    assert sr.classify("ECON 201", eng)["value"] == sr.ELECTIVE  # business course for an engineering student: elective suggestion
+    assert sr.classify("QUAN 201", eng)["value"] == sr.NOT_APPLICABLE
+    assert sr.classify("MATH 210", "No such program") is None

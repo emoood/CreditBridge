@@ -1,0 +1,7 @@
+# DEMO student records, looked up by case number (stands in for the student information system). All people are invented.
+# A record gives the name, contact, program, entry term and curriculum, so the officer does not retype them and the agents can check against them.
+students:
+  CB-2026-0101: {name: Maya Okonkwo, student_id: SYN-1001, email: maya.okonkwo@example.invalid, phone: "+971 50 000 0101", program: BSc Computer Engineering, term: Fall 2026, curriculum: Advanced Placement}
+  CB-2026-0102: {name: Daniel Ferreira, student_id: SYN-1002, email: daniel.ferreira@example.invalid, phone: "+971 50 000 0102", program: BSc Computer Engineering, term: Fall 2026, curriculum: Advanced Placement}
+  CB-2026-0103: {name: Sofia Lindqvist, student_id: SYN-1003, email: sofia.lindqvist@example.invalid, phone: "+971 50 000 0103", program: BSc Psychology, term: Fall 2026, curriculum: Advanced Placement}
+  CB-2026-0104: {name: Rania Haddad, student_id: SYN-1004, email: rania.haddad@example.invalid, phone: "+971 50 000 0104", program: BBA Business Administration, term: Fall 2026, curriculum: Advanced Placement}

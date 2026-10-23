@@ -13,6 +13,7 @@ from sqlalchemy import select
 from ..config import get_settings
 from ..db.models import Application, Job
 from ..db.session import app_session
+from ..services import student_record as sr
 from ..services.curriculum import curriculum
 from ..services.documents import UploadError, render_page_png, save_upload
 from ..services.linking import autolink, candidates, subject_ref
@@ -44,7 +45,7 @@ def get_application(app_id: str):
 
 @router.post("/applications")
 async def create_application(file: UploadFile = File(...),  # noqa: B008
-                             student_label: str = Form(""), student_id: str = Form(""), plant_misread: str = Form(""), program: str = Form(""), qualification: str = Form(""),
+                             student_label: str = Form(""), student_id: str = Form(""), plant_misread: str = Form(""), program: str = Form(""), qualification: str = Form(""), case_number: str = Form(""),
                              x_role: str | None = Header(default=None)):
     """Store + hash the file, create the application and the reading job, return immediately. Reading happens in the worker."""
     data = await file.read()
@@ -52,9 +53,14 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         doc = save_upload(get_settings().document_root, file.filename or "upload", data, 15, 40)
     except UploadError as e:
         raise HTTPException(400, str(e)) from e
+    rec = sr.load_record(case_number) if case_number.strip() else None
+    if case_number.strip() and rec is None:
+        raise HTTPException(404, f"No student record for case number {case_number.strip()}")
+    if rec:  # the case number loads name, ID, contact, program, term and curriculum from the (demo) student data
+        student_label, student_id, program, qualification = rec["name"], rec["student_id"], rec["program"], qualification or rec["curriculum"]
     with app_session() as db:
         app = Application(id=f"APP-{uuid.uuid4().hex[:8].upper()}", kind="upload", student=student_label.strip() or "Uploaded transcript",
-                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={"student_id": student_id.strip(), **({"planted_misread": {"subject": "AP Chemistry", "field": "mark", "wrong": 65}} if plant_misread.strip().lower() in ("1", "true", "on") and get_settings().demo_mode else {})})
+                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={"student_id": student_id.strip(), **({"student_record": rec} if rec else {}), **({"planted_misread": {"subject": "AP Chemistry", "field": "mark", "wrong": 65}} if plant_misread.strip().lower() in ("1", "true", "on") and get_settings().demo_mode else {})})
         job = Job(id=uuid.uuid4().hex[:12], app_id=app.id, phase="READING", status="QUEUED")
         db.add_all([app, job])
         db.commit()
@@ -62,6 +68,15 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         out = {**app_summary(db, app), "job_id": job.id}
     worker.enqueue(out["job_id"])
     return out
+
+
+@router.get("/students/{case_number}")
+def student_record(case_number: str):
+    """The (demo) student record for a case number, so the upload form can show who this is before the file is read."""
+    rec = sr.load_record(case_number)
+    if rec is None:
+        raise HTTPException(404, "No student record for this case number")
+    return {**rec, "plan": sr.plan_for(rec["program"])}
 
 
 class StudentPatch(BaseModel):

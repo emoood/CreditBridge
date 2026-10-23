@@ -19,6 +19,7 @@ from ..services import extraction_checks as xc
 from ..services import grade_checks as gc
 from ..services import mapping as mp
 from ..services import recording, usage
+from ..services import student_record as sr
 from ..services import vision_reader as vr
 from ..services.curriculum import curriculum
 from ..services.extraction import extract_transcript
@@ -289,9 +290,26 @@ def _lookup_rows(db, app: Application, rows: list[dict[str, Any]]) -> dict[str, 
                            mapping=verdict["mapping"], condition_result=verdict["condition_result"])
         if verdict["status"] == mp.MAPPED:
             mp.save_state(db, app.id, r["id"], finding=None)
+        _classify_row(db, app, r["id"], verdict["mapping"])
         out[r["id"]] = mp.state_dict(st)
     usage.trace(app.id, "", "code", "lookup", {"rows": len(rows), **{k: sum(1 for v in out.values() if v["status"] == k) for k in (mp.MAPPED, mp.CONDITIONAL, mp.NO_MAPPING, mp.WAITING, mp.NOT_EVAL)}})
     return out
+
+
+def _classify_row(db, app: Application, row_id: str, mapping: dict[str, Any] | None) -> None:
+    """Program-aware mapping: the code class of the mapped AUD equivalent against the student's program plan. A Case-agent judgment on the SAME
+    course is kept (it is only replaced when the mapped course changes)."""
+    st = mp.get_state(db, app.id, row_id)
+    old = (st.facts or {}).get("_class") if st else None
+    code = (mapping or {}).get("aud_code")
+    cls = sr.classify(code, app.program)
+    if cls is None:
+        if old is not None:
+            mp.merge_facts(db, app.id, row_id, _class=None)
+        return
+    if old and old.get("aud_code") == code and old.get("by") == "case_agent":
+        return
+    mp.merge_facts(db, app.id, row_id, _class=cls)
 
 
 async def _work_unit(db, job: Job, app: Application, row: dict[str, Any], u, provider: LLMProvider, mode: str = "work") -> None:
