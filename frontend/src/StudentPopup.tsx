@@ -9,6 +9,7 @@ import { appStatus, build, classLabel, curriculumOf, DOUBT_LABEL, isOpen, plainS
 import { AppPill, RowStatusText } from './ui';
 import { useApp, useInclude, useInstitution } from './useApp';
 import { useDemo } from './demo';
+import { OutboxButton } from './Outbox';
 
 export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: { appId: string; role: string; quals: string[]; qual: string; onClose: () => void; onChanged: () => void }) {
   const { data, error, refresh } = useApp(appId);
@@ -89,7 +90,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
       <div><small>STUDENT</small><h2>{app.student}</h2>
         <p className="muted">ID {app.student_id || app.id} · {app.program || curriculumOf(app, results)}{app.program ? ` · ${curriculumOf(app, results)}` : ''}{app.student_record?.term ? ` · ${app.student_record.term}` : ''}{app.student_record ? ` · case ${app.student_record.case_number}` : ''}</p>
         {app.student_record && <details className="rv-contact"><summary>Contact details</summary><p className="muted">{app.student_record.email} · {app.student_record.phone}</p></details>}</div>
-      <div className="pop-head-right">{approved ? <span className="approved-tag"><Check size={13} /> Approved</span> : isUpload && !reading && !gate && !evaluating ? null : <AppPill s={status} />}<button className="icon-button" onClick={onClose} aria-label="Close"><X size={22} /></button></div>
+      <div className="pop-head-right">{approved ? <span className="approved-tag"><Check size={13} /> Approved</span> : isUpload && !reading && !gate && !evaluating ? null : <AppPill s={status} />}<OutboxButton appId={appId} role={role} onChanged={reload} /><button className="icon-button" onClick={onClose} aria-label="Close"><X size={22} /></button></div>
     </header>
     {app.replay && <div className="replay-banner"><History size={15} /> <span><strong>{app.replay.label}</strong>. {app.replay.live.length ? `Nothing here was produced just now except ${app.replay.live.length} course(s) run live.` : 'Nothing here was produced just now: no model was called.'}</span></div>}
     {err && <div className="eval-error"><AlertCircle size={15} /> {err}</div>}
