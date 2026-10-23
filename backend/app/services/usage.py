@@ -4,6 +4,7 @@ from typing import Any
 
 from sqlalchemy import select
 
+from ..config import get_settings
 from ..db.models import TraceEvent, UsageEntry
 from ..db.session import app_session
 from ..providers.base import LLMProvider, LLMRequest, LLMResponse, ProviderHealth
@@ -23,6 +24,9 @@ class MeteredProvider:
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
         resp = await self.inner.complete(request)
+        if get_settings().demo_mode and not getattr(self.inner, "is_demo", False):  # demo mode is synthetic data only: keep the raw reply so the run can be saved as a prepared run
+            from .prepared import capture
+            capture(self.app_id, request, resp)
         pin, pout = COST_PER_MTOK_USD.get(resp.model, (0.0, 0.0))
         with app_session() as db:
             db.add(UsageEntry(app_id=self.app_id, row_id=self.row_id, stage=request.stage, provider=resp.provider, model=resp.model, seconds=resp.duration_s,

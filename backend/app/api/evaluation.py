@@ -9,7 +9,19 @@ from sqlalchemy import delete, select
 
 from ..agents.precedent import Precedent
 from ..config import get_settings
-from ..db.models import Application, AuditEvent, Decision, Job, JobUnit, RowState, TraceEvent, UsageEntry, iso
+from ..db.models import (
+    Application,
+    AuditEvent,
+    Decision,
+    Job,
+    JobUnit,
+    ModelLog,
+    RowAction,
+    RowState,
+    TraceEvent,
+    UsageEntry,
+    iso,
+)
 from ..db.session import app_session
 from ..devlog import events
 from ..runtime import reset_runtime, rt
@@ -181,7 +193,7 @@ def reset():
     with app_session() as db:
         if _active(db):
             raise HTTPException(409, "A job is queued or running")
-        for model in (RowState, TraceEvent, UsageEntry, JobUnit, Decision, AuditEvent, Job, Application):
+        for model in (RowState, RowAction, ModelLog, TraceEvent, UsageEntry, JobUnit, Decision, AuditEvent, Job, Application):
             db.execute(delete(model))
         db.commit()
     reset_runtime()

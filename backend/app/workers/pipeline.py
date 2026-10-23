@@ -1,6 +1,7 @@
 """The two background phases. Phase 1 (reading) ends at the officer gate. Phase 2 (evaluation) runs only after confirmation.
 Every unit is idempotent: re-running one overwrites only its own result and can never create or change a human decision."""
 import asyncio
+import hashlib
 import time
 import uuid
 from typing import Any
@@ -129,9 +130,9 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
 
         # ---- stage curriculum (read-only lookup; unrecognized subjects are flagged, never guessed)
         rows = []
-        for r in merged["rows"]:
+        for i, r in enumerate(merged["rows"]):
             grade = r.get("letter") or (f"{r['mark']:g}" if r.get("mark") is not None else "")
-            rows.append({"id": uuid.uuid4().hex[:8], "code": r.get("code") or "", "title": r.get("subject") or "", "title_ar": "",
+            rows.append({"id": _row_id(app, i, r.get("subject")), "code": r.get("code") or "", "title": r.get("subject") or "", "title_ar": "",
                          "credits": f"{r['credits']:g}" if r.get("credits") is not None else "", "grade": grade,
                          "mark": r.get("mark"), "points": r.get("points"), "term": r.get("term") or "", "page": r.get("page", 1),
                          "evidence_ref": "", "uncertain_fields": r.get("uncertain", []), "flags": r.get("flags", []),
@@ -163,6 +164,11 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         job.flags = (["BLOCKS_FAILED"] if failed else []) + (["UNRECOGNIZED_SUBJECTS"] if unrecognized else []) + (["CHECK_FLAGS"] if merged["flags"] else [])
         db.commit()
         store.audit(db, app.id, "system", "extraction_review_required", job.id, rows=len(rows), failed_blocks=len(failed), unrecognized=unrecognized)
+
+
+def _row_id(app: Application, index: int, title: str | None) -> str:
+    """A row id that depends only on the document and the row's place in it, so the same file always gives the same ids (a prepared run can then refer to rows)."""
+    return hashlib.sha1(f"{(app.document or {}).get('sha256', app.id)}|{index}|{title or ''}".encode()).hexdigest()[:8]
 
 
 def gc_merge(results: list[dict[str, Any]], scale: dict[str, Any]) -> dict[str, Any]:

@@ -192,3 +192,15 @@ class RowAction(Base):
     chosen: Mapped[dict] = mapped_column(JSON, default=dict)  # what the officer settled on: aud_code, credits (None = no credit)
     reason: Mapped[str] = mapped_column(Text, default="")
     batch: Mapped[bool] = mapped_column(default=False)  # created by "Confirm all mapped"
+
+
+class ModelLog(Base):
+    """The model's raw reply to every call of an application, kept ONLY in demo mode (synthetic data) so a finished real run can be saved as a prepared run.
+    Keyed by what the call was (stage, run key, index), not by when it happened."""
+    __tablename__ = "model_log"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    app_id: Mapped[str] = mapped_column(String(40), index=True)
+    stage: Mapped[str] = mapped_column(String(30))
+    runkey: Mapped[str] = mapped_column(String(20))
+    idx: Mapped[int] = mapped_column(Integer, default=0)
+    response: Mapped[dict] = mapped_column(JSON, default=dict)

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     database_url: str = ""  # curriculum database (Supabase), read-only
     app_database_url: str = "postgresql+psycopg:///creditbridge"  # this app's own state: local PostgreSQL, never Supabase
     document_root: str = "./data/documents"
+    demo_stage_seconds: float = 0.5  # Demo mode, speed "fast": about this long per stage ("instant" = 0)
     recordings_root: str = "./data/recordings"  # recorded real runs for replay (local, gitignored)
     catalog: str = "demo"  # demo (synthetic, used by fixtures/tests) | aud_2026_2027 (real AUD catalog, descriptions only)
 
