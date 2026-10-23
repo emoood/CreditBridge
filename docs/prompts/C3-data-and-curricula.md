@@ -6,7 +6,7 @@ A2. Grade conversion tables to "C equivalent" for AP (letter and exam score), A 
 A3. Mapping tables for IB, A Level, French Bac from the admissions sheets, converted like mapping_ap.csv (same columns, version, status values; do not guess codes; report rows with no AUD code, duplicates and credits other than 3), files mapping_ib.csv, mapping_alevel.csv, mapping_frenchbac.csv.
 A4. Decide and record in REQUIREMENTS.md open items: how a 4-credit course counts in a 3-credit slot; repeated courses (latest or best); age-of-course limit; university transfer minimum grade and credit conversion (credits vs ECTS vs hours).
 
-Part B: code (Claude Code, branch C3, after C1 is merged and part A is in)
+Part B: code (Claude Code, after C1 is merged and part A is in)
 Audit first. Labels: [CODE] deterministic, [AGENT] model-driven with code verifying.
 B1. [CODE] Load the elective lists; a mapped course matches a program-elective slot when it is on that slot's list (placement order step 4 in REQUIREMENTS section 6.3). Files: placement loader only through a small addition in a new file; ask Emad before editing placement.py.
 B2. [CODE] Load the grade scales per curriculum and enforce the C-equivalent minimum for each (AP, IB, A Level, French Bac). Below the minimum goes to Not applicable with the reason "Grade below C equivalent, not eligible for transfer credit". Edge cases: pass/fail, missing grade (request, never assume), predicted grades, in-progress and withdrawn courses, repeated courses, a numeric-only grade.
@@ -14,4 +14,4 @@ B3. [CODE] Load the new mapping files through the same loader as mapping_ap.csv 
 B4. University transfer path: Intake sets student type from the header; credits are required (missing means a request item), major is required (missing means a request), every course is a new-course case so a request for syllabus or outline with learning outcomes, credits and the official transcript is raised automatically; matching uses the C2 syllabus comparison. Handle: different credit systems, courses older than the age limit from A4, a grade scale from another university, several universities on one transcript, an unrecognised institution (flag for the officer), a transcript in Arabic or French.
 B5. Tests (small): one case per new curriculum through grade check and mapping; one university transfer case that raises requests.
 
-Finish: change log docs/changes/C3.md, a line in INDEX.md, C3 row status, pull request. Final report under 20 lines.
+Finish: change log docs/changes/C3.md, a line in INDEX.md, C3 row status, push to main. Final report under 20 lines.

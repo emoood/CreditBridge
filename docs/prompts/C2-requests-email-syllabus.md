@@ -1,4 +1,4 @@
-Read docs/OWNERSHIP.md and docs/REQUIREMENTS.md (sections 8 and 9) first. Chunk C2, branch C2. C0 is merged. Follow the Git, Rules and Change log sections in OWNERSHIP.md. Only edit the files OWNERSHIP.md allows for C2.
+Read docs/OWNERSHIP.md and docs/REQUIREMENTS.md (sections 8 and 9) first. Chunk C2. C0 is merged. Follow the Git, Rules and Change log sections in OWNERSHIP.md. Only edit the files OWNERSHIP.md allows for C2.
 Audit first (a few lines), then build in order, one commit per step. Labels: [CODE] deterministic, [AGENT] model-driven with code verifying.
 
 What already exists (verify, do not rebuild):
@@ -40,4 +40,4 @@ Step 6. Tests (small)
 One email per student from several items; add, remove and edit an item; simulated send writes the outbox and sends nothing; recipient not on the allowlist is refused; a reply resumes only its row; syllabus comparison with an invalid citation is downgraded; accept writes a versioned mapping row only after approval.
 
 Wording in the UI and emails: plain, short, no "need you", no "stale".
-Finish: change log docs/changes/C2.md, a line in INDEX.md, C2 row status, pull request. Final report under 15 lines: audit result, what was built, what was not, and any file outside the allowed list you had to touch and why.
+Finish: change log docs/changes/C2.md, a line in INDEX.md, C2 row status, push to main. Final report under 15 lines: audit result, what was built, what was not, and any file outside the allowed list you had to touch and why.

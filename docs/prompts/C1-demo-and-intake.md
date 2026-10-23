@@ -1,4 +1,4 @@
-Read docs/OWNERSHIP.md and docs/REQUIREMENTS.md (sections 1, 2, 3, 5) first. Chunk C1, branch C1. C0 is merged. Follow the Git, Rules and Change log sections in OWNERSHIP.md. Model runs use the local model (Ollama); do not use a paid API; retry a recording at most once.
+Read docs/OWNERSHIP.md and docs/REQUIREMENTS.md (sections 1, 2, 3, 5) first. Chunk C1. C0 is merged. Follow the Git, Rules and Change log sections in OWNERSHIP.md. Model runs use the local model (Ollama); do not use a paid API; retry a recording at most once.
 Audit first (a few lines). Reuse what exists. One commit per step, in this order. Labels: [CODE] deterministic, [AGENT] model-driven with code verifying.
 
 Step 1. [AGENT] Intake speed
@@ -20,4 +20,4 @@ Change: relabel the control as Replay / Live AI (same behavior, same screens, sa
 Step 5. Recordings (last; policies/data/ must be final, see C3 data step)
 Re-record the clean case for Rania (Finance), then the planted copy error. The planted misread only if the repair is genuine. Use scripts/overnight_runs.py if it fits. Then check: Human Geography shows Waiting on document and resumes on a score-5 style upload; the Auditor explanation matches the verified diff. Report timings per stage. Commit the recordings under fixtures/prepared_runs/ (never anything under data/).
 
-Finish: change log docs/changes/C1.md, a line in INDEX.md, C1 row status, pull request per OWNERSHIP.md. Final report under 20 lines: audit result, timings before and after, recordings made and their variants, anything you could not do.
+Finish: change log docs/changes/C1.md, a line in INDEX.md, C1 row status, push to main per OWNERSHIP.md. Final report under 20 lines: audit result, timings before and after, recordings made and their variants, anything you could not do.
