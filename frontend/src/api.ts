@@ -30,17 +30,22 @@ export type ActionInfo = { id: number; row_id: string; action: 'CONFIRM' | 'CHAN
   original: { aud_code: string | null; credits: number | null; status: string; mapping_version?: string }; chosen: { aud_code?: string; credits?: number }; reason: string; batch: boolean };
 export type SheetLine = { row_id: string; source_course: string; grade: string; aud_code: string | null; aud_equivalent: string; aud_credits: number | null; status: string; action: string };
 export type SheetCheck = { row_id: string; source_course: string; check: string; message: string };
-export type AuditReport = { status: string; summary: string; explanations: { row_id: string; explanation: string }[]; passes_after: boolean; applied: string[];
-  proposals: { row_id: string; source_course: string; why: string; from: { aud_code: string | null; credits: number | null }; to: { aud_code: string; credits: number }; touches_confirmed: boolean }[] };
-export type Sheet = { columns: string[]; headers: string[]; rows: SheetLine[]; checks: SheetCheck[]; ok: boolean; unconfirmed: number; audit: AuditReport | null; unresolved: { row_id: string; title: string; status: string }[]; approved: boolean;
+export type AuditReport = { status: string; clean?: boolean; sheet_hash?: string; summary: string; agent_comment?: string; explanations: { row_id: string; explanation: string }[]; passes_after: boolean; applied: string[]; flags?: string[];
+  warnings?: SheetCheck[]; differences?: { row_id: string; source_course: string; field: string; sheet: unknown; decision: unknown; action: string; by: string; at: string | null }[];
+  proposals: { row_id: string; source_course: string; why: string; from: { aud_code: string | null; credits: number | null }; to: { aud_code: string; credits: number }; touches_confirmed: boolean; rechecked?: boolean; restores_decision?: boolean }[] };
+export type Sheet = { sheet_hash?: string; columns: string[]; headers: string[]; rows: SheetLine[]; checks: SheetCheck[]; ok: boolean; unconfirmed: number; audit: AuditReport | null; unresolved: { row_id: string; title: string; status: string }[]; approved: boolean;
   planted: { row_id: string; source_course: string; from: string; to: string; label: string } | null; note?: string };
 export type Finding = { headline: string; questions_for_chair?: string[]; needs?: string; missing_evidence: string[]; gaps: string[]; candidates: { aud_code: string; why: string }[]; review_package: string[]; flags?: string[] };
 export type DraftedRequest = { id: string; what: string; why: string; to: string; status: 'DRAFT' | 'SENT' | 'RECEIVED' };
 export type RowStatus = 'Mapped' | 'Conditional' | 'No mapping' | 'Waiting on document' | 'Not evaluated';
 export type RowStateInfo = { row_id: string; status: RowStatus; kind: string; reason: string; can_include: boolean; included_override: boolean;
   mapping: { aud_code: string; aud_credits: number; version: string; status: string; condition: { type: string; value: unknown; evidence?: string } | null } | null;
-  condition_result: { status: string; reason: string; missing: { field: string; evidence: string }[] } | null; finding: Finding | null; requests: DraftedRequest[]; facts: Record<string, unknown> };
-export type Activity = { usage: { recorded_calls?: number; recorded_seconds?: number; live_calls?: number; calls: number; seconds: number; prompt_tokens: number; output_tokens: number; cost_usd: number; models: string[]; by_stage: Record<string, { calls: number; seconds: number }> };
+  condition_result: { status: string; reason: string; missing: { field: string; evidence: string }[] } | null; finding: Finding | null; requests: DraftedRequest[]; facts: Record<string, unknown>;
+  classification?: ProgramClass | null; doubts?: Doubt[] };
+export type ProgramClass = { value: 'Program course' | 'General elective suggestion' | 'Not applicable'; why: string; by: 'code' | 'case_agent'; aud_code: string };
+export type Doubt = { kind: string; reason: string; verified: boolean; evidence: string; by: string };
+export type StudentRecord = { case_number: string; name: string; student_id: string; email: string; phone: string; program: string; term: string; curriculum: string };
+export type Activity = { usage: { tool_calls?: number; tool_seconds?: number; recorded_calls?: number; recorded_seconds?: number; live_calls?: number; calls: number; seconds: number; prompt_tokens: number; output_tokens: number; cost_usd: number; models: string[]; by_stage: Record<string, { calls: number; seconds: number }> };
   trace: { at: string; row_id: string; actor: string; name: string; args: Record<string, unknown>; ok: boolean; detail: string; recorded?: boolean }[] };
 export type Subject = { id: string; name: string; code: string; qualification: string };
 export type Candidate = Subject & { score: number };
@@ -48,9 +53,12 @@ export type Row = { id: string; code: string; title: string; title_ar: string; c
   uncertain_fields: string[]; subject: Subject | null; candidates: Candidate[]; included: boolean; corrected: boolean; auto_linked?: boolean;
   mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string; source_id?: string; questions?: { field: string; question: string }[] };
 export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; program: string; institution: string; courses: number; status: string; decided: number; catalog: string;
-  created_at: string; student_id?: string; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
+  created_at: string; student_id?: string; student_record?: StudentRecord | null; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
   extraction?: { method: string; blocks?: { key: string; status: string; reread?: boolean; flags?: number | null; error?: string }[]; failed_blocks?: number; flags?: string[]; unrecognized?: number; rows_found?: number;
-    planted_misread?: { subject: string; wrong: number; applied?: { subject: string; from: number; to: number }[] } | null };
+    planted_misread?: { subject: string; wrong: number; applied?: { subject: string; from: number; to: number }[] } | null;
+    intake?: { agent: boolean; recovery_used: number; changes: { block: string; row: string; field: string; from: unknown; to: unknown }[]; skipped: Record<string, string>; read_by_code: string[]; text_layer_crosscheck: boolean; agent_questions: number;
+      name_check?: { status: 'match' | 'mismatch' | 'unchecked'; source?: string; seen?: string | null; why?: string } };
+    case_summary?: { text: string; by: string; ok?: boolean } };
   curriculum?: { available: boolean; error: string | null };
   replay?: { name: string; label: string; recorded_at: string; model: string; live: string[] } | null };
 export type Recording = { student?: { name: string; id: string } | null; case_path?: boolean; model_calls?: number; name: string; recorded_at: string; model: string; label: string; evaluation_s: number | null; reading_s: number | null;
@@ -65,7 +73,7 @@ async function j<T>(r: Response): Promise<T> {
 export const api = {
   applications: () => fetch('/api/v1/applications').then(j<AppInfo[]>),
   application: (id: string) => fetch(`/api/v1/applications/${id}`).then(j<AppInfo>),
-  upload: (file: File, label: string, qualification: string, studentId = '', plantMisread = false) => { const f = new FormData(); f.append('file', file); f.append('student_label', label); f.append('student_id', studentId); if (plantMisread) f.append('plant_misread', '1'); f.append('qualification', qualification);
+  upload: (file: File, label: string, qualification: string, studentId = '', plantMisread = false, caseNumber = '') => { const f = new FormData(); f.append('file', file); f.append('student_label', label); f.append('student_id', studentId); if (caseNumber) f.append('case_number', caseNumber); if (plantMisread) f.append('plant_misread', '1'); f.append('qualification', qualification);
     return fetch('/api/v1/applications', { method: 'POST', body: f, headers: { 'X-Role': 'admissions' } }).then(j<AppInfo>); },
   patchRow: (id: string, row: string, body: Record<string, unknown>) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<Row>),
   addRow: (id: string) => fetch(`/api/v1/applications/${id}/rows`, { method: 'POST' }).then(j<Row>),
@@ -86,6 +94,8 @@ export const api = {
   sheet: (id: string) => fetch(`/api/v1/applications/${id}/sheet`).then(j<Sheet>),
   approve: (id: string, role: string) => fetch(`/api/v1/applications/${id}/approve`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ approved: boolean }>),
   runAudit: (id: string, role: string) => fetch(`/api/v1/applications/${id}/audit`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
+  exportCheck: (id: string, role: string) => fetch(`/api/v1/applications/${id}/export-check`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ ready: boolean; job_id?: string }>),
+  studentRecord: (caseNumber: string) => fetch(`/api/v1/students/${encodeURIComponent(caseNumber)}`).then(j<StudentRecord & { plan: unknown }>),
   applyAudit: (id: string, role: string, rowIds: string[]) => fetch(`/api/v1/applications/${id}/audit/apply`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ row_ids: rowIds }) }).then(j<{ applied: string[]; sheet_ok: boolean }>),
   searchCatalog: (q: string) => fetch(`/api/v1/catalog/search?q=${encodeURIComponent(q)}`).then(j<{ code: string; title: string; level: number }[]>),
   setStudent: (id: string, name: string, studentId: string) => fetch(`/api/v1/applications/${id}/student`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify({ name, student_id: studentId }) }).then(j<AppInfo>),

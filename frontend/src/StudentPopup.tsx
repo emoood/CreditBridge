@@ -4,7 +4,7 @@ import { api, type Sheet } from './api';
 import { Activity } from './Activity';
 import { Evidence } from './Evidence';
 import { ExtractionCheck } from './ExtractionCheck';
-import { appStatus, build, curriculumOf, RESOLUTION_LABEL, toCsv, toTsv, type Item } from './model';
+import { appStatus, build, CLASS_LABEL, curriculumOf, RESOLUTION_LABEL, toCsv, toTsv, type Item } from './model';
 import { AppPill, RowStatusText } from './ui';
 import { useApp, useInclude, useInstitution } from './useApp';
 
@@ -41,19 +41,30 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
   const canApprove = role === 'admissions' && !approved && c.unresolved === 0 && c.total > 0 && !!sheet?.ok && !evaluating;
   const summary = [[c.mapped, 'mapped'], [c.conditional, 'conditional'], [c.noMapping, 'no mapping'], [c.waiting, 'waiting on a document']].filter(([n]) => (n as number) > 0).map(([n, l]) => `${n} ${l}`).join(' · ');
 
+  /** Every export goes through the Auditor first (unless it already reviewed this exact sheet and found it clean). Returns the sheet if it may be exported. */
+  async function auditedSheet(what: string): Promise<Sheet | null> {
+    const chk = await api.exportCheck(appId, role);
+    if (!chk.ready && chk.job_id) {
+      setToast('The Auditor is reviewing the sheet…');
+      for (let n = 0; n < 150; n++) { const j = await api.job(chk.job_id); if (j.status === 'DONE' || j.status === 'FAILED' || j.status === 'INTERRUPTED') break; await new Promise(r => setTimeout(r, 1000)); }
+      setToast(null);
+    }
+    const s = await api.sheet(appId); setSheet(s); await refresh();
+    const reviewed = s.audit?.sheet_hash === s.sheet_hash;
+    if (!s.ok || !reviewed || !s.audit?.clean) { setErr(!s.ok ? `${s.checks.length} sheet check(s) fail. Nothing was ${what}. See the Auditor box.` : !reviewed ? `The Auditor could not review the sheet. Nothing was ${what}.` : `The Auditor found differences from your decisions. Nothing was ${what}. See the Auditor box.`); return null; }
+    return s;
+  }
   async function copySheet() {
     setBusy(true); setErr(null);
     try {
-      const s = await api.sheet(appId); setSheet(s);          // the checks run before every copy or download
-      if (!s.ok) { setErr(`${s.checks.length} sheet check(s) fail. Nothing was copied.`); return; }
-      await navigator.clipboard.writeText(toTsv(s)); setToast(`Copied ${s.rows.length} rows${s.unconfirmed ? ` (${s.unconfirmed} unconfirmed, marked)` : ''}`);
+      const s = await auditedSheet('copied'); if (!s) return;
+      await navigator.clipboard.writeText(toTsv(s)); setToast(`Copied ${s.rows.length} rows${s.unconfirmed ? ` (${s.unconfirmed} unconfirmed, marked)` : ''}. The Auditor reviewed this sheet.`);
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
   async function downloadCsv() {
     setBusy(true); setErr(null);
     try {
-      const s = await api.sheet(appId); setSheet(s);
-      if (!s.ok) { setErr(`${s.checks.length} sheet check(s) fail. Nothing was downloaded.`); return; }
+      const s = await auditedSheet('downloaded'); if (!s) return;
       const url = URL.createObjectURL(new Blob([toCsv(s)], { type: 'text/csv' }));
       const a = document.createElement('a'); a.href = url; a.download = `creditbridge-${appId}.csv`; a.click(); URL.revokeObjectURL(url);
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
@@ -63,7 +74,8 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
     : activity ? <Activity data={data} onClose={() => setActivity(false)} /> : null}>
     <header className="pop-head">
       <div><small>STUDENT</small><h2>{app.student}</h2>
-        <p className="muted">ID {app.student_id || app.id} · {curriculumOf(app, results)} curriculum{app.program ? ` · ${app.program}` : ''}</p></div>
+        <p className="muted">ID {app.student_id || app.id} · {curriculumOf(app, results)} curriculum{app.program ? ` · ${app.program}` : ''}{app.student_record?.term ? ` · entering ${app.student_record.term}` : ''}</p>
+        {app.student_record && <p className="muted">{app.student_record.email} · {app.student_record.phone} · case {app.student_record.case_number}</p>}</div>
       <div className="pop-head-right">{approved ? <span className="approved-tag"><Check size={13} /> Approved</span> : <AppPill s={status} />}<button className="icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button></div>
     </header>
     {app.replay && <div className="replay-banner"><History size={15} /> <span><strong>{app.replay.label}</strong>. {app.replay.live.length ? `Nothing here was produced just now except ${app.replay.live.length} course(s) run live.` : 'Nothing here was produced just now: no model was called.'}</span></div>}
@@ -79,13 +91,16 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
 
     {!reading && !gate && !demoIdle && <div className="pop-body">
       <div className="selection"><div><strong>{built.relevant.length} of {c.total} courses relevant</strong> <button className="link-btn" onClick={() => setNotEvalOpen(true)}>Adjust</button>
-        {data.selectionRule && <p className="muted rule">{data.selectionRule}</p>}</div>
+        {data.selectionRule && <p className="muted rule">{data.selectionRule}</p>}
+        {app.extraction?.case_summary?.text && <p className="case-summary"><strong>{app.extraction.case_summary.by === 'code' ? 'Summary' : 'Case agent'}:</strong> {app.extraction.case_summary.text}</p>}</div>
         <span className="muted push">{summary}{c.resolved ? `${summary ? ' · ' : ''}${c.resolved} resolved` : ''}</span></div>
 
-      {built.relevant.length > 0 && <table className="ctable"><thead><tr><th>Source course</th><th>Grade</th><th>AUD equivalent</th>{inst.display.aud_credits && <th className="num">AUD credits</th>}<th>Status</th></tr></thead>
+      {built.relevant.length > 0 && <table className="ctable"><thead><tr><th>Source course</th><th>Grade</th><th>AUD equivalent</th>{inst.display.aud_credits && <th className="num">AUD credits</th>}<th>Program</th><th>Status</th></tr></thead>
         <tbody>{built.relevant.map(i => <tr key={i.key} className={`${evidenceKey === i.key ? 'sel' : ''} ${i.result ? 'click' : ''}`} onClick={() => i.result && setEvidenceKey(i.key)}>
           <td><strong>{i.title}</strong></td><td>{i.grade || '—'}</td>
           <td>{equivalent(i)}</td>{inst.display.aud_credits && <td className="num">{i.audCode ? i.audCredits ?? '—' : '—'}</td>}
+          <td className={`prog ${i.cls?.value === 'Not applicable' ? 'prog-off' : ''}`} title={i.cls ? `${i.cls.why}${i.cls.by === 'case_agent' ? ' (judged by the Case agent)' : ''}` : ''}>{i.cls ? CLASS_LABEL[i.cls.value] : '—'}
+            {i.doubts > 0 && <span className="obj-badge" title={(i.state?.doubts ?? []).map(d => `${d.kind.replace(/_/g, ' ')}: ${d.reason}${d.verified ? '' : ' (not verified by code)'}`).join('\n')}>{i.doubts} doubt{i.doubts === 1 ? '' : 's'}</span>}</td>
           <td className="status-cell"><RowStatusText s={i.status} />{i.resolved && i.action && <span className="res-tag">{RESOLUTION_LABEL[i.action.action]}</span>}
             {i.action?.action === 'SEND_FOR_REVIEW' && !i.resolved && <span className="res-tag">Sent for review</span>}
             {i.objections > 0 && <span className="obj-badge" title="The reviewer objects. Open the row for the full text.">{i.objections} objection{i.objections === 1 ? '' : 's'}</span>}</td></tr>)}</tbody></table>}
@@ -95,9 +110,13 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
       {sheet && !sheet.ok && <section className="checks"><h4>Sheet checks failed ({sheet.checks.length})</h4>
         <ul>{sheet.checks.map((k, i) => <li key={i}><strong>{k.source_course}</strong> · {k.check.replace(/_/g, ' ')}: {k.message}</li>)}</ul>
         <button className="secondary-button" disabled={busy} onClick={() => run(() => api.runAudit(appId, role))}>Explain with the Auditor</button></section>}
-      {sheet?.audit && <AuditBox appId={appId} role={role} audit={sheet.audit} onChanged={reload} />}
+      {sheet?.audit && (!sheet.audit.clean || sheet.audit.proposals.length > 0 || (sheet.audit.warnings ?? []).length > 0) && <AuditBox appId={appId} role={role} audit={sheet.audit} onChanged={reload} />}
 
       {built.relevant.length > 0 && <p className="muted placeholder-note">AUD codes and credits shown are placeholder mapping data for this demo, not AUD&apos;s real equivalencies.</p>}
+
+      {built.electives.length > 0 && <section className="electives"><h4>General elective suggestions <span className="count">{built.electives.length}</span></h4>
+        <p className="muted">Mapped courses outside {app.program || 'the program'} that can count as free electives. Confirm them like any other row.</p>
+        <ul>{built.electives.map(i => <li key={i.key}><strong>{i.title}</strong> <span className="muted">→ {i.audCode}{i.cls?.by === 'case_agent' ? ' · judged by the Case agent: ' + i.cls.why : ''}</span></li>)}</ul></section>}
 
       {built.needsInput.length > 0 && <section className="needs"><h4>Needs your input <span className="count">{built.needsInput.length}</span></h4>
         <div className="needs-cards">{built.needsInput.map(i => <NeedCard key={i.key} i={i} appId={appId} role={role} busy={busy} onOpen={() => i.result && setEvidenceKey(i.key)} onChanged={reload} />)}</div></section>}
@@ -166,12 +185,14 @@ function AuditBox({ appId, role, audit, onChanged }: { appId: string; role: stri
   const pending = audit.proposals.filter(p => !audit.applied.includes(p.row_id));
   async function apply(ids: string[]) { setBusy(true); setErr(null); try { await api.applyAudit(appId, role, ids); onChanged(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } }
   return <section className="checks audit"><h4>Auditor</h4><p>{audit.summary}</p>
-    {audit.explanations.map(e => <p key={e.row_id} className="muted">{e.explanation}</p>)}
+    {(audit.warnings ?? []).map((w, i) => <p key={i} className="muted">Note: <strong>{w.source_course}</strong>: {w.message}</p>)}
+    {audit.explanations.map(e => <p key={e.row_id}>{e.explanation}</p>)}
     {pending.map(p => <div className="proposal" key={p.row_id}><strong>{p.source_course}</strong>: {p.from.aud_code ?? '—'} ({p.from.credits ?? '—'} cr) → <strong>{p.to.aud_code}</strong> ({p.to.credits} cr)
-      <span className="muted"> · {p.why}{p.touches_confirmed ? ' · changes a row you already confirmed' : ''}</span>
+      <span className="muted"> · {p.rechecked ? 're-checked by code · ' : ''}{p.restores_decision ? 'restores your decision · ' : ''}{p.why}{p.touches_confirmed ? ' · changes a row you already confirmed' : ''}</span>
       <button className="secondary-button" disabled={busy} onClick={() => apply([p.row_id])}>Apply this change</button></div>)}
     {pending.length === 0 && audit.proposals.length > 0 && <p className="muted">All proposed changes were applied.</p>}
-    {audit.proposals.length === 0 && <p className="muted">No automatic correction was proposed; this needs your judgment.</p>}
+    {!audit.clean && audit.proposals.length === 0 && <p className="muted">No automatic correction was proposed; this needs your judgment.</p>}
+    {audit.agent_comment && <p className="muted"><em>Auditor&apos;s own comment (not verified by code): {audit.agent_comment}</em></p>}
     {err && <div className="eval-error"><AlertCircle size={14} /> {err}</div>}</section>;
 }
 

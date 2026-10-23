@@ -19,6 +19,7 @@ export function Activity({ data, onClose }: { data: AppData; onClose: () => void
       {app.replay && <p className="muted">Figures are those of the recorded run{live ? `; ${live} course(s) ran live` : ''}.</p>}
       <div className="act-stats">
         <div><small>MODEL CALLS</small><strong>{act ? act.usage.calls : calls}</strong>{act && (act.usage.recorded_calls ?? 0) > 0 && <span>{act.usage.recorded_calls} from the recording · {act.usage.live_calls} live</span>}</div>
+        <div><small>TOOL CALLS</small><strong>{act?.usage.tool_calls ?? 0}</strong><span>{Math.round(act?.usage.tool_seconds ?? 0)} s · every agent step is in the ledger</span></div>
         <div><small>MODEL TIME</small><strong>{Math.round(act ? act.usage.seconds : secs)} s</strong></div>
         <div><small>COST</small><strong>${(act?.usage.cost_usd ?? 0).toFixed(2)}</strong><span>{act ? `${act.usage.prompt_tokens + act.usage.output_tokens} tokens · local model` : 'local model'}</span></div>
         <div><small>MODEL</small><strong className="small-strong">{(act?.usage.models.length ? act.usage.models : models).join(', ') || '—'}</strong></div>

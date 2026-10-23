@@ -1,7 +1,7 @@
 // Maps the backend's statuses and data onto the officer-facing vocabulary. Pure functions.
 // Row vocabulary:  Mapped | Conditional | No mapping | Waiting on document | Not evaluated   (+ the officer's resolution, if any)
 // Application vocabulary: Processing | Needs you | Waiting on document | Ready
-import type { ActionInfo, AppInfo, CaseResult, Job, Row, RowStateInfo, RowStatus, Sheet } from './api';
+import type { ActionInfo, AppInfo, CaseResult, Job, ProgramClass, Row, RowStateInfo, RowStatus, Sheet } from './api';
 
 export type { RowStatus };
 export type AppStatus = 'Processing' | 'Needs you' | 'Waiting on document' | 'Ready';
@@ -25,6 +25,8 @@ export type Item = {
   resolved: boolean;      // confirmed, changed, rejected or no credit
   audCode: string | null; // what the row stands at now (the officer's choice, else the suggestion)
   audCredits: number | null;
+  cls: ProgramClass | null; // the program-plan class of the mapped equivalent (Program course, General elective suggestion, Not applicable)
+  doubts: number;         // doubts the Case agent raised that code corroborated or recorded
   needsInput: boolean;    // No mapping, Conditional or Waiting on document, and not yet resolved: shown in "Needs your input"
 };
 
@@ -58,11 +60,11 @@ export function classify(row: Row | null, result: CaseResult | null, included: b
   const needsInput = (status === 'No mapping' || status === 'Conditional' || status === 'Waiting on document') && !resolved;
   return { key: result?.course.code ?? row?.id ?? title, rowId: row?.id ?? '', title, grade: result?.course.grade ?? row?.grade ?? '', result, status, reason,
     finding: needsInput ? (state?.finding?.headline ?? reason) : undefined, objections: result?.review?.status === 'CHALLENGED' ? result.review.objections.length || 1 : 0,
-    canInclude: state ? status === 'Not evaluated' && state.can_include : legacy.canInclude, state, action, resolved, audCode, audCredits, needsInput };
+    canInclude: state ? status === 'Not evaluated' && state.can_include : legacy.canInclude, state, action, resolved, audCode, audCredits, needsInput, cls: state?.classification ?? null, doubts: state?.doubts?.length ?? 0 };
 }
 
 export type Built = {
-  items: Item[]; relevant: Item[]; needsInput: Item[]; notEvaluated: Item[];
+  items: Item[]; relevant: Item[]; needsInput: Item[]; notEvaluated: Item[]; electives: Item[];
   counts: { mapped: number; conditional: number; noMapping: number; waiting: number; notEvaluated: number; resolved: number; unresolved: number; total: number; confirmable: number };
 };
 
@@ -83,10 +85,10 @@ export function build(app: AppInfo, results: CaseResult[], pending: { key: strin
   items.sort((a, b) => Number(a.resolved) - Number(b.resolved) || rank[a.status] - rank[b.status]);
   const relevant = items.filter(i => i.status !== 'Not evaluated');
   const n = (s: RowStatus) => relevant.filter(i => i.status === s).length;
-  return { items, relevant, needsInput: items.filter(i => i.needsInput), notEvaluated: items.filter(i => i.status === 'Not evaluated'),
+  return { items, relevant, needsInput: items.filter(i => i.needsInput), notEvaluated: items.filter(i => i.status === 'Not evaluated'), electives: relevant.filter(i => i.cls?.value === 'General elective suggestion'),
     counts: { mapped: n('Mapped'), conditional: n('Conditional'), noMapping: n('No mapping'), waiting: n('Waiting on document'), notEvaluated: items.length - relevant.length,
       resolved: relevant.filter(i => i.resolved).length, unresolved: relevant.filter(i => !i.resolved).length, total: items.length,
-      confirmable: relevant.filter(i => i.status === 'Mapped' && !i.resolved && !!i.state).length } };
+      confirmable: relevant.filter(i => i.status === 'Mapped' && !i.resolved && !!i.state && !i.doubts && i.cls?.value !== 'Not applicable').length } };
 }
 
 const BUSY = ['READING', 'CONFIRMED', 'EVALUATION_IN_PROGRESS'];
@@ -120,3 +122,5 @@ export function sheetRows(s: Sheet): string[][] {
 }
 export const toTsv = (s: Sheet) => sheetRows(s).map(r => r.map(c => c.replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
 export const toCsv = (s: Sheet) => sheetRows(s).map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+
+export const CLASS_LABEL: Record<string, string> = { 'Program course': 'Program course', 'General elective suggestion': 'Elective suggestion', 'Not applicable': 'Not in the plan' };

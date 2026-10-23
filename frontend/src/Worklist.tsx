@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, History, Loader2, UploadCloud } from "lucide-react";
-import { api, type AppInfo, type Recording } from "./api";
+import { api, type AppInfo, type Recording, type StudentRecord } from "./api";
 import {
   APP_ORDER,
   appStatus,
@@ -40,6 +40,8 @@ export default function Worklist() {
   const [qual, setQual] = useState("");
   const [name, setName] = useState("");
   const [sid, setSid] = useState("");
+  const [caseNo, setCaseNo] = useState("");
+  const [rec, setRec] = useState<StudentRecord | null>(null);
   const [plant, setPlant] = useState(false);
   const inst = useInstitution();
   const [quals, setQuals] = useState<string[]>([]);
@@ -112,8 +114,10 @@ export default function Worklist() {
     setUploading(true);
     setError(null);
     try {
-      const a = await api.upload(f, name, qual, sid, plant);
+      const a = await api.upload(f, name, qual, sid, plant, rec ? caseNo : "");
       setPlant(false);
+      setCaseNo("");
+      setRec(null);
       setName("");
       setSid("");
       setOpen(a.id);
@@ -147,14 +151,63 @@ export default function Worklist() {
               ))}
             </select>
           </label>
+          <label
+            className="role-pick"
+            title="The case number loads name, contact, program, term and curriculum from the demo student data"
+          >
+            Case number{" "}
+            <input
+              className="mini"
+              placeholder="e.g. CB-2026-0101"
+              value={caseNo}
+              style={{ width: 130 }}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCaseNo(v);
+                setRec(null);
+                if (v.trim().length >= 8)
+                  api
+                    .studentRecord(v.trim())
+                    .then(setRec)
+                    .catch(() => setRec(null));
+              }}
+            />
+            {rec ? (
+              <span className="muted">
+                {" "}
+                {rec.name} · {rec.program} · {rec.term}
+              </span>
+            ) : caseNo.trim().length >= 8 ? (
+              <span className="muted"> no record</span>
+            ) : null}
+          </label>
           <label className="role-pick">
             Student{" "}
-            <input className="mini" placeholder="Name (synthetic)" value={name} onChange={(e) => setName(e.target.value)} />
-            <input className="mini" placeholder="ID" value={sid} onChange={(e) => setSid(e.target.value)} style={{ width: 90 }} />
+            <input
+              className="mini"
+              placeholder="Name (synthetic)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <input
+              className="mini"
+              placeholder="ID"
+              value={sid}
+              onChange={(e) => setSid(e.target.value)}
+              style={{ width: 90 }}
+            />
           </label>
           {inst.demo_mode && (
-            <label className="role-pick demo-switch" title="Demo only: replaces the AP Chemistry mark with a wrong value before the extraction checks run, so the Intake recheck has something to fix (Transcript B)">
-              <input type="checkbox" checked={plant} onChange={(e) => setPlant(e.target.checked)} /> Demo: plant a misread (Transcript B)
+            <label
+              className="role-pick demo-switch"
+              title="Demo only: replaces the AP Chemistry mark with a wrong value before the extraction checks run, so the Intake recheck has something to fix (Transcript B)"
+            >
+              <input
+                type="checkbox"
+                checked={plant}
+                onChange={(e) => setPlant(e.target.checked)}
+              />{" "}
+              Demo: plant a misread (Transcript B)
             </label>
           )}
           <input
@@ -237,7 +290,9 @@ export default function Worklist() {
                   <AppPill s={e.status} />
                 </td>
                 <td className="num">{e.built.counts.mapped || ""}</td>
-                <td className={`num ${e.built.needsInput.length ? "hot" : ""}`}>{e.built.needsInput.length || ""}</td>
+                <td className={`num ${e.built.needsInput.length ? "hot" : ""}`}>
+                  {e.built.needsInput.length || ""}
+                </td>
                 <td className="num">{e.built.counts.notEvaluated || ""}</td>
               </tr>
             ))}
@@ -316,7 +371,11 @@ function ReplayPicker({
       >
         {recordings.map((r) => (
           <option key={r.name} value={r.name}>
-            {r.student?.name ? `${r.student.name} · ` : ''}{r.label}{r.case_path ? ` · ${r.model_calls ?? 0} recorded model calls` : ' · older format'}
+            {r.student?.name ? `${r.student.name} · ` : ""}
+            {r.label}
+            {r.case_path
+              ? ` · ${r.model_calls ?? 0} recorded model calls`
+              : " · older format"}
           </option>
         ))}
       </select>

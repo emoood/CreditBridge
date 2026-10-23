@@ -98,3 +98,12 @@
 .rowq{display:block;font-size:11px;color:#9a6a00;margin:2px 0 0 6px}
 .planted{border:2px dashed #7a5af8;background:#f5f2ff;color:#3b2a8a;border-radius:10px;padding:10px 14px;font-size:12.5px}.planted strong{display:inline-block;background:#7a5af8;color:#fff;border-radius:5px;padding:1px 7px;margin-right:8px;font-size:10.5px;letter-spacing:.6px}.placeholder-note{margin:-6px 0 0;font-size:11.5px}.demo-switch{color:#7a5af8!important}
 .rec-tag{font-style:normal;font-size:9.5px;font-weight:800;color:#27406e;background:#eef3ff;border-radius:4px;padding:1px 5px;margin-right:4px;text-transform:uppercase;letter-spacing:.5px}
+
+/* program-aware mapping, Case agent summary, Intake agent line */
+.case-summary { margin: 4px 0 0; font-size: 13px; }
+td.prog { white-space: nowrap; font-size: 12.5px; }
+td.prog.prog-off { color: var(--muted, #6b7280); }
+.electives { margin: 14px 0; padding: 10px 12px; border: 1px solid var(--line, #e5e7eb); border-radius: 8px; }
+.electives h4 { margin: 0 0 4px; font-size: 13px; }
+.electives ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+.intake-line { font-size: 12.5px; margin: 4px 0; }
