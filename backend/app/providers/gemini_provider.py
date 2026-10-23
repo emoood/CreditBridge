@@ -9,26 +9,7 @@ from google.genai import types
 
 from ..devlog import events
 from .base import LLMProvider, LLMRequest, LLMResponse, ProviderHealth, ToolCall
-
-
-def _extract_retry_delay(e: Exception) -> float:
-    try:
-        details = getattr(e, "details", [])
-        for d in details:
-            if isinstance(d, dict) and "retryDelay" in d:
-                val = str(d["retryDelay"]).rstrip("s")
-                return min(float(val) + 1.0, 30.0)
-    except Exception:
-        pass
-    import re
-    s = str(e)
-    m = re.search(r"retryDelay':\s*'([0-9\.]+)s?'", s) or re.search(r"Please retry in ([0-9\.]+)s", s)
-    if m:
-        try:
-            return min(float(m.group(1)) + 1.0, 30.0)
-        except Exception:
-            pass
-    return 5.0
+from .rate_limiter import RateLimiter
 
 
 def clean_schema_for_gemini(schema: dict[str, Any]) -> dict[str, Any]:
@@ -63,16 +44,18 @@ def clean_schema_for_gemini(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 class GeminiProvider:
-    """Google Gemini API provider implementing LLMProvider protocol via google-genai."""
+    """Google Gemini API provider implementing LLMProvider protocol with rate limiting and retry."""
 
     def __init__(self, api_key: str, model: str = "gemini-3.5-flash",
-                 temperature: float = 0.0, timeout: float = 120.0):
+                 temperature: float = 0.0, timeout: float = 120.0, rpm: int = 5):
         self.api_key = api_key
         self.model = model
         self.temperature = temperature
         self.timeout = timeout
+        self.rpm = rpm
         self.name = f"gemini:{model}"
         self.client = genai.Client(api_key=api_key)
+        self.rate_limiter = RateLimiter(rpm=rpm)
         self._content_cache: dict[str, types.Content] = {}
 
     async def health(self) -> ProviderHealth:
@@ -84,10 +67,10 @@ class GeminiProvider:
             return ProviderHealth(True, self.name, self.model, f"ok ({display})", loaded=True)
         except Exception as e:  # noqa: BLE001
             # Try fallback model if configured model fails
-            if self.model != "gemini-3.5-flash":
+            if self.model != "gemini-3.5-flash-lite":
                 try:
-                    m = await self.client.aio.models.get(model="gemini-3.5-flash")
-                    return ProviderHealth(True, f"gemini:gemini-3.5-flash", "gemini-3.5-flash", f"ok ({m.display_name})", loaded=True)
+                    m = await self.client.aio.models.get(model="gemini-3.5-flash-lite")
+                    return ProviderHealth(True, f"gemini:gemini-3.5-flash-lite", "gemini-3.5-flash-lite", f"ok ({m.display_name})", loaded=True)
                 except Exception:
                     pass
             return ProviderHealth(False, self.name, self.model, f"unreachable: {type(e).__name__}: {e}")
@@ -174,15 +157,20 @@ class GeminiProvider:
         )
 
         models_to_try = [self.model]
-        if self.model != "gemini-3.5-flash":
-            models_to_try.append("gemini-3.5-flash")
+        if self.model not in ("gemini-3.5-flash-lite", "gemini-3.5-flash"):
+            models_to_try.append("gemini-3.5-flash-lite")
 
         resp = None
         used_model = self.model
         t0 = time.time()
 
         for m_idx, current_model in enumerate(models_to_try):
-            for attempt in range(3):
+            for attempt in range(4):
+                # Rate limit guard: wait until slot is available before making HTTP call
+                waited = await self.rate_limiter.acquire()
+                if waited > 0.5:
+                    events.emit("info", where="rate_limit", model=current_model, waited_s=waited, **request.meta)
+
                 try:
                     resp = await self.client.aio.models.generate_content(
                         model=current_model,
@@ -197,11 +185,12 @@ class GeminiProvider:
                     is_last_model = (m_idx == len(models_to_try) - 1)
                     if is_daily_quota and not is_last_model:
                         break  # Immediately try fallback model
-                    if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "503" in err_str or "UNAVAILABLE" in err_str) and attempt < 2:
-                        delay = _extract_retry_delay(e)
+                    if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "503" in err_str or "UNAVAILABLE" in err_str) and attempt < 3:
+                        delay = RateLimiter.extract_retry_delay(e)
+                        self.rate_limiter.penalize(delay)
                         await asyncio.sleep(delay)
                         continue
-                    if is_last_model and attempt == 2:
+                    if is_last_model and attempt == 3:
                         events.emit("error", where="llm_call", provider=self.name, model=current_model,
                                     stage=request.stage, error=f"{type(e).__name__}: {e}", **request.meta)
                         raise

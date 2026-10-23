@@ -16,6 +16,7 @@ def build_provider(settings: Settings, route: str | None = None) -> LLMProvider:
             model=settings.gemini_model,
             temperature=settings.llm_temperature,
             timeout=limit + 10,
+            rpm=settings.gemini_rpm,
         )
     elif route == "lmstudio":
         url, model = settings.route(route)
