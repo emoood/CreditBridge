@@ -172,6 +172,14 @@ export default function Worklist() {
           What needs you comes first. Click a row to open the student.
         </p>
         <div className="wl-actions">
+          {!demo.on && (
+            <span
+              className="muted demo-off-note"
+              title="Tick Demo in the header, or open the app with ?demo=1"
+            >
+              Demo is off: an upload now uses the live model and takes minutes.
+            </span>
+          )}
           {demo.on ? (
             <label className="role-pick" title="Cases that have a prepared run">
               Case{" "}

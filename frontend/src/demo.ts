@@ -16,6 +16,13 @@ function read(): DemoState {
   }
 }
 let state: DemoState = read();
+// Opening the app as http://localhost:5173/?demo=1 turns Demo on at every load (and ?demo=0 turns it off), whatever the browser kept.
+try {
+  const q = new URLSearchParams(window.location.search).get("demo");
+  if (q === "1" || q === "0") state = { ...state, on: q === "1" };
+} catch {
+  /* no window */
+}
 const subs = new Set<() => void>();
 export function setDemo(p: Partial<DemoState>) {
   state = { ...state, ...p };
