@@ -1,8 +1,9 @@
 """Fail fast, with a clear message, if anything the app needs is missing. Run by scripts/start.sh. Read-only checks."""
+import asyncio
 import json
+from pathlib import Path
 import sys
 import urllib.request
-from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -10,6 +11,8 @@ sys.path.insert(0, str(ROOT))
 from sqlalchemy import create_engine, text
 
 from backend.app.config import get_settings
+from backend.app.db.session import get_app_engine
+from backend.app.providers.router import build_provider
 
 s = get_settings()
 problems: list[str] = []
@@ -29,20 +32,27 @@ def scrub(e: Exception) -> str:
 
 
 print("CreditBridge preflight")
-# 1. this app's own PostgreSQL (jobs, units, decisions)
+# 1. this app's own database (jobs, units, decisions)
 try:
-    eng = create_engine(s.app_database_url, connect_args={"connect_timeout": 5})
+    eng = get_app_engine()
     with eng.connect() as c:
         c.execute(text("select 1"))
-    ok(f"app PostgreSQL reachable ({eng.url.database})")
+    ok(f"app database reachable ({eng.url.database or 'local'})")
 except Exception as e:  # noqa: BLE001
-    bad(f"app PostgreSQL not reachable ({scrub(e)})",
-        "start Postgres (brew services start postgresql@18) and create the database: createdb creditbridge  (or set APP_DATABASE_URL)")
+    bad(f"app database not reachable ({scrub(e)})",
+        "start Postgres (brew services start postgresql@18) and create the database: createdb creditbridge (or set APP_DATABASE_URL)")
 
-# 2. Ollama + model + vision/tools capability
+# 2. Model provider
 base, model = s.route(s.llm_default_route)
 try:
-    if s.llm_default_route == "lmstudio":
+    if s.llm_default_route == "gemini":
+        prov = build_provider(s)
+        h = asyncio.run(prov.health())
+        if h.ok:
+            ok(f"Gemini API reachable, model {model} ready ({h.detail})")
+        else:
+            bad(f"Gemini API error: {h.detail}", "check your GEMINI_API_KEY in .env")
+    elif s.llm_default_route == "lmstudio":
         ids = {m["id"] for m in json.load(urllib.request.urlopen(base.rstrip("/") + "/models", timeout=5))["data"]}
         ok(f"LM Studio reachable, model {model} loaded") if model in ids else bad(f"model {model} not listed by LM Studio", "load it in LM Studio")
     else:
@@ -57,7 +67,7 @@ try:
                 if need not in caps:
                     bad(f"{model} lacks the '{need}' capability", "use a model that supports vision and tool calling")
 except Exception as e:  # noqa: BLE001
-    bad(f"model server not reachable at {base} ({scrub(e)})", "start Ollama: OLLAMA_MAX_LOADED_MODELS=1 OLLAMA_NUM_PARALLEL=1 ollama serve")
+    bad(f"model server not reachable at {base} ({scrub(e)})", "check provider setup and credentials in .env")
 
 # 3. curriculum database (teammate's, read-only)
 if not s.database_url:
@@ -67,9 +77,9 @@ else:
         eng = create_engine(s.database_url, connect_args={"connect_timeout": 8})
         with eng.connect() as c:
             n = c.execute(text("select count(*) from curriculum.subjects")).scalar()
-        ok(f"curriculum database reachable, {n} subjects") if n else bad("curriculum.subjects is empty", "ask the teammate to load the curriculum data")
+        ok(f"curriculum database reachable (Supabase), {n} subjects") if n else bad("curriculum.subjects is empty", "ask the teammate to load the curriculum data")
     except Exception as e:  # noqa: BLE001
-        bad(f"curriculum database not reachable ({scrub(e)})", "check DATABASE_URL (use the Session pooler string, port 5432) and your network")
+        bad(f"curriculum database not reachable ({scrub(e)})", "check DATABASE_URL and your network")
 
 # 4. catalog, folders, frontend deps
 cat = {"demo": ROOT / "fixtures/demo_v1/catalog.json", "aud_2026_2027": ROOT / "catalog/aud_undergrad_2026_2027/courses.json"}.get(s.catalog)
