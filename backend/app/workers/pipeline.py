@@ -6,7 +6,7 @@ import uuid
 from typing import Any
 
 from ..agents.auditor_agent import run_auditor
-from ..agents.case_agent import run_case_agent
+from ..agents.case_agent import run_case_agent, run_case_review
 from ..agents.intake_agent import run_intake_agent
 from ..agents.orchestrator import is_school_specific, no_evidence_case, run_case, school_specific_case
 from ..config import get_settings
@@ -360,14 +360,45 @@ async def run_evaluation(job_id: str, provider: LLMProvider) -> None:
         rows = [dict(r) for r in app.rows]
         states = _lookup_rows(db, app, rows)
         todo = [r for r in rows if r.get("source_id") and states[r["id"]]["status"] != mp.NOT_EVAL]
+        todo.sort(key=lambda r: states[r["id"]]["status"] != mp.MAPPED)  # mapped rows (no model) run and show first; the agent rows follow and stream in as they finish
         units = store.plan_units(db, job, "evaluate", [r["source_id"] for r in todo], reset)
         sid_row = {r["source_id"]: r for r in todo}
         store.audit(db, app.id, "system", "evaluation_started", job.id, rows=len(rows), to_work=len(todo), resumed=not reset)
         for u in units:
             if u.status != "DONE":
                 await _work_unit(db, job, app, sid_row[u.unit_key], u, provider)
+        if get_settings().case_review:
+            job.stage = "review"
+            db.commit()
+            await _review_application(db, app, provider)
         job.stage, job.current_unit = "triage", ""
         _finish_evaluation(db, job, app)
+
+
+def code_summary(db, app: Application) -> str:
+    """The summary used when the Case agent could not write one: counts only, built from the row states."""
+    c: dict[str, int] = {}
+    doubted = 0
+    for r in app.rows:
+        st = mp.get_state(db, app.id, r["id"])
+        if st and st.status != mp.NOT_EVAL:
+            c[st.status] = c.get(st.status, 0) + 1
+            doubted += bool((st.facts or {}).get("_doubts"))
+    parts = [f"{n} {k.lower()}" for k, n in c.items()]
+    return ("; ".join(parts) or "No relevant rows") + (f"; {doubted} with a doubt for you to look at" if doubted else "") + "."
+
+
+async def _review_application(db, app: Application, provider: LLMProvider) -> None:
+    """The Case agent reviews ALL rows once (mapped ones included). A failure here never blocks the sheet: code writes the summary instead."""
+    R = rt()
+    try:
+        rep = await run_case_review(usage.MeteredProvider(provider, app.id, ""), R.repo, R.retriever, R.precedent, app.id)
+    except Exception as e:  # noqa: BLE001
+        rep = {"summary": "", "ok": False, "by": "case_agent", "flags": [f"review_failed:{_err_code(e)}"]}
+    db.expire_all()
+    summary = {**rep, "text": rep["summary"] or code_summary(db, app), "by": "case_agent" if rep["summary"] else "code"}
+    store.set_json(app, "extraction", {**(app.extraction or {}), "case_summary": summary})
+    db.commit()
 
 
 async def run_row(job_id: str, provider: LLMProvider) -> None:

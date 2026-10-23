@@ -17,7 +17,7 @@ from .orchestrator import CaseResult
 from .tools.base import ToolRegistry  # noqa: F401  (re-exported type for callers)
 from .tools.case_tools import CASE_TOOLS, CaseContext, TracedRegistry
 
-PROMPT_VERSION = "case_v2"
+PROMPT_VERSION = "case_v3"
 PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
 
 
@@ -45,7 +45,8 @@ async def run_case_agent(provider: LLMProvider, repo, retriever, precedent, app_
                  "open_requests": [r for r in (st.requests if st else []) if r["status"] in ("DRAFT", "SENT")],
                  "mode": mode, "officer_notes": [n["text"] for n in ((st.facts or {}).get("_notes", []) if st else [])], "previous_finding": (st.finding if st else None)}
     outcome = await run_bounded_agent(provider, TracedRegistry(CASE_TOOLS), ctx, system=PROMPT, user=json.dumps(brief, ensure_ascii=False),
-                                      final_model=CaseFinding, max_tool_rounds=get_settings().case_max_tool_rounds, stage="case")
+                                      final_model=CaseFinding, max_tool_rounds=get_settings().case_max_tool_rounds, stage="case",
+                                      max_seconds=get_settings().case_max_seconds)
     flags = list(outcome.flags)
     finding: dict[str, Any]
     if outcome.status == "OK" and outcome.output is not None:
@@ -65,3 +66,15 @@ async def run_case_agent(provider: LLMProvider, repo, retriever, precedent, app_
 
 def proposal_of(res: dict[str, Any]) -> CaseResult | None:
     return res.get("proposal")
+
+
+async def run_case_review(provider: LLMProvider, repo, retriever, precedent, app_id: str) -> dict[str, Any]:
+    """The whole-application pass: the Case agent reviews ALL rows (mapped ones too), raises doubts that code corroborates, judges borderline electives
+    against the free-elective allowance and writes a short summary for the officer. It never changes a row's status."""
+    ctx = CaseContext(repo, retriever, "case", "", precedent=precedent, app_id=app_id, row_id="", provider=provider)
+    s = get_settings()
+    outcome = await run_bounded_agent(provider, TracedRegistry(CASE_TOOLS), ctx, system=PROMPT, user=json.dumps({"mode": "review_all"}), final_model=CaseFinding,
+                                      max_tool_rounds=s.case_review_max_tool_rounds, stage="case_review", max_seconds=s.case_review_max_seconds)
+    ok = outcome.status == "OK" and outcome.output is not None
+    return {"summary": outcome.output.headline if ok else "", "ok": ok, "by": "case_agent", "prompt_version": PROMPT_VERSION, "flags": list(outcome.flags) + ([] if ok else [outcome.error or "AGENT_FAILED"]),
+            "llm_calls": outcome.llm_calls, "tool_calls": len(outcome.tool_calls)}

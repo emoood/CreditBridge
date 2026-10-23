@@ -91,16 +91,86 @@ async def test_one_click_include_runs_a_not_evaluated_row_and_the_ledger_is_serv
 
 # ---- program-aware mapping and the student record
 def test_student_record_by_case_number():
-    from app.services import student_record as sr
+    from backend.app.services import student_record as sr
     rec = sr.load_record("cb-2026-0102")
     assert rec["name"] == "Daniel Ferreira" and rec["program"] == "BSc Computer Engineering" and rec["term"] and rec["curriculum"]
     assert sr.load_record("nope") is None
 
 
 def test_classification_against_program_plan():
-    from app.services import student_record as sr
+    from backend.app.services import student_record as sr
     eng = "BSc Computer Engineering"
     assert sr.classify("MATH 210", eng)["value"] == sr.PROGRAM
     assert sr.classify("ECON 201", eng)["value"] == sr.ELECTIVE  # business course for an engineering student: elective suggestion
     assert sr.classify("QUAN 201", eng)["value"] == sr.NOT_APPLICABLE
     assert sr.classify("MATH 210", "No such program") is None
+
+
+# ---- the Case agent reviews every application (mapped rows included); code corroborates doubts
+async def _run_with_program(env, program="BSc Computer Engineering"):
+    from backend.app.db.models import Application
+    from backend.tests.conftest import read_to_gate
+    up = await read_to_gate(env)
+    with app_session() as db:
+        db.get(Application, up["id"]).program = program
+        db.commit()
+    await env.client.post(f"/api/v1/applications/{up['id']}/confirm", headers=ADMIN)
+    await env.worker.idle()
+    return up["id"]
+
+
+async def test_mapped_rows_run_first_and_carry_a_program_class(case_env):
+    app_id = await _run_with_program(case_env)
+    st, rows, _res = await states(case_env, app_id)
+    assert st["AP Statistics"]["classification"]["value"] == "Not applicable"  # STA201 is not on the engineering plan
+    with app_session() as db:
+        order = [u.unit_key for u in db.scalars(select(JobUnit).where(JobUnit.app_id == app_id, JobUnit.stage == "evaluate").order_by(JobUnit.id))]
+    sid = {r["title"]: r["source_id"] for r in rows}
+    mapped = {sid["AP Statistics"], sid["AP Psychology"]}
+    assert set(order[:2]) == mapped  # mapped rows come first in the queue; the agent rows follow
+
+
+async def test_raise_doubt_is_checked_by_code_and_blocks_bulk_confirm(case_env):
+    app_id = await _run_with_program(case_env)
+    _st, rows, _ = await states(case_env, app_id)
+    R = runtime.rt()
+    row = {r["title"]: r for r in rows}
+    ctx = CaseContext(R.repo, R.retriever, "case", "", app_id=app_id, row_id="")
+    reg = ToolRegistry(CASE_TOOLS)
+    ok = await reg.execute(ToolCall("1", "raise_doubt", {"row_id": row["AP Statistics"]["id"], "kind": "program_mismatch", "reason": "Not on the engineering plan"}), ctx)
+    stale_on_fine = await reg.execute(ToolCall("2", "raise_doubt", {"row_id": row["AP Psychology"]["id"], "kind": "stale_mapping", "reason": "Looks old to me"}), ctx)
+    stale = await reg.execute(ToolCall("3", "raise_doubt", {"row_id": row["AP Computer Science A"]["id"], "kind": "stale_mapping", "reason": "Version t0 is older than t1"}), ctx)
+    other = await reg.execute(ToolCall("4", "raise_doubt", {"row_id": row["AP Psychology"]["id"], "kind": "other", "reason": "Grade looks odd for this course"}), ctx)
+    assert ok.ok and ok.data["verified_by_code"] and not stale_on_fine.ok and stale.ok and other.ok and other.data["verified_by_code"] is False
+    r = await case_env.client.post(f"/api/v1/applications/{app_id}/confirm-mapped", headers=ADMIN)
+    assert r.status_code == 200
+    done = (await case_env.client.get(f"/api/v1/applications/{app_id}/results")).json()["actions"]
+    assert row["AP Statistics"]["id"] not in done  # Not applicable to the program, so not in the bulk confirm
+
+
+async def test_set_classification_follows_the_allowance_and_level_rules(case_env):
+    app_id = await _run_with_program(case_env, "BSc Psychology")  # a plan with a 9-credit allowance
+    _st, rows, _ = await states(case_env, app_id)
+    R = runtime.rt()
+    stat = next(r for r in rows if r["title"] == "AP Statistics")
+    ctx = CaseContext(R.repo, R.retriever, "case", "", app_id=app_id, row_id="")
+    reg = ToolRegistry(CASE_TOOLS)
+    first = await reg.execute(ToolCall("1", "set_classification", {"row_id": stat["id"], "why": "Intro statistics fits a free elective"}), ctx)
+    again = await reg.execute(ToolCall("2", "set_classification", {"row_id": stat["id"], "why": "Do it twice"}), ctx)
+    assert (first.ok or "above beginner" in (first.error or "")) and not again.ok  # a judged row cannot be judged twice
+    if first.ok:
+        with app_session() as db:
+            assert mp.get_state(db, app_id, stat["id"]).facts["_class"]["by"] == "case_agent"
+
+
+async def test_the_review_pass_writes_a_summary_and_logs_its_tool_calls(case_env, monkeypatch):
+    from backend.app.config import get_settings
+    monkeypatch.setattr(get_settings(), "case_review", True)
+    case_env.model.agent_args[""] = {"headline": "Two rows are mapped and three need your input.", "needs": "NEEDS_YOU"}
+    app_id = await _run_with_program(case_env)
+    from backend.app.db.models import Application
+    with app_session() as db:
+        summary = db.get(Application, app_id).extraction["case_summary"]
+    assert summary["text"].startswith("Two rows are mapped") and summary["by"] == "case_agent"
+    act = (await case_env.client.get(f"/api/v1/applications/{app_id}/activity")).json()
+    assert act["usage"]["by_stage"]["case_review"]["calls"] >= 1

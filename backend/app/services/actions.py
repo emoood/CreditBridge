@@ -100,13 +100,19 @@ def record(db: Session, app: Application, row: dict[str, Any], action: str, acto
     return a
 
 
+def bulk_confirmable(st) -> bool:
+    """A mapped row can be confirmed in bulk only if nothing about it needs a second look: no doubt on it, and its equivalent is not outside the program plan."""
+    f = st.facts or {}
+    return not f.get("_doubts") and (f.get("_class") or {}).get("value") != "Not applicable"
+
+
 def confirm_all_mapped(db: Session, app: Application, actor: str, role: str) -> list[RowAction]:
     done = latest(db, app.id)
     out = []
     for r in app.rows:
         st = mp.get_state(db, app.id, r["id"])
         a = done.get(r["id"])
-        if st and st.status == mp.MAPPED and not (a and a.action in RESOLVING):
+        if st and st.status == mp.MAPPED and not (a and a.action in RESOLVING) and bulk_confirmable(st):
             out.append(record(db, app, r, "CONFIRM", actor, role, batch=True))
     return out
 

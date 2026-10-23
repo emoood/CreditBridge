@@ -140,6 +140,7 @@ TEST_MAPPINGS = [  # demo-catalog codes, so the policy check can run in tests
 @pytest.fixture
 def case_env(env, monkeypatch):
     monkeypatch.setattr(get_settings(), "case_agent", True)
+    monkeypatch.setattr(get_settings(), "case_review", False)  # the application-wide review has its own tests
     with app_session() as db:
         db.execute(delete(CourseMapping))
         db.add_all([CourseMapping(qualification="Advanced Placement", subject_name="", aud_credits=3, **m) for m in TEST_MAPPINGS])

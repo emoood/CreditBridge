@@ -6,13 +6,14 @@ from typing import ClassVar, Literal
 from pydantic import BaseModel, Field
 
 from ...config import get_settings
-from ...db.models import RowState
+from ...db.models import Application, RowState
 from ...db.session import app_session
-from ...providers.base import LLMProvider, ToolCall
+from ...providers.base import LLMProvider
+from ...services import doubts
 from ...services import mapping as mp
-from ...services.usage import trace
+from ...services import student_record as sr
 from ..orchestrator import CaseResult, run_case
-from .base import AgentTool, ToolContext, ToolError, ToolRegistry, ToolResult
+from .base import AgentTool, LoggedRegistry, ToolContext, ToolError
 from .evidence_tools import EmptyArgs, TargetArgs, enforced_rules
 
 
@@ -37,27 +38,117 @@ def _state_facts(ctx: CaseContext) -> dict:
         return dict(st.facts or {}) if st else {}
 
 
-class TracedRegistry(ToolRegistry):
-    """Every action the Case agent takes is logged to the trace shown in the activity drawer."""
+class TracedRegistry(LoggedRegistry):
+    """Every tool call the Case agent makes goes to the trace shown in the activity drawer and to the usage ledger."""
+    agent = "case_agent"
 
-    async def execute(self, call: ToolCall, ctx: ToolContext) -> ToolResult:
-        res = await super().execute(call, ctx)
-        if isinstance(ctx, CaseContext):
-            trace(ctx.app_id, ctx.row_id, "case_agent", call.name, call.arguments, res.ok, (res.error or res.to_message())[:300])
-        return res
+    def scope(self, ctx, call):
+        rid = call.arguments.get("row_id") if isinstance(call.arguments, dict) else None
+        return ctx.app_id, rid or ctx.row_id
+
+
+class OptionalRowArgs(BaseModel):
+    row_id: str | None = Field(default=None, description="Leave empty for the row you are working on")
+
+
+def _row(db, ctx: CaseContext, row_id: str | None):
+    """(application, row dict, row state) for the given row id, or for the row this run is about."""
+    app = db.get(Application, ctx.app_id)
+    rid = row_id or ctx.row_id
+    row = next((r for r in app.rows if r["id"] == rid), None)
+    st = mp.get_state(db, ctx.app_id, rid) if row else None
+    if row is None or st is None:
+        raise ToolError(f"Unknown row '{rid}'. Call list_rows for the row ids.")
+    return app, row, st
 
 
 class ReadMapping(AgentTool):
     name = "read_mapping"
-    description = "Read this row's mapping, its condition, the code's condition verdict, missing evidence, facts on file and requests already drafted."
+    description = "Read a row's mapping, its condition, the code's condition verdict, missing evidence, facts on file, requests already drafted, its program classification and doubts."
+    input_schema = OptionalRowArgs
+    roles: ClassVar[set[str]] = {"case"}
+
+    async def execute(self, args: OptionalRowArgs, ctx: CaseContext):
+        with app_session() as db:
+            _app, row, st = _row(db, ctx, args.row_id)
+            return {"row_status": st.status, "kind": st.kind, "reason": st.reason, "mapping": st.mapping, "condition_result": st.condition_result,
+                    "facts_on_file": {k: v for k, v in (st.facts or {}).items() if not k.startswith("_")}, "officer_notes": (st.facts or {}).get("_notes", []), "requests": st.requests,
+                    "grade_on_transcript": row.get("grade"), "program_class": (st.facts or {}).get("_class"), "doubts": (st.facts or {}).get("_doubts", [])}
+
+
+class ListRows(AgentTool):
+    name = "list_rows"
+    description = ("List EVERY row of this application, mapped ones included: row id, title, grade, status, mapped AUD course, program class, doubts already raised, and the code's "
+                   "signals (stale mapping, near-miss grade, program mismatch). Also the student's program and the free-elective credits left.")
     input_schema = EmptyArgs
     roles: ClassVar[set[str]] = {"case"}
 
     async def execute(self, args, ctx: CaseContext):
         with app_session() as db:
-            st = _state(ctx, db)
-            return {"row_status": st.status, "kind": st.kind, "reason": st.reason, "mapping": st.mapping, "condition_result": st.condition_result,
-                    "facts_on_file": {k: v for k, v in (st.facts or {}).items() if not k.startswith("_")}, "officer_notes": (st.facts or {}).get("_notes", []), "requests": st.requests, "grade_on_transcript": ctx.repo.sources[ctx.source_course_id].grade}
+            app = db.get(Application, ctx.app_id)
+            rows = []
+            for r in app.rows:
+                st = mp.get_state(db, app.id, r["id"])
+                if st is None or st.status == mp.NOT_EVAL:
+                    continue
+                m, cls = st.mapping or {}, (st.facts or {}).get("_class")
+                sig = {k: v for k, v in doubts.signals(db, ctx.repo, app, r, st).items() if v}
+                rows.append({"row_id": r["id"], "title": r.get("title"), "grade": r.get("grade"), "status": st.status, "aud_code": m.get("aud_code"),
+                             "mapping_version": m.get("version"), "program_class": cls["value"] if cls else None, "class_by": cls["by"] if cls else None,
+                             "doubts": [d["kind"] for d in (st.facts or {}).get("_doubts", [])], "signals": sig})
+            left = sr.allowance_left(app.program, doubts.elective_credits_used(db, app))
+            return {"program": app.program, "entry_term": ((app.extraction or {}).get("student_record") or {}).get("term"), "free_elective_credits_left": left, "rows": rows}
+
+
+class RaiseDoubtArgs(BaseModel):
+    row_id: str
+    kind: Literal["stale_mapping", "near_miss_grade", "program_mismatch", "other"]
+    reason: str = Field(min_length=5, max_length=300)
+
+
+class RaiseDoubt(AgentTool):
+    name = "raise_doubt"
+    description = ("Raise a doubt on a row (also a Mapped one) for the officer: stale_mapping, near_miss_grade or program_mismatch. Code checks the doubt against the facts and refuses one it "
+                   "cannot corroborate. A doubt never changes the row's status, but the row can then no longer be confirmed in bulk. Kind 'other' is recorded as your unverified note.")
+    input_schema = RaiseDoubtArgs
+    roles: ClassVar[set[str]] = {"case"}
+
+    async def execute(self, args: RaiseDoubtArgs, ctx: CaseContext):
+        with app_session() as db:
+            app, row, st = _row(db, ctx, args.row_id)
+            evidence = None
+            if args.kind != "other":
+                evidence = doubts.signals(db, ctx.repo, app, row, st)[args.kind]
+                if not evidence:
+                    raise ToolError(f"Code does not corroborate a {args.kind} doubt on this row. Call list_rows and look at its signals.")
+            existing = list((st.facts or {}).get("_doubts", []))
+            if any(d["kind"] == args.kind for d in existing):
+                return {"note": "This doubt is already recorded."}
+            mp.merge_facts(db, app.id, row["id"], _doubts=[*existing, {"kind": args.kind, "reason": args.reason, "verified": evidence is not None, "evidence": evidence or "", "by": "case_agent"}])
+            return {"recorded": True, "verified_by_code": evidence is not None}
+
+
+class SetClassificationArgs(BaseModel):
+    row_id: str
+    why: str = Field(min_length=5, max_length=300, description="Why this out-of-program course fits the free-elective allowance")
+
+
+class SetClassification(AgentTool):
+    name = "set_classification"
+    description = ("For a row whose mapped AUD course is 'Not applicable' to the program: judge that it fits the student's free-elective allowance and suggest it as a general elective. "
+                   "Code refuses it when the course is in a never-transferable area, above beginner level, or the allowance is used up.")
+    input_schema = SetClassificationArgs
+    roles: ClassVar[set[str]] = {"case"}
+
+    async def execute(self, args: SetClassificationArgs, ctx: CaseContext):
+        with app_session() as db:
+            app, row, st = _row(db, ctx, args.row_id)
+            why = doubts.can_suggest_elective(db, ctx.repo, app, row["id"], st)
+            if why:
+                raise ToolError(why)
+            code = st.mapping["aud_code"]
+            mp.merge_facts(db, app.id, row["id"], _class={"value": sr.ELECTIVE, "why": args.why, "by": "case_agent", "aud_code": code})
+            return {"classification": sr.ELECTIVE}
 
 
 class ReadSourceExcerpts(AgentTool):
@@ -176,4 +267,4 @@ class SetRowState(AgentTool):
             return {"status": args.status}
 
 
-CASE_TOOLS: list[AgentTool] = [ReadMapping(), ReadSourceExcerpts(), ReadTargetExcerpts(), CheckPolicy(), ProposeCandidates(), DraftRequest(), SetRowState()]
+CASE_TOOLS: list[AgentTool] = [ReadMapping(), ListRows(), RaiseDoubt(), SetClassification(), ReadSourceExcerpts(), ReadTargetExcerpts(), CheckPolicy(), ProposeCandidates(), DraftRequest(), SetRowState()]

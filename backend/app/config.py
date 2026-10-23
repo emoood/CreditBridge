@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     title_only_suggestions: bool = True  # for subjects with no syllabus: up to 3 candidate courses from the title, marked unverified
     reviewer_max_tool_rounds: int = 6
     case_max_tool_rounds: int = 3  # the Case agent is quick by design (read the mapping, act, submit)
+    case_review: bool = True  # the Case agent also reviews the whole application (mapped rows included) after the rows are worked
+    case_max_seconds: float = 90  # budget per row run; once rounds or seconds are used up the agent may only submit
+    case_review_max_tool_rounds: int = 4  # the whole-application review (list rows, raise doubts, judge borderline electives, summary)
+    case_review_max_seconds: float = 90
     case_agent: bool = True  # the code-first path (gate, mapping lookup, Case agent). False = the older model evaluation of every subject
     llm_context_tokens: int = 8192
     agent_protocol: str = "native"  # native (runtime tool calls) | json_action (constrained JSON actions parsed by our code)
@@ -36,8 +40,11 @@ class Settings(BaseSettings):
     vision_recheck_dpi: int = 400  # the Intake agent's focused re-read of one block
     intake_agent: bool = True
     intake_max_rechecks: int = 3  # re-reads per transcript
-    intake_max_tool_rounds: int = 5
+    intake_max_tool_rounds: int = 14  # the whole reading plan: list pages, read blocks, check, recover, submit
+    intake_max_seconds: float = 400
+    intake_recovery_rounds: int = 2  # recovery re-reads per transcript (tighter crop, higher zoom)
     auditor_max_tool_rounds: int = 6
+    auditor_max_seconds: float = 90
 
     ollama_mac_url: str = "http://127.0.0.1:11434"
     ollama_mac_dev_model: str = "qwen3.5:4b"

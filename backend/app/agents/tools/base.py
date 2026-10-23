@@ -23,6 +23,7 @@ class ToolContext:
     match_cited: dict[str, Any] | None = None  # reviewer: the matcher's cited pairs
     case: CaseFile = field(default_factory=CaseFile)
     precedent: PrecedentStore = field(default_factory=PrecedentStore)
+    deadline: float | None = None  # wall-clock time after which the agent may only submit (set by the loop from the agent's seconds budget)
 
 
 @dataclass
@@ -86,3 +87,23 @@ class ToolRegistry:
 
 class ToolError(Exception):
     """Expected, model-visible failure (bad id, out of scope...)."""
+
+
+class LoggedRegistry(ToolRegistry):
+    """A registry that writes EVERY tool call of an agent (accepted or refused) to the action trace and to the usage ledger, with its duration.
+    Subclasses say which agent they are and where the call belongs (application, row)."""
+    agent = ""
+
+    def scope(self, ctx: ToolContext, call: ToolCall) -> tuple[str, str]:
+        return getattr(ctx, "app_id", ""), getattr(ctx, "row_id", "")
+
+    async def execute(self, call: ToolCall, ctx: ToolContext) -> ToolResult:
+        import time
+
+        from ...services.usage import log_tool
+        t0 = time.time()
+        res = await super().execute(call, ctx)
+        app_id, row_id = self.scope(ctx, call)
+        if app_id:
+            log_tool(app_id, row_id, self.agent, call.name, call.arguments if isinstance(call.arguments, dict) else {}, res.ok, (res.error or res.to_message())[:300], time.time() - t0)
+        return res

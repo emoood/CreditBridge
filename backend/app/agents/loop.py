@@ -1,6 +1,7 @@
 """Bounded tool-calling loop. The model finishes by calling submit_result (Ollama's MLX runner has no
 structured `format`; see docs/decisions.md). Every final result is validated locally with Pydantic."""
 import json
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -40,11 +41,14 @@ def _try_content_json(content: str, model: type[BaseModel]) -> BaseModel | None:
 
 
 async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, *, system: str,
-                            user: str, final_model: type[BaseModel], max_tool_rounds: int, stage: str) -> AgentOutcome:
-    """Investigate with tools; if the model cannot finish, one clean synthesis turn over a compact evidence summary."""
+                            user: str, final_model: type[BaseModel], max_tool_rounds: int, stage: str, max_seconds: float | None = None) -> AgentOutcome:
+    """Investigate with tools; if the model cannot finish, one clean synthesis turn over a compact evidence summary.
+    The budget is rounds AND seconds: once either is used up the agent may only submit (the seconds are checked between turns)."""
     evidence: list[str] = []
     json_mode = get_settings().agent_protocol == "json_action"
     run = _loop_json if json_mode else _loop
+    ctx_deadline = time.time() + max_seconds if max_seconds else None
+    ctx.deadline = ctx_deadline  # tools may look at it too (a long vision call should not start after the deadline)
     out = await run(provider, registry, ctx, system, user, final_model, max_tool_rounds, stage, evidence)
     if out.status == "OK" or not evidence:
         return out
@@ -77,6 +81,15 @@ async def run_bounded_agent(provider: LLMProvider, registry: ToolRegistry, ctx: 
     return out
 
 
+def _over(ctx: ToolContext, out: AgentOutcome) -> bool:
+    d = getattr(ctx, "deadline", None)
+    if d is not None and time.time() > d:
+        if "TIME_BUDGET_USED" not in out.flags:
+            out.flags.append("TIME_BUDGET_USED")
+        return True
+    return False
+
+
 async def _loop(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext, system: str, user: str,
                 final_model: type[BaseModel], max_tool_rounds: int, stage: str, evidence: list[str]) -> AgentOutcome:
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}, {"role": "user", "content": user}]
@@ -92,7 +105,7 @@ async def _loop(provider: LLMProvider, registry: ToolRegistry, ctx: ToolContext,
         return await provider.complete(LLMRequest(messages, tools, stage, meta))
 
     while True:
-        final_turn = rounds >= max_tool_rounds
+        final_turn = rounds >= max_tool_rounds or _over(ctx, out)
         tools = [submit] if final_turn else registry.visible_tools(ctx.role) + [submit]
         resp = await call(tools)
         sub = next((c for c in resp.tool_calls if c.name == SUBMIT), None)
@@ -161,7 +174,7 @@ async def _loop_json(provider: LLMProvider, registry: ToolRegistry, ctx: ToolCon
     meta = {"course": ctx.source_course_id}
     repaired, rounds, total_turns = False, 0, 0
     while True:
-        final_turn = rounds >= max_tool_rounds
+        final_turn = rounds >= max_tool_rounds or _over(ctx, out)
         out.llm_calls += 1
         resp = await provider.complete(LLMRequest(messages, [], stage, meta, response_format=final_only if final_turn else full))
         act = parse_action(resp.content)

@@ -38,20 +38,32 @@ def trace(app_id: str, row_id: str, actor: str, name: str, args: dict[str, Any] 
         db.commit()
 
 
+def log_tool(app_id: str, row_id: str, agent: str, name: str, args: dict[str, Any] | None, ok: bool, detail: str, seconds: float) -> None:
+    """One tool call by an agent: written to the action trace AND to the usage ledger (provider "tool", free, with its own duration), so the
+    ledger shows every step an agent took, not only its model calls."""
+    trace(app_id, row_id, agent, name, args, ok, detail)
+    with app_session() as db:
+        db.add(UsageEntry(app_id=app_id, row_id=row_id, stage=f"tool:{agent}", provider="tool", model=name, seconds=round(seconds, 3), prompt_tokens=0, output_tokens=0, cost_usd=0.0))
+        db.commit()
+
+
 def activity(app_id: str, limit: int = 300) -> dict[str, Any]:
     from ..db.models import iso
     with app_session() as db:
         calls = list(db.scalars(select(UsageEntry).where(UsageEntry.app_id == app_id).order_by(UsageEntry.id)))
         events = list(db.scalars(select(TraceEvent).where(TraceEvent.app_id == app_id).order_by(TraceEvent.id.desc()).limit(limit)))
+        tools = [c for c in calls if c.provider in ("tool", "recorded:tool")]
+        calls = [c for c in calls if c not in tools]  # model calls only; tool calls are counted on their own
         by_stage: dict[str, dict[str, float]] = {}
-        for c in calls:
+        for c in calls + tools:
             s = by_stage.setdefault(c.stage or "other", {"calls": 0, "seconds": 0.0, "prompt_tokens": 0, "output_tokens": 0})
             s["calls"] += 1
             s["seconds"] = round(s["seconds"] + c.seconds, 2)
             s["prompt_tokens"] += c.prompt_tokens
             s["output_tokens"] += c.output_tokens
         recorded = [c for c in calls if (c.provider or "").startswith("recorded:")]
-        return {"usage": {"recorded_calls": len(recorded), "recorded_seconds": round(sum(c.seconds for c in recorded), 1), "live_calls": len(calls) - len(recorded), "calls": len(calls), "seconds": round(sum(c.seconds for c in calls), 1), "prompt_tokens": sum(c.prompt_tokens for c in calls),
+        return {"usage": {"tool_calls": len(tools), "tool_seconds": round(sum(c.seconds for c in tools), 1),
+                          "recorded_calls": len(recorded), "recorded_seconds": round(sum(c.seconds for c in recorded), 1), "live_calls": len(calls) - len(recorded), "calls": len(calls), "seconds": round(sum(c.seconds for c in calls), 1), "prompt_tokens": sum(c.prompt_tokens for c in calls),
                           "output_tokens": sum(c.output_tokens for c in calls), "cost_usd": round(sum(c.cost_usd for c in calls), 4),
                           "models": sorted({c.model for c in calls if c.model}), "by_stage": by_stage},
                 "trace": [{"at": iso(e.at), "row_id": e.row_id, "actor": e.actor, "name": e.name, "args": {k: v for k, v in e.args.items() if k != "_recorded"}, "ok": e.ok, "detail": e.detail,
