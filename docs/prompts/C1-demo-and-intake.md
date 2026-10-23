@@ -1,4 +1,4 @@
-Read docs/OWNERSHIP.md and docs/REQUIREMENTS.md (sections 1, 2, 3, 5) first. Chunk C1. C0 is merged. Follow the Git, Rules and Change log sections in OWNERSHIP.md. Model runs use the local model (Ollama); do not use a paid API; retry a recording at most once.
+Read docs/OWNERSHIP.md and docs/REQUIREMENTS.md (sections 1, 2, 3, 5) first. Chunk C1. C0 is merged. Follow the Git, Rules and Change log sections in OWNERSHIP.md. Do no live model runs in this chunk: test with the fake provider or prepared runs and list in the change log anything that needs a live run to confirm.
 Audit first (a few lines). Reuse what exists. One commit per step, in this order. Labels: [CODE] deterministic, [AGENT] model-driven with code verifying.
 
 Step 1. [AGENT] Intake speed
@@ -17,7 +17,7 @@ Step 4. Demo mode
 Today: header checkbox "Demo", Alt+D, "Demo mode" chip, stage speed, Reset; prepared runs in fixtures/prepared*runs matched by sha256 or filename.
 Change: relabel the control as Replay / Live AI (same behavior, same screens, same case list; the chip stays small). Add a data_version to each prepared run (hash of mapping_ap.csv, mapping_conditions.yaml and the plan files in policies/data/) and refuse Replay with "recording out of date" on a mismatch. Case names follow demo_ap*<student>\_<variant>; add a README table of what each file shows. Variants: clean, copy error (a2c), misread (a2m). Planted-error switches are separate named variants.
 
-Step 5. Recordings (last; policies/data/ must be final, see C3 data step)
+Step 5. Recordings (NOT part of the C1 coding session. Done by Friend 2 with a stronger model after C2 is finished and policies/data/ is final; Friend 1 skips this step. The recording must store which model made it.)
 Re-record the clean case for Rania (Finance), then the planted copy error. The planted misread only if the repair is genuine. Use scripts/overnight_runs.py if it fits. Then check: Human Geography shows Waiting on document and resumes on a score-5 style upload; the Auditor explanation matches the verified diff. Report timings per stage. Commit the recordings under fixtures/prepared_runs/ (never anything under data/).
 
 Finish: change log docs/changes/C1.md, a line in INDEX.md, C1 row status, push to main per OWNERSHIP.md. Final report under 20 lines: audit result, timings before and after, recordings made and their variants, anything you could not do.
