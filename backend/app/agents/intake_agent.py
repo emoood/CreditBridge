@@ -501,7 +501,10 @@ def name_check(record: str | None, seen: str | None, path: str) -> dict[str, Any
         return {"status": "unchecked", "why": "no student record"}
     norm = lambda s: re.sub(r"[^a-z ]", "", (s or "").lower()).split()
     if seen:
-        same = set(norm(record)) <= set(norm(seen)) or difflib.SequenceMatcher(None, " ".join(norm(record)), " ".join(norm(seen))).ratio() >= 0.85
+        close = lambda a, b: difflib.SequenceMatcher(None, a, b).ratio() >= 0.8
+        want, got = norm(record), norm(seen)
+        # every name matches (small misspellings tolerated), or at least the family name does: a vision misreading of a first letter is not a different person
+        same = all(any(close(w, g) for g in got) for w in want) or (bool(want) and any(close(want[-1], g) for g in got))
         return {"status": "match" if same else "mismatch", "source": "vision (agent)", "seen": seen if not same else None}
     layer = cc.name_in_text(path, record)
     if layer is None:

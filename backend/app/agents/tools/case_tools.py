@@ -47,10 +47,6 @@ class TracedRegistry(LoggedRegistry):
         return ctx.app_id, rid or ctx.row_id
 
 
-class OptionalRowArgs(BaseModel):
-    row_id: str | None = Field(default=None, description="Leave empty for the row you are working on")
-
-
 def _row(db, ctx: CaseContext, row_id: str | None):
     """(application, row dict, row state) for the given row id, or for the row this run is about."""
     app = db.get(Application, ctx.app_id)
@@ -64,13 +60,13 @@ def _row(db, ctx: CaseContext, row_id: str | None):
 
 class ReadMapping(AgentTool):
     name = "read_mapping"
-    description = "Read a row's mapping, its condition, the code's condition verdict, missing evidence, facts on file, requests already drafted, its program classification and doubts."
-    input_schema = OptionalRowArgs
+    description = "Read this row's mapping, its condition, the code's condition verdict, missing evidence, facts on file, requests already drafted, its program classification and doubts."
+    input_schema = EmptyArgs
     roles: ClassVar[set[str]] = {"case"}
 
-    async def execute(self, args: OptionalRowArgs, ctx: CaseContext):
+    async def execute(self, args, ctx: CaseContext):
         with app_session() as db:
-            _app, row, st = _row(db, ctx, args.row_id)
+            _app, row, st = _row(db, ctx, None)
             return {"row_status": st.status, "kind": st.kind, "reason": st.reason, "mapping": st.mapping, "condition_result": st.condition_result,
                     "facts_on_file": {k: v for k, v in (st.facts or {}).items() if not k.startswith("_")}, "officer_notes": (st.facts or {}).get("_notes", []), "requests": st.requests,
                     "grade_on_transcript": row.get("grade"), "program_class": (st.facts or {}).get("_class"), "doubts": (st.facts or {}).get("_doubts", [])}
@@ -267,4 +263,6 @@ class SetRowState(AgentTool):
             return {"status": args.status}
 
 
-CASE_TOOLS: list[AgentTool] = [ReadMapping(), ListRows(), RaiseDoubt(), SetClassification(), ReadSourceExcerpts(), ReadTargetExcerpts(), CheckPolicy(), ProposeCandidates(), DraftRequest(), SetRowState()]
+ROW_TOOLS: list[AgentTool] = [ReadMapping(), ReadSourceExcerpts(), ReadTargetExcerpts(), CheckPolicy(), ProposeCandidates(), DraftRequest(), SetRowState()]  # working ONE row
+REVIEW_TOOLS: list[AgentTool] = [ListRows(), RaiseDoubt(), SetClassification()]  # the whole-application review
+CASE_TOOLS: list[AgentTool] = [*ROW_TOOLS, *REVIEW_TOOLS]

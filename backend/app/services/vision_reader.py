@@ -95,7 +95,8 @@ def count_text_lines(img: Image.Image, span: tuple[int, int]) -> int:
 def two_column_zone(img: Image.Image, min_gap: int = 30, min_zone: int = 300) -> tuple[int, int, tuple[int, int], tuple[int, int]] | None:
     """Where two tables are printed side by side: (top, bottom, left range, right range) or None. Found as the tallest run of rows in which one vertical
     gutter stays empty while there is ink on both sides of it (full-width bands above and below break the run)."""
-    g = np.asarray(img.convert("L")) < 200
+    gray = np.asarray(img.convert("L"))
+    g = gray < 200
     H, W = g.shape
     ink_rows = g.any(axis=1)
     if ink_rows.sum() < min_zone:
@@ -129,6 +130,9 @@ def two_column_zone(img: Image.Image, min_gap: int = 30, min_zone: int = 300) ->
                 cols = np.where(zone.any(axis=0))[0]
                 if gx0 - int(cols[0]) < 0.3 * W or int(cols[-1]) - gx1 < 0.3 * W:
                     continue  # a gutter inside one table (between its columns), not between two tables
+                faint = gray[y0:y] < 245  # two tables have a border or fill running down the inner edge of each; the ragged gap inside one plain table has none
+                if faint[:, max(0, gx0 - 30):gx0].mean(axis=0).max() < 0.5 or faint[:, gx1:gx1 + 30].mean(axis=0).max() < 0.5:
+                    continue
                 return y0, y, (max(0, int(cols[0]) - 8), gx0 + 4), (gx1 - 4, min(W, int(cols[-1]) + 9))
     return None
 
