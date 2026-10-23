@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Check, ChevronDown, ChevronRight, ClipboardCopy, Download, History, Loader2, Paperclip, Play, ShieldCheck, X } from 'lucide-react';
-import { api, type Sheet } from './api';
+import { api, type AppInfo, type Sheet } from './api';
 import { Activity } from './Activity';
 import { Evidence } from './Evidence';
 import { ExtractionCheck } from './ExtractionCheck';
 import { appStatus, build, CLASS_LABEL, curriculumOf, RESOLUTION_LABEL, toCsv, toTsv, type Item } from './model';
 import { AppPill, RowStatusText } from './ui';
 import { useApp, useInclude, useInstitution } from './useApp';
+import { useDemo } from './demo';
 
 export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: { appId: string; role: string; quals: string[]; qual: string; onClose: () => void; onChanged: () => void }) {
   const { data, error, refresh } = useApp(appId);
   const inst = useInstitution();
+  const demoMode = useDemo();
   const [include, setInclude] = useInclude(appId);
   const [evidenceKey, setEvidenceKey] = useState<string | null>(null);
   const [activity, setActivity] = useState(false);
@@ -18,6 +20,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [exported, setExported] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const evaluating = !!data && (['CONFIRMED', 'EVALUATION_IN_PROGRESS'].includes(data.app.status) || data.evalJob?.status === 'RUNNING' || data.evalJob?.status === 'QUEUED');
   const built = useMemo(() => data ? build(data.app, data.results, data.pending, include, evaluating, data.states, data.actions) : null, [data, include, evaluating]);
@@ -58,7 +61,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
     setBusy(true); setErr(null);
     try {
       const s = await auditedSheet('copied'); if (!s) return;
-      await navigator.clipboard.writeText(toTsv(s)); setToast(`Copied ${s.rows.length} rows${s.unconfirmed ? ` (${s.unconfirmed} unconfirmed, marked)` : ''}. The Auditor reviewed this sheet.`);
+      await navigator.clipboard.writeText(toTsv(s)); setExported(true); setToast(`Copied ${s.rows.length} rows${s.unconfirmed ? ` (${s.unconfirmed} unconfirmed, marked)` : ''}. The Auditor reviewed this sheet.`);
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
   async function downloadCsv() {
@@ -66,7 +69,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
     try {
       const s = await auditedSheet('downloaded'); if (!s) return;
       const url = URL.createObjectURL(new Blob([toCsv(s)], { type: 'text/csv' }));
-      const a = document.createElement('a'); a.href = url; a.download = `creditbridge-${appId}.csv`; a.click(); URL.revokeObjectURL(url);
+      setExported(true); const a = document.createElement('a'); a.href = url; a.download = `creditbridge-${appId}.csv`; a.click(); URL.revokeObjectURL(url);
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -84,6 +87,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
     {interrupted && <div className="eval-warn"><AlertCircle size={15} /> The {interrupted.phase === 'READING' ? 'reading' : 'evaluation'} was {interrupted.status.toLowerCase()}. Finished work is kept.
       <button className="link-btn" onClick={() => run(() => api.resume(interrupted.id, role))}>Resume</button></div>}
 
+    {demoMode.on && app.replay === undefined && <StageStrip app={app} evalStage={evalJob?.stage} evalStatus={evalJob?.status} audited={!!sheet?.audit} approved={approved} exported={exported} />}
     {reading && <ReadingProgress done={(readJob?.units ?? []).filter(u => u.stage === 'read' && u.status === 'DONE').length} total={(readJob?.units ?? []).filter(u => u.stage === 'read').length} stage={readJob?.stage} />}
     {gate && <ExtractionCheck display={inst.display} app={app} quals={quals} qual={qual} role={role} onChanged={reload} />}
     {demoIdle && <div className="pad"><p className="muted">The demo fixtures have not been evaluated yet.</p><button className="primary-button" disabled={busy} onClick={() => run(() => api.evaluate(appId, role))}><Play size={16} /> Run AI evaluation</button></div>}
@@ -194,6 +198,17 @@ function AuditBox({ appId, role, audit, onChanged }: { appId: string; role: stri
     {!audit.clean && audit.proposals.length === 0 && <p className="muted">No automatic correction was proposed; this needs your judgment.</p>}
     {audit.agent_comment && <p className="muted"><em>Auditor&apos;s own comment (not verified by code): {audit.agent_comment}</em></p>}
     {err && <div className="eval-error"><AlertCircle size={14} /> {err}</div>}</section>;
+}
+
+/** The stages of a case, one after another: shown in Demo mode so the audience can follow where the work is. */
+function StageStrip({ app, evalStage, evalStatus, audited, approved, exported }: { app: AppInfo; evalStage?: string; evalStatus?: string; audited: boolean; approved: boolean; exported: boolean }) {
+  const reading = app.status === 'READING';
+  const gate = app.status === 'EXTRACTION_REVIEW_REQUIRED';
+  const evaluating = evalStatus === 'RUNNING' || evalStatus === 'QUEUED' || app.status === 'CONFIRMED' || app.status === 'EVALUATION_IN_PROGRESS';
+  const past = !reading && !gate;
+  const rank = { Intake: reading ? 1 : 2, 'Relevance gate': !past ? 0 : evaluating && (evalStage === 'lookup' || !evalStage) ? 1 : 2, 'Mapping lookup': !past ? 0 : evaluating && (evalStage === 'lookup' || !evalStage) ? 1 : 2,
+    'Case agent': !past ? 0 : evaluating && evalStage !== 'lookup' && !!evalStage ? 1 : evaluating ? 0 : 2, 'Officer review': past && !evaluating ? (approved || exported ? 2 : 1) : 0, Auditor: audited ? 2 : exported ? 1 : 0, 'Copy / CSV': exported ? 2 : 0 };
+  return <div className="stage-strip" aria-label="Stages">{Object.entries(rank).map(([k, v]) => <span key={k} className={v === 2 ? 'done' : v === 1 ? 'active' : ''}>{v === 2 ? '✓ ' : ''}{k}</span>)}</div>;
 }
 
 function ReadingProgress({ done, total, stage }: { done: number; total: number; stage?: string }) {

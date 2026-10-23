@@ -7,7 +7,7 @@ import type { AppData } from './useApp';
 export function Activity({ data, onClose }: { data: AppData; onClose: () => void }) {
   const { app, results, readJob, evalJob } = data;
   const [act, setAct] = useState<Act | null>(null);
-  useEffect(() => { api.activity(app.id).then(setAct).catch(() => undefined); }, [app.id, results.length, app.status]);
+  useEffect(() => { const f = () => api.activity(app.id).then(setAct).catch(() => undefined); f(); const t = setInterval(f, 1200); return () => clearInterval(t); }, [app.id, results.length, app.status]); // streams while work is happening
   const calls = results.reduce((n, r) => n + (r.replay ? r.replay.recorded_llm_calls ?? 0 : r.llm_calls), 0);
   const secs = results.reduce((n, r) => n + (r.replay ? r.replay.recorded_duration_s ?? 0 : r.duration_s), 0);
   const live = results.filter(r => !r.replay).length;

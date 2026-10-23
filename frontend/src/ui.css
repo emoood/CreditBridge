@@ -107,3 +107,13 @@ td.prog.prog-off { color: var(--muted, #6b7280); }
 .electives h4 { margin: 0 0 4px; font-size: 13px; }
 .electives ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
 .intake-line { font-size: 12.5px; margin: 4px 0; }
+
+/* Demo mode */
+.demo-controls { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.demo-toggle { display: inline-flex; align-items: center; gap: 4px; color: var(--muted, #6b7280); cursor: pointer; }
+.demo-chip { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 999px; padding: 2px 8px; font-size: 11.5px; font-weight: 600; }
+.demo-controls select { font-size: 12px; }
+.stage-strip { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; font-size: 12px; }
+.stage-strip span { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line, #e5e7eb); color: var(--muted, #6b7280); }
+.stage-strip span.done { color: #166534; border-color: #bbf7d0; background: #f0fdf4; }
+.stage-strip span.active { color: #3730a3; border-color: #c7d2fe; background: #eef2ff; font-weight: 600; }

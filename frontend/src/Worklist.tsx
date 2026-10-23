@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, History, Loader2, UploadCloud } from "lucide-react";
-import { api, type AppInfo, type Recording, type StudentRecord } from "./api";
+import {
+  api,
+  type AppInfo,
+  type DemoCase,
+  type Recording,
+  type StudentRecord,
+} from "./api";
+import { useDemo } from "./demo";
 import {
   APP_ORDER,
   appStatus,
@@ -44,6 +51,9 @@ export default function Worklist() {
   const [rec, setRec] = useState<StudentRecord | null>(null);
   const [plant, setPlant] = useState(false);
   const inst = useInstitution();
+  const demo = useDemo();
+  const [cases, setCases] = useState<DemoCase[]>([]);
+  const [selCase, setSelCase] = useState("");
   const [quals, setQuals] = useState<string[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [replayOpen, setReplayOpen] = useState(false);
@@ -109,12 +119,32 @@ export default function Worklist() {
       .catch(() => undefined);
   }, [entries.length]);
 
+  useEffect(() => {
+    if (!demo.on) return;
+    api
+      .demoCases()
+      .then((d) => {
+        setCases(d.cases);
+        setSelCase((c) => c || d.cases[0]?.case_number || "");
+      })
+      .catch(() => setCases([]));
+  }, [demo.on]);
+  const picked = cases.find((c) => c.case_number === selCase);
+
   async function upload(f: File | undefined) {
     if (!f) return;
     setUploading(true);
     setError(null);
     try {
-      const a = await api.upload(f, name, qual, sid, plant, rec ? caseNo : "");
+      const a = await api.upload(
+        f,
+        name,
+        qual,
+        sid,
+        plant,
+        demo.on ? selCase : rec ? caseNo : "",
+        demo.on ? demo.speed : "",
+      );
       setPlant(false);
       setCaseNo("");
       setRec(null);
@@ -142,61 +172,88 @@ export default function Worklist() {
           What needs you comes first. Click a row to open the student.
         </p>
         <div className="wl-actions">
-          <label className="role-pick">
-            Curriculum{" "}
-            <select value={qual} onChange={(e) => setQual(e.target.value)}>
-              <option value="">Detect from transcript</option>
-              {quals.map((q) => (
-                <option key={q}>{q}</option>
-              ))}
-            </select>
-          </label>
-          <label
-            className="role-pick"
-            title="The case number loads name, contact, program, term and curriculum from the demo student data"
-          >
-            Case number{" "}
-            <input
-              className="mini"
-              placeholder="e.g. CB-2026-0101"
-              value={caseNo}
-              style={{ width: 130 }}
-              onChange={(e) => {
-                const v = e.target.value;
-                setCaseNo(v);
-                setRec(null);
-                if (v.trim().length >= 8)
-                  api
-                    .studentRecord(v.trim())
-                    .then(setRec)
-                    .catch(() => setRec(null));
-              }}
-            />
-            {rec ? (
-              <span className="muted">
-                {" "}
-                {rec.name} · {rec.program} · {rec.term}
-              </span>
-            ) : caseNo.trim().length >= 8 ? (
-              <span className="muted"> no record</span>
-            ) : null}
-          </label>
-          <label className="role-pick">
-            Student{" "}
-            <input
-              className="mini"
-              placeholder="Name (synthetic)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <input
-              className="mini"
-              placeholder="ID"
-              value={sid}
-              onChange={(e) => setSid(e.target.value)}
-              style={{ width: 90 }}
-            />
-          </label>
+          {demo.on ? (
+            <label className="role-pick" title="Cases that have a prepared run">
+              Case{" "}
+              <select
+                value={selCase}
+                onChange={(e) => setSelCase(e.target.value)}
+              >
+                {cases.length === 0 && (
+                  <option value="">No prepared runs</option>
+                )}
+                {cases.map((c) => (
+                  <option key={c.case_number} value={c.case_number}>
+                    {c.case_number} · {c.name}
+                  </option>
+                ))}
+              </select>
+              {picked && (
+                <span className="muted">
+                  {" "}
+                  {picked.program} · file {picked.filename}
+                </span>
+              )}
+            </label>
+          ) : (
+            <>
+              <label className="role-pick">
+                Curriculum{" "}
+                <select value={qual} onChange={(e) => setQual(e.target.value)}>
+                  <option value="">Detect from transcript</option>
+                  {quals.map((q) => (
+                    <option key={q}>{q}</option>
+                  ))}
+                </select>
+              </label>
+              <label
+                className="role-pick"
+                title="The case number loads name, contact, program, term and curriculum from the demo student data"
+              >
+                Case number{" "}
+                <input
+                  className="mini"
+                  placeholder="e.g. CB-2026-0101"
+                  value={caseNo}
+                  style={{ width: 130 }}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCaseNo(v);
+                    setRec(null);
+                    if (v.trim().length >= 8)
+                      api
+                        .studentRecord(v.trim())
+                        .then(setRec)
+                        .catch(() => setRec(null));
+                  }}
+                />
+                {rec ? (
+                  <span className="muted">
+                    {" "}
+                    {rec.name} · {rec.program} · {rec.term}
+                  </span>
+                ) : caseNo.trim().length >= 8 ? (
+                  <span className="muted"> no record</span>
+                ) : null}
+              </label>
+              <label className="role-pick">
+                Student{" "}
+                <input
+                  className="mini"
+                  placeholder="Name (synthetic)"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <input
+                  className="mini"
+                  placeholder="ID"
+                  value={sid}
+                  onChange={(e) => setSid(e.target.value)}
+                  style={{ width: 90 }}
+                />
+              </label>
+            </>
+          )}
           {inst.demo_mode && (
             <label
               className="role-pick demo-switch"
@@ -232,7 +289,7 @@ export default function Worklist() {
           <button
             className="secondary-button"
             onClick={() => setReplayOpen(!replayOpen)}
-            disabled={!recordings.length}
+            disabled={!recordings.length || demo.on}
             title={recordings.length ? "" : "No recorded run saved yet"}
           >
             <History size={16} /> Replay a recorded run
