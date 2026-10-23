@@ -1,19 +1,20 @@
 """Score a model on the six fixture subjects through the full case workflow. Manual, uses the real model.
-Usage: python benchmarks/model_eval.py MODEL [--think none|false|low|medium|high] [--runs N] [--tag NAME]
+Usage: python benchmarks/model_eval.py [MODEL] [--provider gemini|ollama|lmstudio] [--think none|false|low|medium|high] [--runs N] [--tag NAME]
 Scoring (hand-written rubric from fixtures/demo_v1/expected_results.json): 2 = intended outcome, 1 = acceptable
 fallback, 0 = wrong, unsafe or failed. Max 12 per run."""
 import argparse
 import asyncio
+from datetime import date
 import json
+from pathlib import Path
 import sys
 import time
-from datetime import date
-from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from backend.app.agents.orchestrator import CaseResult, run_case
 from backend.app.config import get_settings
 from backend.app.devlog import events
+from backend.app.providers.gemini_provider import GeminiProvider
 from backend.app.providers.guard import GuardedProvider
 from backend.app.providers.ollama_provider import OllamaProvider
 from backend.app.providers.openai_compat import OpenAICompatProvider
@@ -48,19 +49,27 @@ def score(code: str, r: CaseResult) -> tuple[int, str]:
         if c == "CS330" and st == "POTENTIAL_MATCH" and t == "READY_TO_ACCEPT":
             return 0, "FELL FOR THE TITLE TRAP (CS330 ready to accept)"
         if c == "CS330":
-            return 1, "claimed CS330 but flagged/challenged"
-        return 1, f"no unsafe claim ({st})"
+            return 1, "claimed CS330 (withdrawn/challenged)"
+        return 0, f"expected CS340/CS330, got {c or st}"
     if code == "ENGL101":
-        return (2, "ok") if st == "NEEDS_SYLLABUS" else (0, f"expected NEEDS_SYLLABUS, got {st}")
+        return (2, "no syllabus detected") if st == "NEEDS_MORE_EVIDENCE" and "NO_SYLLABUS" in r.match.flags and r.llm_calls == 0 else \
+               (1, "no syllabus (called model)") if st == "NEEDS_MORE_EVIDENCE" and "NO_SYLLABUS" in r.match.flags else \
+               (0, f"expected no syllabus/0 calls, got {st}/{r.llm_calls}")
     return 0, "?"
 
 
 async def main(a):
     s = get_settings()
+    model_name = a.model or (s.gemini_model if a.provider == "gemini" else "default")
     think = {"none": None, "false": False, "true": True}.get(a.think, a.think)
-    inner = (OpenAICompatProvider(s.lmstudio_base_url, a.model, "lmstudio", 0.0, a.call_timeout + 10) if a.provider == "lmstudio"
-             else OllamaProvider(s.ollama_mac_url, a.model, "eval", s.llm_context_tokens, 0.0, a.call_timeout + 10, think))
-    prov = GuardedProvider(inner, a.call_timeout)  # hard per-call limit, one retry, then the subject is marked failed
+    if a.provider == "gemini":
+        key = s.get_gemini_api_key()
+        inner = GeminiProvider(key, model_name, 0.0, a.call_timeout + 10)
+    elif a.provider == "lmstudio":
+        inner = OpenAICompatProvider(s.lmstudio_base_url, model_name, "lmstudio", 0.0, a.call_timeout + 10)
+    else:
+        inner = OllamaProvider(s.ollama_mac_url, model_name, "eval", s.llm_context_tokens, 0.0, a.call_timeout + 10, think)
+    prov = GuardedProvider(inner, a.call_timeout)
     repo = DemoRepo()
     ret = CatalogRetriever(list(repo.targets.values()))
     runs = []
@@ -81,17 +90,17 @@ async def main(a):
             print(f"  {code:8} {rows[-1]['points']} {rows[-1]['why']:48} {rows[-1].get('triage','')} {rows[-1]['secs']}s", flush=True)
         total = sum(x["points"] for x in rows)
         runs.append({"run": n + 1, "total": total, "secs": round(time.time() - t_run), "rows": rows})
-        print(f"{a.model} run {n + 1}: {total}/12 in {runs[-1]['secs']}s", flush=True)
-    out = Path(__file__).parent / "results" / f"model_eval_{date.today()}_{a.tag or a.model.replace(':', '-').replace('/', '-')}.json"
-    out.write_text(json.dumps({"model": a.model, "think": a.think, "date": str(date.today()), "prompt": "matching_v3/reviewer_v3",
-                               "runs": runs}, indent=1))
+        print(f"{model_name} run {n + 1}: {total}/12 in {runs[-1]['secs']}s", flush=True)
+    out = Path(__file__).parent / "results" / f"model_eval_{date.today()}_{a.tag or model_name.replace(':', '-').replace('/', '-')}.json"
+    out.write_text(json.dumps({"model": model_name, "think": a.think, "date": str(date.today()), "prompt": "matching_v4/reviewer_v4",
+                               "runs": runs}, indent=1), encoding="utf-8")
     print("saved", out)
 
 ap = argparse.ArgumentParser()
-ap.add_argument("model")
+ap.add_argument("model", nargs="?", default="")
 ap.add_argument("--think", default="false")
 ap.add_argument("--runs", type=int, default=1)
 ap.add_argument("--call-timeout", dest="call_timeout", type=float, default=120)
-ap.add_argument("--provider", default="ollama", choices=["ollama", "lmstudio"])
+ap.add_argument("--provider", default="gemini", choices=["ollama", "lmstudio", "gemini"])
 ap.add_argument("--tag", default="")
 asyncio.run(main(ap.parse_args()))

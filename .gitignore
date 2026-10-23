@@ -12,3 +12,6 @@ dist/
 *.egg-info/
 frontend/tsconfig.tsbuildinfo
 *.tsbuildinfo
+API_Secret.txt
+API_secret.txt
+*secret*

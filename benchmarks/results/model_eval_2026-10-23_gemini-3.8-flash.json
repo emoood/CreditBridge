@@ -1,0 +1,51 @@
+{
+ "model": "gemini-3.8-flash",
+ "think": "false",
+ "date": "2026-10-23",
+ "prompt": "matching_v4/reviewer_v4",
+ "runs": [
+  {
+   "run": 1,
+   "total": 0,
+   "secs": 64,
+   "rows": [
+    {
+     "course": "COMP101",
+     "points": 0,
+     "why": "crash ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please ",
+     "secs": 61.6
+    },
+    {
+     "course": "STAT210",
+     "points": 0,
+     "why": "crash ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please ",
+     "secs": 0.6
+    },
+    {
+     "course": "COMP220",
+     "points": 0,
+     "why": "crash ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please ",
+     "secs": 0.3
+    },
+    {
+     "course": "SENG490",
+     "points": 0,
+     "why": "crash ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please ",
+     "secs": 0.5
+    },
+    {
+     "course": "INFS230",
+     "points": 0,
+     "why": "crash ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please ",
+     "secs": 0.4
+    },
+    {
+     "course": "ENGL101",
+     "points": 0,
+     "why": "crash ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please ",
+     "secs": 0.5
+    }
+   ]
+  }
+ ]
+}

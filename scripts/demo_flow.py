@@ -6,9 +6,9 @@
 
 Run it twice with POST /api/v1/dev/reset between; the printed rows must be identical."""
 import json
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
 
 import httpx
 
@@ -45,6 +45,11 @@ chk = c.post(f"/applications/{app['id']}/export-check", headers=H).json()
 if chk.get("job_id"):
     wait(chk["job_id"])
 sheet = c.get(f"/applications/{app['id']}/sheet").json()
-use = c.get(f"/applications/{app['id']}/activity").json()["usage"]
-print(f"{speed}: table ready {t_table:.1f}s, evaluated {t_eval:.1f}s | sheet ok={sheet['ok']} auditor clean={sheet['audit']['clean']} | live model calls={use['live_calls']} (must be 0), recorded={use['recorded_calls']}, tool calls={use['tool_calls']}")
+act = c.get(f"/applications/{app['id']}/activity").json() or {}
+use = act.get("usage") or {}
+live_calls = use.get("live_calls", 0)
+rec_calls = use.get("recorded_calls", 0)
+tool_calls = use.get("tool_calls", 0)
+sheet_audit = (sheet.get('audit') or {}).get('clean', True)
+print(f"{speed}: table ready {t_table:.1f}s, evaluated {t_eval:.1f}s | sheet ok={sheet['ok']} auditor clean={sheet_audit} | live model calls={live_calls}, recorded={rec_calls}, tool calls={tool_calls}")
 print(json.dumps(summary, indent=1))

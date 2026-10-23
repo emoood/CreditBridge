@@ -7,13 +7,13 @@ import pymupdf
 from backend.app.services import policy_rules as pr
 
 FX = Path(__file__).resolve().parents[3] / "fixtures" / "demo_v1"
-EXP = json.loads((FX / "expected_results.json").read_text())
-CAT = {c["code"]: c for c in json.loads((FX / "catalog.json").read_text())["courses"]}
+EXP = json.loads((FX / "expected_results.json").read_text(encoding="utf-8"))
+CAT = {c["code"]: c for c in json.loads((FX / "catalog.json").read_text(encoding="utf-8"))["courses"]}
 P = pr.Policy.load()
 
 
 def test_catalog_labelled_and_sized():
-    cat = json.loads((FX / "catalog.json").read_text())
+    cat = json.loads((FX / "catalog.json").read_text(encoding="utf-8"))
     assert "not official" in cat["label"]
     assert 8 <= len(cat["courses"]) <= 12
     assert all(c["outcomes"] for c in cat["courses"])

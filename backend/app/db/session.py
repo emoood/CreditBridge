@@ -1,7 +1,8 @@
 """Two separate databases:
  - the CURRICULUM database (DATABASE_URL, Supabase): read-only, owned by a teammate; `get_engine`.
- - this app's OWN state (APP_DATABASE_URL, local PostgreSQL): jobs, units, applications, decisions, audit; `get_app_engine`."""
+ - this app's OWN state (APP_DATABASE_URL, local PostgreSQL or SQLite): jobs, units, applications, decisions, audit; `get_app_engine`."""
 from functools import lru_cache
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -24,7 +25,19 @@ _app_engine: Engine | None = None
 def get_app_engine() -> Engine:
     global _app_engine
     if _app_engine is None:
-        _app_engine = create_engine(get_settings().app_database_url, pool_pre_ping=True)
+        url = get_settings().app_database_url
+        if url.startswith("sqlite"):
+            Path("data").mkdir(parents=True, exist_ok=True)
+            _app_engine = create_engine(url, connect_args={"check_same_thread": False})
+        else:
+            try:
+                eng = create_engine(url, pool_pre_ping=True, connect_args={"connect_timeout": 2})
+                with eng.connect():
+                    pass
+                _app_engine = eng
+            except Exception:
+                Path("data").mkdir(parents=True, exist_ok=True)
+                _app_engine = create_engine("sqlite:///data/creditbridge.db", connect_args={"check_same_thread": False})
     return _app_engine
 
 

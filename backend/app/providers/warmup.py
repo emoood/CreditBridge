@@ -9,9 +9,11 @@ from ..config import Settings
 
 
 async def warm_up(s: Settings) -> dict[str, Any]:
-    url, model = s.route(s.llm_default_route)
+    if s.llm_default_route == "gemini":
+        return {"ok": True, "skipped": "Gemini cloud model does not require local preloading"}
     if s.llm_default_route == "lmstudio":
         return {"ok": True, "skipped": "LM Studio manages its own model loading"}
+    url, model = s.route(s.llm_default_route)
     t0 = time.time()
     out: dict[str, Any] = {"ok": False, "model": model, "think": s.llm_think}
     try:
