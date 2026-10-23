@@ -1,0 +1,484 @@
+program:
+  name: Bachelor of Business Administration - Major in Marketing
+  curriculum_year: 2025
+  total_credits: 123
+plan_items:
+- year: null
+  term: null
+  type: course
+  code: ENGL 100
+  name: Developmental English
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: remedial
+  raw: ENGL 100 | Developmental English | 4
+- year: null
+  term: null
+  type: course
+  code: MATH 095
+  name: Beginning & Intermediate Algebra
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: remedial
+  raw: MATH 095 | Beginning & Intermediate Algebra | 4
+- year: null
+  term: null
+  type: course
+  code: MATH 103
+  name: Foundational Mathematics for Business
+  credits: 4
+  alternatives: []
+  categories_satisfied: []
+  block: remedial
+  raw: MATH 103 | Foundational Mathematics for Business | 4
+- year: Year I
+  term: fall
+  type: course
+  code: BUSI 101
+  name: Introduction to Business
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: BUSI 101 | Introduction to Business | 3
+- year: Year I
+  term: spring
+  type: course
+  code: ACCG 201
+  name: Principles of Financial Accounting
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ACCG 201 | Principles of Financial Accounting | 3
+- year: Year I
+  term: fall
+  type: course
+  code: COMP 101
+  name: IT & Innovation in Today's World
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: COMP 101 | IT & Innovation in Today's World | 3
+- year: Year I
+  term: spring
+  type: course
+  code: BUSI 201
+  name: Business Communication
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: BUSI 201 | Business Communication | 3
+- year: Year I
+  term: fall
+  type: course
+  code: ENGL 101
+  name: Composition and Rhetoric
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ENGL 101 | Composition and Rhetoric | 3
+- year: Year I
+  term: spring
+  type: course
+  code: ENGL 102
+  name: Advanced Composition and Research
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ENGL 102 | Advanced Composition and Research | 3
+- year: Year I
+  term: fall
+  type: course
+  code: MATH 200
+  name: Mathematics with Business Application
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MATH 200 | Mathematics with Business Application | 3
+- year: Year I
+  term: spring
+  type: course
+  code: QUAN 201
+  name: Introduction to Business Statistics
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: QUAN 201 | Introduction to Business Statistics | 3
+- year: Year I
+  term: fall
+  type: slot
+  slot_id: BQ-SCIE
+  name: Science and the Nature of Reality
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: BQ- SCIE | Science and the Nature of Reality | 3
+- year: Year I
+  term: spring
+  type: course
+  code: PSPK 101
+  name: Public Speaking in Intercultural Contexts
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: PSPK101 | Public Speaking in Intercultural Contexts | 3
+- year: Year I
+  term: fall
+  type: course
+  code: UNIV 100
+  name: The University Experience
+  credits: 1
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: UNIV 100 | The University Experience | 1
+- year: Year II
+  term: fall
+  type: course
+  code: ACCG 211
+  name: Principles of Managerial Accounting
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ACCG 211 | Principles of Managerial Accounting | 3
+- year: Year II
+  term: spring
+  type: course
+  code: BUSI 301
+  name: Business Research
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: BUSI 301 | Business Research | 3
+- year: Year II
+  term: fall
+  type: course
+  code: BUSI 211
+  name: Business Ethics
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: BUSI 211 | Business Ethics | 3
+- year: Year II
+  term: spring
+  type: course
+  code: ECON 202
+  name: Principles of Macro-Economics
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ECON 202 | Principles of Macro-Economics | 3
+- year: Year II
+  term: fall
+  type: course
+  code: WLDC 201
+  name: World Cuture I or II
+  credits: 3
+  alternatives:
+  - WLDC 202
+  categories_satisfied: []
+  block: core
+  raw: 'WLDC201 | World Cuture I or II | 3 ; alternative source: or WLDC202'
+- year: Year II
+  term: spring
+  type: course
+  code: FINA 201
+  name: Principles of Finance
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: FINA 201 | Principles of Finance | 3
+- year: Year II
+  term: fall
+  type: course
+  code: ECON 201
+  name: Principles of Micro-Economics
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: ECON 201 | Principles of Micro-Economics | 3
+- year: Year II
+  term: spring
+  type: course
+  code: MGMT 201
+  name: Principles of Management
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MGMT 201 | Principles of Management | 3
+- year: Year II
+  term: fall
+  type: course
+  code: QUAN 301
+  name: Quantitative Methods for Decision Making
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: QUAN 301 | Quantitative Methods for Decision Making | 3
+- year: Year II
+  term: spring
+  type: course
+  code: MKTG 201
+  name: Principles of Marketing
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MKTG 201 | Principles of Marketing | 3
+- year: Year III
+  term: fall
+  type: course
+  code: BUSI 311
+  name: Business Law I
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: BUSI 311 | Business Law I | 3
+- year: Year III
+  term: spring
+  type: course
+  code: BUSI 331
+  name: Management of Information Systems
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: BUSI 331 | Management of Information Systems | 3
+- year: Year III
+  term: fall
+  type: course
+  code: BUSI 321
+  name: Business in the International Environment
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: BUSI 321 | Business in the International Environment | 3
+- year: Year III
+  term: spring
+  type: slot
+  slot_id: MKTG-ELE
+  name: Marketing Elective
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: MKTG ELE | Marketing Elective | 3
+- year: Year III
+  term: fall
+  type: course
+  code: MKTG 311
+  name: Sales Management
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MKTG 311 | Sales Management | 3
+- year: Year III
+  term: spring
+  type: course
+  code: MGMT 313
+  name: Operations Management I
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MGMT 313 | Operations Management I | 3
+- year: Year III
+  term: fall
+  type: slot
+  slot_id: MKTG-ELE
+  name: Marketing Elective
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: MKTG ELE | Marketing Elective | 3
+- year: Year III
+  term: spring
+  type: course
+  code: MKTG 361
+  name: Marketing Research
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MKTG 361 | Marketing Research | 3
+- year: Year III
+  term: fall
+  type: slot
+  slot_id: BQ-CULT
+  name: Cultures, Traditions and Societies
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: BQ- CULT | Cultures, Traditions and Societies | 3
+- year: Year III
+  term: spring
+  type: slot
+  slot_id: BQ-IMAG
+  name: Imagination, Expression and the Written Word
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: BQ-IMAG | Imagination, Expression and the Written Word | 3
+- year: Year IV
+  term: fall
+  type: course
+  code: MKTG 421
+  name: International Marketing
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MKTG 421 | International Marketing | 3
+- year: Year IV
+  term: spring
+  type: course
+  code: MKTG 471
+  name: Strategic Marketing Management
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MKTG 471 | Strategic Marketing Management | 3
+- year: Year IV
+  term: fall
+  type: course
+  code: MKTG 401
+  name: Consumer Behaviour
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MKTG 401 | Consumer Behaviour | 3
+- year: Year IV
+  term: spring
+  type: slot
+  slot_id: GEN-ELE
+  name: General Elective
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: GEN ELE | General Elective | 3
+- year: Year IV
+  term: fall
+  type: slot
+  slot_id: BQ-ETHI
+  name: Ethics, Thought & Consciousness
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: BQ-ETHI | Ethics, Thought & Consciousness | 3
+- year: Year IV
+  term: spring
+  type: course
+  code: MGMT 499
+  name: Strategic Management (Capstone)
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: MGMT 499 | Strategic Management (Capstone) | 3
+- year: Year IV
+  term: fall
+  type: course
+  code: HUMN 398
+  name: The Core Experience
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: HUMN398 | The Core Experience | 3
+- year: Year IV
+  term: spring
+  type: slot
+  slot_id: MKTG-ELE
+  name: MKTG Elective or Major ELE (only 1 can be M ELE)
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: MKTG ELE | MKTG Elective or Major ELE (only 1 can be M ELE) | 3
+- year: Year IV
+  term: fall
+  type: slot
+  slot_id: MKTG-ELE
+  name: Marketing Elective
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: MKTG ELE | Marketing Elective | 3
+- year: Year IV
+  term: spring
+  type: slot
+  slot_id: BQ-ELE
+  name: BQ Elective
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: elective_slot
+  raw: BQ- ELE | BQ Elective | 3
+- year: Year IV
+  term: null
+  type: course
+  code: BUSI 481
+  name: Internship
+  credits: 3
+  alternatives: []
+  categories_satisfied: []
+  block: core
+  raw: BUSI 481 | Internship | 3
+exclusions: []
+prerequisites:
+- course: BQ-SCIE
+  type: co
+  raw_text: 'Co-req: ENGL 101'
+  parsed_codes:
+  - ENGL 101
+  min_grade: null
+  unknown_codes: []
+- course: ENGL 100
+  type: pre
+  raw_text: 'Pre: IELP or TOEFL'
+  parsed_codes: []
+  min_grade: null
+  unknown_codes: []
+- course: MATH 095
+  type: pre
+  raw_text: 'Pre: ACCUPLACER'
+  parsed_codes: []
+  min_grade: null
+  unknown_codes: []
+- course: MATH 103
+  type: pre
+  raw_text: 'Pre: ACCUPLACER or P/P+ MATH 095'
+  parsed_codes:
+  - MATH 095
+  min_grade: null
+  unknown_codes: []

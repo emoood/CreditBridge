@@ -1,0 +1,5 @@
+# ASSUMED DEMO RULE, not from AUD's mapping sheet: AP Statistics counts only with an exam score of 4 or higher (needs the score report).
+# Applied on top of the rows of mapping_ap.csv with the same source_course (case, "AP" prefix and punctuation ignored). "programs" is optional (all programs when omitted).
+conditions:
+  - source_course: Statistics
+    condition: {type: min_exam_score, value: 4, evidence: AP exam score report}

@@ -2,8 +2,8 @@
 __pycache__/
 *.pyc
 .env
-data/*
-!data/overnight/
+/data/*
+!/data/overnight/
 node_modules/
 dist/
 .DS_Store
