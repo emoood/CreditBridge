@@ -11,6 +11,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Callable
 
+from dotenv import load_dotenv
+load_dotenv(override=False)
+
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
@@ -68,6 +71,11 @@ def classify_request_type(what: str, explicit_type: str | None = None) -> str:
     if any(k in w for k in ("translat", "english version", "arabic", "french")):
         return "translation"
     return "other"
+
+
+def is_email_sending_enabled() -> bool:
+    load_dotenv(override=False)
+    return os.getenv("EMAIL_SENDING", "false").lower() in ("true", "1")
 
 
 def generate_token() -> str:
@@ -268,7 +276,7 @@ def send_student_email(db: Session, app_id: str, recipient_override: str | None 
         raise ValueError("Student email address is missing. Provide an email before sending.")
 
     # Environment settings
-    email_sending_enabled = os.getenv("EMAIL_SENDING", "false").lower() in ("true", "1")
+    email_sending_enabled = is_email_sending_enabled()
     smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
     smtp_user = os.getenv("SMTP_USER", "").strip()

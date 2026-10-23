@@ -127,7 +127,7 @@ def preview_email(app_id: str, upload_base_url: str = ""):
         content = ob.build_email_content(app, rec, open_items, upload_base_url=upload_base_url)
         email_addr = (rec or {}).get("email") or ""
         import os
-        sending_enabled = os.getenv("EMAIL_SENDING", "false").lower() in ("true", "1")
+        sending_enabled = ob.is_email_sending_enabled()
     return {
         "student_name": content["student_name"],
         "recipient": email_addr,
