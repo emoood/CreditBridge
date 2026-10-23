@@ -130,6 +130,9 @@ export default function Worklist() {
       .catch(() => setCases([]));
   }, [demo.on]);
   const picked = cases.find((c) => c.case_number === selCase);
+  useEffect(() => {
+    if (demo.on && !picked?.misread_run) setPlant(false); // a misread can only be played for a case that has a prepared misread run
+  }, [demo.on, picked]);
 
   async function upload(f: File | undefined) {
     if (!f) return;
@@ -262,7 +265,7 @@ export default function Worklist() {
               </label>
             </>
           )}
-          {inst.demo_mode && (
+          {inst.demo_mode && (!demo.on || picked?.misread_run) && (
             <label
               className="role-pick demo-switch"
               title="Demo only: replaces the AP Chemistry mark with a wrong value before the extraction checks run, so the Intake recheck has something to fix (Transcript B)"
