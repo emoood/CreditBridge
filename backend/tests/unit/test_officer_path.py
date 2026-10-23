@@ -59,24 +59,24 @@ async def test_sheet_checks_catch_a_changed_mapping_and_duplicates_and_final_app
     await case_env.worker.idle()
 
 
-async def test_auditor_only_for_a_failing_sheet_proposes_and_the_officer_applies_with_the_original_kept(case_env):
+async def test_auditor_proposes_a_rechecked_fix_with_a_code_built_explanation_and_the_officer_applies_it(case_env):
     app_id = await run_to_review(case_env)
     _, rows, _ = await states(case_env, app_id)
     rid = {r["title"]: r["id"] for r in rows}
-    assert (await case_env.client.post(f"/api/v1/applications/{app_id}/audit", headers=ADMIN)).status_code == 409    # passing sheet: no model
     await case_env.client.post(f"/api/v1/applications/{app_id}/confirm-mapped", headers=ADMIN)
     with app_session() as db:
         db.scalar(select(CourseMapping).where(CourseMapping.subject_code == "AP-STAT")).aud_code = "CS102"
         db.commit()
     R = runtime.rt()
-    script = [[ToolCall("1", "list_failures", {})],
-              [ToolCall("2", "propose_correction", {"row_id": rid["AP Statistics"], "aud_code": "CS102", "why": "The mapping record now says CS102"})],
-              [ToolCall("3", "rerun_checks", {})],
-              [ToolCall("4", "submit_result", {"summary": "Mapping moved to CS102", "explanations": [{"row_id": rid["AP Statistics"], "explanation": "Sheet had STA201, record says CS102"}]})]]
+    script = [[ToolCall("1", "run_sheet_checks", {})],
+              [ToolCall("2", "diff_sheet_vs_decisions", {})],
+              [ToolCall("3", "propose_fix", {"row_id": rid["AP Statistics"], "aud_code": "CS102", "why": "The mapping record now says CS102"})],
+              [ToolCall("4", "submit_result", {"summary": "I moved the sheet to the new mapping."})]]
     report = await run_auditor(FakeLLMProvider(script), R.repo, R.retriever, app_id)
     assert report["status"] == "OK" and report["passes_after"] is True   # the proposal fixes the copy of the sheet
     p = report["proposals"][0]
-    assert p["touches_confirmed"] and p["from"]["aud_code"] == "STA201" and p["to"]["aud_code"] == "CS102"   # shown as before and after
+    assert p["touches_confirmed"] and p["from"]["aud_code"] == "STA201" and p["to"]["aud_code"] == "CS102" and p["rechecked"]   # shown as before and after
+    assert "Check 'matches_mapping' fails" in report["explanations"][0]["explanation"] and "I moved" not in report["explanations"][0]["explanation"]  # built by code, not by the agent
     with app_session() as db:  # nothing changed yet
         assert db.scalar(select(RowAction).where(RowAction.action == "CORRECT")) is None
 
@@ -193,3 +193,40 @@ async def test_replay_of_a_case_agent_run_restores_everything_without_a_model_an
     assert asked == {calc2["source_id"]}
     live_result = next(r for r in res2["results"] if r["course"]["title"] == live_title)
     assert not live_result["is_replay"] and sum(r["is_replay"] for r in res2["results"]) == len(res2["results"]) - 1
+
+
+async def test_the_auditor_runs_on_a_clean_sheet_too_and_export_check_skips_a_sheet_already_audited_clean(case_env):
+    app_id = await run_to_review(case_env)
+    await case_env.client.post(f"/api/v1/applications/{app_id}/confirm-mapped", headers=ADMIN)
+    first = (await case_env.client.post(f"/api/v1/applications/{app_id}/export-check", headers=ADMIN)).json()
+    assert first["ready"] is False and first["job_id"]                      # no audit yet for this sheet: the Auditor runs
+    case_env.model.agent_args["audit"] = {}
+    await case_env.worker.idle()
+    sheet = (await case_env.client.get(f"/api/v1/applications/{app_id}/sheet")).json()
+    assert sheet["audit"]["clean"] is True and sheet["audit"]["proposals"] == [] and sheet["audit"]["sheet_hash"] == sheet["sheet_hash"]
+    second = (await case_env.client.post(f"/api/v1/applications/{app_id}/export-check", headers=ADMIN)).json()
+    assert second == {"ready": True}                                         # this exact sheet was audited clean
+    r = await case_env.client.post(f"/api/v1/applications/{app_id}/rows/{(await states(case_env, app_id))[1][0]['id']}/action", json={"action": "REJECT", "reason": "x"}, headers=ADMIN)
+    assert r.status_code == 200
+    third = (await case_env.client.post(f"/api/v1/applications/{app_id}/export-check", headers=ADMIN)).json()
+    assert third["ready"] is False                                           # the sheet changed: audited again
+
+
+async def test_propose_fix_is_refused_without_a_failure_and_when_the_recheck_fails(case_env):
+    app_id = await run_to_review(case_env)
+    _, rows, _ = await states(case_env, app_id)
+    rid = {r["title"]: r["id"] for r in rows}
+    await case_env.client.post(f"/api/v1/applications/{app_id}/confirm-mapped", headers=ADMIN)
+    from backend.app.agents.auditor_agent import AuditContext, AuditorRegistry, ProposeFix
+    R = runtime.rt()
+    ctx = AuditContext(R.repo, R.retriever, "auditor", app_id, app_id=app_id)
+    reg = AuditorRegistry([ProposeFix()])
+    clean_row = await reg.execute(ToolCall("1", "propose_fix", {"row_id": rid["AP Statistics"], "aud_code": "CS102", "why": "just because"}), ctx)
+    assert not clean_row.ok and "nothing to fix" in clean_row.error
+    with app_session() as db:
+        db.scalar(select(CourseMapping).where(CourseMapping.subject_code == "AP-STAT")).aud_code = "CS102"
+        db.commit()
+    wrong = await reg.execute(ToolCall("2", "propose_fix", {"row_id": rid["AP Statistics"], "aud_code": "STA201", "why": "keep the old one"}), ctx)
+    assert not wrong.ok and "does not hold" in wrong.error        # the record says CS102: the fix still fails the check
+    right = await reg.execute(ToolCall("3", "propose_fix", {"row_id": rid["AP Statistics"], "aud_code": "CS102", "why": "match the record"}), ctx)
+    assert right.ok and ctx.proposals[rid["AP Statistics"]]["rechecked"]

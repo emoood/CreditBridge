@@ -425,7 +425,7 @@ async def run_row(job_id: str, provider: LLMProvider) -> None:
 
 
 async def run_audit(job_id: str, provider: LLMProvider) -> None:
-    """Phase "AUDIT": the Auditor agent, only because a sheet check failed. Its report is stored for the officer; nothing is applied."""
+    """Phase "AUDIT": the Auditor agent, on every export. Its report is stored for the officer; nothing is applied."""
     R = rt()
     with app_session() as db:
         job = db.get(Job, job_id)

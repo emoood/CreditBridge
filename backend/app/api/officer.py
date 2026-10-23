@@ -153,16 +153,31 @@ def approve(app_id: str, x_role: str | None = Header(default=None), x_actor: str
 
 @router.post("/applications/{app_id}/audit")
 def run_audit_job(app_id: str, x_role: str | None = Header(default=None)):
-    """The Auditor runs only when a sheet check fails; a passing sheet never calls a model."""
+    """Queue the Auditor for the sheet as it stands now (it runs on every export, clean or not)."""
     _officer(x_role)
     with app_session() as db:
         app = get_app(db, app_id)
         _confirmed(app)
-        if sh.build(db, app)["ok"]:
-            raise HTTPException(409, "Every sheet check passes; the Auditor is not needed")
         job_id = _queue_job(db, app_id, "AUDIT", {})
     worker.enqueue(job_id)
     return {"job_id": job_id}
+
+
+@router.post("/applications/{app_id}/export-check")
+def export_check(app_id: str, x_role: str | None = Header(default=None)):
+    """Called before every copy or download. The Auditor reviews the sheet unless it already reviewed this exact sheet (same hash) and found it clean;
+    returns {ready: true} to go ahead, or {job_id} to wait for the Auditor and then read the sheet again."""
+    _officer(x_role)
+    with app_session() as db:
+        app = get_app(db, app_id)
+        _confirmed(app)
+        sheet = sh.build(db, app)
+        audit = (app.extraction or {}).get("audit")
+        if audit and audit.get("sheet_hash") == sheet["sheet_hash"] and audit.get("clean") and sheet["ok"]:
+            return {"ready": True}
+        job_id = _queue_job(db, app_id, "AUDIT", {})
+    worker.enqueue(job_id)
+    return {"ready": False, "job_id": job_id}
 
 
 class ApplyIn(BaseModel):

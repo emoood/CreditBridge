@@ -1,11 +1,13 @@
 """The spreadsheet (confirmed rows, unconfirmed marked) and the deterministic checks run before it is copied or downloaded.
 No model is involved. Columns and their order come from policies/institution.yaml. Failures name the exact row."""
+import hashlib
+import json
 from typing import Any
 
 import yaml
 from sqlalchemy.orm import Session
 
-from ..db.models import Application, CourseMapping, RowAction
+from ..db.models import Application, CourseMapping, RowAction, iso
 from ..runtime import rt
 from . import actions as ac
 from . import mapping as mp
@@ -47,6 +49,10 @@ def build(db: Session, app: Application, overrides: dict[str, dict[str, Any]] | 
         if st is None or st.status == mp.NOT_EVAL:
             continue
         ln = _line(r, st, done.get(r["id"]), (overrides or {}).get(r["id"]))
+        base = _line(r, st, done.get(r["id"]), None)  # what the officer's decision (and the mapping record) say, before any planted change or proposed fix
+        act = done.get(r["id"])
+        ln["decision"] = {"aud_code": base["aud_code"], "aud_credits": base["aud_credits"], "action": act.action if act else "", "by": act.actor if act else "",
+                          "at": iso(act.at) if act else None, "status": base["status"]}
         if plant and plant["row_id"] == r["id"] and not (overrides or {}).get(r["id"]) and not (done.get(r["id"]) and done[r["id"]].action == "CORRECT") and ln["aud_code"]:
             t = rt().repo.targets.get(plant["to"])
             ln.update({"aud_code": plant["to"], "aud_equivalent": f"{plant['to']} · {t['title']}" if t else plant["to"], "planted": True})
@@ -80,8 +86,18 @@ def build(db: Session, app: Application, overrides: dict[str, dict[str, Any]] | 
                                "message": f"{ln['aud_code']} is already credited for {seen[ln['aud_code']]['source_course']}"})
             else:
                 seen[ln["aud_code"]] = ln
+    diff = [{"row_id": ln["row_id"], "source_course": ln["source_course"], "field": f, "sheet": ln[f], "decision": ln["decision"][f], "action": ln["decision"]["action"],
+             "by": ln["decision"]["by"], "at": ln["decision"]["at"]}
+            for ln in lines for f in ("aud_code", "aud_credits") if ln[f] != ln["decision"][f]]
+    warnings = []
+    for ln in lines:
+        st = mp.get_state(db, app.id, ln["row_id"])
+        cls = (st.facts or {}).get("_class") if st else None
+        if ln["aud_code"] and ln["status"].startswith("Confirmed") and cls and cls["value"] == "Not applicable":
+            warnings.append({"row_id": ln["row_id"], "source_course": ln["source_course"], "check": "program_plan", "message": f"{ln['aud_code']} is not on the plan for {app.program}"})
     cols = columns()
-    return {"columns": cols, "headers": [COLUMN_NAMES[c] for c in cols], "rows": lines, "checks": checks, "ok": not checks,
+    digest = hashlib.sha256(json.dumps([[ln["row_id"], ln["aud_code"], ln["aud_credits"], ln["status"]] for ln in lines], sort_keys=True).encode()).hexdigest()[:16]
+    return {"sheet_hash": digest, "diff": diff, "warnings": warnings, "columns": cols, "headers": [COLUMN_NAMES[c] for c in cols], "rows": lines, "checks": checks, "ok": not checks,
             "unconfirmed": sum(1 for ln in lines if ln["status"].startswith("Unconfirmed")),
             "planted": plant if plant and any(ln.get("planted") for ln in lines) else None,
             "note": "AUD codes come from placeholder mapping data, not from AUD."}
