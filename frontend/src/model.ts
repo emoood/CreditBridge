@@ -1,7 +1,7 @@
 // Maps the backend's statuses and data onto the officer-facing vocabulary. Pure functions.
 // Row vocabulary:  Mapped | Conditional | No mapping | Waiting on document | Not evaluated   (+ the officer's resolution, if any)
 // Application vocabulary: Processing | Open | Waiting on document | Ready
-import type { ActionInfo, AppInfo, CaseResult, Job, ProgramClass, Row, RowStateInfo, RowStatus, Sheet } from './api';
+import type { ActionInfo, AppInfo, CaseResult, Job, Place, PlacementView, ProgramClass, Row, RowStateInfo, RowStatus, Sheet } from './api';
 
 export type { RowStatus };
 export type AppStatus = 'Processing' | 'Open' | 'Waiting on document' | 'Ready';
@@ -28,6 +28,7 @@ export type Item = {
   cls: ProgramClass | null; // the program-plan class of the mapped equivalent (Core course, General elective suggestion, Not applicable)
   doubts: number;         // doubts the Case agent raised that code corroborated or recorded
   needsInput: boolean;    // No mapping, Conditional or Waiting on document, and not yet resolved
+  place: Place | null;    // where the row sits in the student's plan (slot, competing courses, fallback)
   order: number;          // position in the transcript, so a list never reorders when a row is confirmed
 };
 
@@ -46,7 +47,7 @@ function legacyStatus(result: CaseResult | null, row: Row | null, included: bool
   return { status: 'No mapping', reason: result.triage.reasons[0] ?? 'No AUD equivalent found', canInclude: false };
 }
 
-export function classify(row: Row | null, result: CaseResult | null, included: boolean, failedKeys: Set<string>, evaluating: boolean, state?: RowStateInfo, action?: ActionInfo): Item {
+export function classify(row: Row | null, result: CaseResult | null, included: boolean, failedKeys: Set<string>, evaluating: boolean, state?: RowStateInfo, action?: ActionInfo, place?: Place): Item {
   const title = result?.course.title ?? row?.title ?? '';
   const legacy = legacyStatus(result, row, included, title);
   const failed = !result && row?.source_id && failedKeys.has(row.source_id);
@@ -61,16 +62,16 @@ export function classify(row: Row | null, result: CaseResult | null, included: b
   const needsInput = (status === 'No mapping' || status === 'Conditional' || status === 'Waiting on document') && !resolved;
   return { key: result?.course.code ?? row?.id ?? title, rowId: row?.id ?? '', title, grade: result?.course.grade ?? row?.grade ?? '', result, status, reason,
     finding: needsInput ? (state?.finding?.headline ?? reason) : undefined, objections: result?.review?.status === 'CHALLENGED' ? result.review.objections.length || 1 : 0,
-    canInclude: state ? status === 'Not evaluated' && state.can_include : legacy.canInclude, state, action, resolved, audCode, audCredits, needsInput, order: 0, cls: state?.classification ?? null, doubts: state?.doubts?.length ?? 0 };
+    canInclude: state ? status === 'Not evaluated' && state.can_include : legacy.canInclude, state, action, resolved, audCode, audCredits, needsInput, order: 0, place: place ?? null, cls: state?.classification ?? null, doubts: state?.doubts?.length ?? 0 };
 }
 
 export type Built = {
-  items: Item[]; relevant: Item[]; needsInput: Item[]; notEvaluated: Item[]; electives: Item[]; notApplicable: Item[];
-  counts: { mapped: number; conditional: number; noMapping: number; waiting: number; notEvaluated: number; resolved: number; unresolved: number; total: number; confirmable: number };
+  items: Item[]; relevant: Item[]; needsInput: Item[]; notEvaluated: Item[]; electives: Item[]; notApplicable: Item[]; placement: PlacementView | null;
+  counts: { mapped: number; conditional: number; noMapping: number; waiting: number; notEvaluated: number; resolved: number; unresolved: number; total: number; confirmable: number; toConfirm: number };
 };
 
 export function build(app: AppInfo, results: CaseResult[], pending: { key: string }[], include: Set<string>, evaluating: boolean,
-  states: Record<string, RowStateInfo> = {}, actions: Record<string, ActionInfo> = {}): Built {
+  states: Record<string, RowStateInfo> = {}, actions: Record<string, ActionInfo> = {}, placement: PlacementView | null = null): Built {
   const rows = app.rows ?? [];
   const bySid = new Map(results.map(r => [r.course.code, r]));
   const failed = new Set(pending.map(p => p.key));
@@ -79,18 +80,19 @@ export function build(app: AppInfo, results: CaseResult[], pending: { key: strin
   for (const row of rows) {
     const res = row.source_id ? bySid.get(row.source_id) ?? null : null;
     if (res) used.add(res.course.code);
-    items.push(classify(row, res, include.has(row.id), failed, evaluating, states[row.id], actions[row.id]));
+    items.push(classify(row, res, include.has(row.id), failed, evaluating, states[row.id], actions[row.id], placement?.rows[row.id]));
   }
   for (const r of results) if (!used.has(r.course.code)) items.push(classify(null, r, include.has(r.course.code), failed, evaluating)); // demo fixtures have no source ids
   const rank: Record<RowStatus, number> = { 'No mapping': 0, Conditional: 1, 'Waiting on document': 2, Mapped: 3, 'Not evaluated': 4 };
   items.forEach((it, n) => { it.order = n; });
   items.sort((a, b) => Number(a.resolved) - Number(b.resolved) || rank[a.status] - rank[b.status]);
-  const relevant = items.filter(i => i.status !== 'Not evaluated');
+  const relevant = items.filter(i => i.status !== 'Not evaluated' && i.place?.status !== 'not_applicable');
   const n = (s: RowStatus) => relevant.filter(i => i.status === s).length;
-  return { items, relevant, needsInput: items.filter(i => i.needsInput), notEvaluated: items.filter(i => i.status === 'Not evaluated' && i.state?.kind !== 'not_applicable'), notApplicable: items.filter(i => i.state?.kind === 'not_applicable'), electives: relevant.filter(i => i.cls?.value === 'General elective suggestion'),
+  return { items, relevant, needsInput: items.filter(i => i.needsInput), notEvaluated: items.filter(i => i.status === 'Not evaluated' && i.state?.kind !== 'not_applicable'), notApplicable: items.filter(i => i.state?.kind === 'not_applicable' || (i.status !== 'Not evaluated' && i.place?.status === 'not_applicable')), electives: [], placement,
     counts: { mapped: n('Mapped'), conditional: n('Conditional'), noMapping: n('No mapping'), waiting: n('Waiting on document'), notEvaluated: items.filter(i => i.status === 'Not evaluated' && i.state?.kind !== 'not_applicable').length,
       resolved: relevant.filter(i => i.resolved).length, unresolved: relevant.filter(i => !i.resolved).length, total: items.length,
-      confirmable: relevant.filter(i => i.status === 'Mapped' && !i.resolved && !!i.state && !i.doubts && i.cls?.value !== 'Not applicable').length } };
+      confirmable: relevant.filter(i => i.status === 'Mapped' && !i.resolved && !!i.state && !i.doubts && i.cls?.value !== 'Not applicable' && i.place?.status !== 'candidate').length,
+      toConfirm: relevant.filter(i => i.status === 'Mapped' && !i.resolved && !!i.state && !i.doubts).length } };
 }
 
 const BUSY = ['READING', 'CONFIRMED', 'EVALUATION_IN_PROGRESS'];
@@ -125,7 +127,10 @@ export function sheetRows(s: Sheet): string[][] {
 export const toTsv = (s: Sheet) => sheetRows(s).map(r => r.map(c => c.replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
 export const toCsv = (s: Sheet) => sheetRows(s).map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
 
-export const CLASS_LABEL: Record<string, string> = { 'Core course': 'Core course', 'General elective suggestion': 'General elective', 'Not applicable': 'Not applicable' };
+export const CLASS_LABEL: Record<string, string> = {};
+export const classLabel = (i: Item) => i.cls?.value ?? '—';
+export const naReason = (i: Item) => i.place?.status === 'not_applicable' ? i.place.reason : i.state?.reason ?? '';
+export const DOUBT_LABEL: Record<string, string> = { stale_mapping: 'mapping needs review', near_miss_grade: 'near-miss grade', other: 'note' };
 
 
 // ---- the review modal: what each open row needs, in one plain sentence, and the one button that moves it forward
@@ -147,7 +152,7 @@ export function needOf(i: Item, _program = ''): Need {
     const req = (s?.requests ?? []).find(q => q.status !== 'RECEIVED');
     return { sentence: `Waiting on: ${req?.what ?? missing[0]?.evidence ?? 'a document'}.`, primary: 'Add document', kind: 'document' };
   }
-  if (s?.kind === 'stale') return { sentence: `The mapping to ${code} is out of date (version ${s.mapping?.version}) and needs re-confirming.`, primary: 'Re-confirm mapping', kind: 'reconfirm' };
+  if (s?.kind === 'stale') return { sentence: `The mapping to ${code} needs review before it can be used.`, primary: 'Re-confirm mapping', kind: 'reconfirm' };
   if (s?.kind === 'condition_missing') {
     if (missing.some(m => m.field === 'exam_score') && cond?.type === 'min_exam_score') return { sentence: `Needs an AP score of ${String(cond.value)} or higher. No score on file.`, primary: 'Add score', kind: 'score' };
     return { sentence: s.condition_result?.reason ?? s.reason, primary: 'Add document', kind: 'document' };
@@ -157,7 +162,7 @@ export function needOf(i: Item, _program = ''): Need {
   return { sentence: s?.kind === 'unmapped' ? 'No AUD course is mapped to this subject yet.' : (s?.reason ?? ''), primary: 'Pick a course', kind: 'pick' };
 }
 
-const KIND_WORDS: Record<OpenKind, string> = { score: 'an exam score', document: 'a document', pick: 'a course', reconfirm: 'a stale mapping to re-confirm', review: 'a second look' };
+const KIND_WORDS: Record<OpenKind, string> = { score: 'an exam score', document: 'a document', pick: 'a course', reconfirm: 'a mapping to review', review: 'a second look' };
 /** One plain sentence about the case, built from the current rows. The Case agent's own sentence is used only when every course it names is still open (a recording can be older than the rows). */
 export function plainSummary(b: Built, program: string, agentText: string): string {
   const open = b.relevant.filter(isOpen);
@@ -170,20 +175,30 @@ export function plainSummary(b: Built, program: string, agentText: string): stri
 
 
 // ---- the grouped review list: one list, Core courses then General electives
-export type RowLabel = 'Ready' | 'Conditional' | 'Stale mapping' | 'Awaiting document' | 'Confirmed' | 'No mapping' | 'Flagged' | 'Changed' | 'Rejected' | 'No credit';
+export type RowLabel = 'Ready' | 'Candidate' | 'Conditional' | 'Mapping needs review' | 'Awaiting document' | 'Confirmed' | 'No mapping' | 'Flagged' | 'Changed' | 'Rejected' | 'No credit';
 export function rowLabel(i: Item): RowLabel {
   if (i.resolved && i.action) return i.action.action === 'CONFIRM' || i.action.action === 'RECONFIRM' ? 'Confirmed' : i.action.action === 'CHANGE' || i.action.action === 'CORRECT' ? 'Changed' : i.action.action === 'REJECT' ? 'Rejected' : 'No credit';
-  if (i.status === 'Mapped') return i.doubts ? 'Flagged' : 'Ready';
+  if (i.status === 'Mapped') return i.doubts ? 'Flagged' : i.place?.status === 'candidate' ? 'Candidate' : 'Ready';
   if (i.status === 'Waiting on document') return 'Awaiting document';
-  if (i.state?.kind === 'stale') return 'Stale mapping';
+  if (i.state?.kind === 'stale') return 'Mapping needs review';
   return i.status === 'No mapping' ? 'No mapping' : 'Conditional';
 }
-export type Group = { id: 'core' | 'elective' | 'other'; title: string; items: Item[]; ready: Item[]; open: number; confirmed: number };
-/** Rows by class, in the order they came in. A group never reorders when a row is confirmed. */
+export type Group = { id: string; title: string; items: Item[]; ready: Item[]; open: number; confirmed: number; candidates: number; credits: number; approved: number; confirmLabel: string };
+const SLOT_ORDER = ['CORE', 'BQ-TECH', 'BQ-IMAG', 'BQ-CULT', 'BQ-ETHI', 'BQ-SCIE', 'BQ-ELE', 'GEN-ELE'];
+const SLOT_TITLE: Record<string, string> = { CORE: 'Core courses', 'BQ-ELE': 'Big Questions elective', 'GEN-ELE': 'General elective' };
+/** Rows by plan slot (core, each Big Questions category, BQ elective, general elective), in transcript order. A group never reorders when a row is confirmed. */
 export function groups(b: Built): Group[] {
-  const mk = (id: Group['id'], title: string, items: Item[]): Group => ({ id, title, items, ready: items.filter(i => isReady(i) && !i.resolved), open: items.filter(isOpen).length, confirmed: items.filter(i => i.resolved).length });
   const rel = [...b.relevant].sort((a, c) => a.order - c.order);
-  const out = [mk('core', 'Core courses', rel.filter(i => i.cls?.value === 'Core course')), mk('elective', 'General electives', rel.filter(i => i.cls?.value === 'General elective suggestion')),
-    mk('other', 'No equivalent yet', rel.filter(i => !i.cls || i.cls.value === 'Not applicable'))];
-  return out.filter(g => g.id !== 'other' ? true : g.items.length > 0);
+  const names = b.placement?.groups ?? {};
+  const title = (slot: string) => SLOT_TITLE[slot] ?? (names[slot] ? `Big Questions: ${names[slot]}` : slot);
+  const mk = (id: string, items: Item[]): Group => {
+    const t = b.placement?.totals.by_slot[id];
+    return { id, title: id === 'other' ? 'No equivalent yet' : title(id), items, ready: items.filter(i => isReady(i) && !i.resolved && i.place?.status !== 'candidate'), open: items.filter(isOpen).length,
+      confirmed: items.filter(i => i.resolved).length, candidates: items.filter(i => i.place?.status === 'candidate' && !i.resolved).length, credits: t?.credits ?? 0, approved: t?.approved ?? 0,
+      confirmLabel: id === 'CORE' ? 'core' : id.startsWith('BQ') ? 'Big Questions' : 'general elective' };
+  };
+  const slots = [...new Set([...SLOT_ORDER, ...rel.map(i => i.place?.slot).filter((x): x is string => !!x)])];
+  const out = slots.map(s => mk(s, rel.filter(i => i.place?.slot === s))).filter(g => g.items.length > 0);
+  const other = rel.filter(i => !i.place?.slot);
+  return other.length ? [...out, mk('other', other)] : out;
 }

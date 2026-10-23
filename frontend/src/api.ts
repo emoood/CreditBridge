@@ -42,7 +42,9 @@ export type RowStateInfo = { row_id: string; status: RowStatus; kind: string; re
   mapping: { aud_code: string; aud_credits: number; version: string; status: string; programs?: string[] | null; condition: { type: string; value: unknown; evidence?: string } | null } | null;
   condition_result: { status: string; reason: string; missing: { field: string; evidence: string }[] } | null; finding: Finding | null; requests: DraftedRequest[]; facts: Record<string, unknown>;
   classification?: ProgramClass | null; doubts?: Doubt[] };
-export type ProgramClass = { value: 'Core course' | 'General elective suggestion' | 'Not applicable'; why: string; by: 'code' | 'case_agent'; aud_code: string };
+export type Place = { slot: string | null; options: string[]; contended: boolean; candidates: string[]; winner: boolean; fallback: string | null; status: 'placed' | 'candidate' | 'not_applicable'; reason: string; suggested: boolean };
+export type PlacementView = { rows: Record<string, Place>; totals: { approved: number; by_slot: Record<string, { credits: number; approved: number }> }; groups: Record<string, string>; plan_total?: number | null };
+export type ProgramClass = { value: string; why: string; by: 'code' | 'case_agent'; aud_code: string };
 export type Doubt = { kind: string; reason: string; verified: boolean; evidence: string; by: string };
 export type DemoCase = { case_number: string; name: string | null; program: string | null; student_id: string | null; filename: string | null;
   run: { name: string; label: string; recorded_at: string; model: string } | null; misread_run: { name: string; label: string } | null; copy_error_run?: { name: string; label: string } | null };
@@ -85,7 +87,7 @@ export const api = {
   previewUrl: (id: string, page: number) => `/api/v1/applications/${id}/preview/${page}`,
   qualifications: () => fetch('/api/v1/curriculum/qualifications').then(j<{ qualifications: string[]; available: boolean; error: string | null }>),
   subjects: (q: string, qualification: string) => fetch(`/api/v1/curriculum/subjects?q=${encodeURIComponent(q)}&qualification=${encodeURIComponent(qualification)}&limit=15`.replace('&qualification=&', '&')).then(j<Subject[]>),
-  results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null; pending_units?: { key: string; status: string; error_code: string }[]; status?: string; states?: Record<string, RowStateInfo>; actions?: Record<string, ActionInfo>; selection_rule?: string }>),
+  results: (id: string) => fetch(`/api/v1/applications/${id}/results`).then(j<{ results: CaseResult[]; counts: Record<string, number>; catalog: string; job: Job | null; pending_units?: { key: string; status: string; error_code: string }[]; status?: string; states?: Record<string, RowStateInfo>; actions?: Record<string, ActionInfo>; placement?: PlacementView; selection_rule?: string }>),
   confirm: (id: string, role: string) => fetch(`/api/v1/applications/${id}/confirm`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({}) }).then(j<{ job_id: string; already_confirmed: boolean }>),
   resume: (jobId: string, role: string) => fetch(`/api/v1/jobs/${jobId}/resume`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
   include: (id: string, row: string, role: string) => fetch(`/api/v1/applications/${id}/rows/${row}/include`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),

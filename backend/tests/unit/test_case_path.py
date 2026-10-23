@@ -296,6 +296,8 @@ def test_chemistry_and_physics_both_stay_candidates_for_bq_scie_and_the_proposal
     assert r["phys"]["fallback"] == "BQ-ELE"
     r2 = pl.resolve(FIN, [{**items[0], "proposal": None}, {**items[1], "proposal": "BQ-SCIE"}])
     assert r2["phys"]["winner"] and not r2["chem"]["winner"] and r2["chem"]["fallback"] == "BQ-ELE"  # the loser falls to its next option
+    r3 = pl.resolve(FIN, [{**items[0]}, {**items[1], "picked": True}])  # the officer picked Physics: Chemistry is no longer a candidate and lands in BQ-ELE
+    assert r3["phys"]["slot"] == "BQ-SCIE" and r3["phys"]["status"] == "placed" and r3["chem"]["slot"] == "BQ-ELE" and r3["chem"]["status"] == "placed"
 
 
 def test_busi_101_is_the_general_elective_suggestion_for_computer_engineering():

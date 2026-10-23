@@ -198,5 +198,9 @@ td.prog.prog-off { color: var(--muted, #6b7280); }
 .rv-act { text-align: right; white-space: nowrap; }
 .rv-status { display: inline-flex; align-items: center; gap: 4px; font-size: 13.5px; color: #374151; }
 .rv-status.s-confirmed { color: #166534; font-weight: 600; }
-.rv-status.s-stale-mapping, .rv-status.s-conditional, .rv-status.s-flagged, .rv-status.s-no-mapping { color: #92400e; font-weight: 600; }
+.rv-status.s-mapping-needs-review, .rv-status.s-candidate, .rv-status.s-conditional, .rv-status.s-flagged, .rv-status.s-no-mapping { color: #92400e; font-weight: 600; }
 .rv-status.s-awaiting-document { color: #1e40af; font-weight: 600; }
+
+.rv-sub { display: block; font-size: 12.5px; line-height: 1.3; }
+.rv-suggest { color: #1e40af; }
+.rv-credits { margin: 0; font-size: 13.5px; }

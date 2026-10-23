@@ -5,7 +5,7 @@ import { Activity } from './Activity';
 import { Evidence } from './Evidence';
 import { ReviewBody, RowPanel } from './Review';
 import { ExtractionCheck } from './ExtractionCheck';
-import { appStatus, build, CLASS_LABEL, curriculumOf, isOpen, plainSummary, RESOLUTION_LABEL, toCsv, toTsv, type Item } from './model';
+import { appStatus, build, classLabel, curriculumOf, DOUBT_LABEL, isOpen, plainSummary, RESOLUTION_LABEL, toCsv, toTsv, type Item } from './model';
 import { AppPill, RowStatusText } from './ui';
 import { useApp, useInclude, useInstitution } from './useApp';
 import { useDemo } from './demo';
@@ -25,7 +25,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
   const [adv, setAdv] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const evaluating = !!data && (['CONFIRMED', 'EVALUATION_IN_PROGRESS'].includes(data.app.status) || data.evalJob?.status === 'RUNNING' || data.evalJob?.status === 'QUEUED');
-  const built = useMemo(() => data ? build(data.app, data.results, data.pending, include, evaluating, data.states, data.actions) : null, [data, include, evaluating]);
+  const built = useMemo(() => data ? build(data.app, data.results, data.pending, include, evaluating, data.states, data.actions, data.placement) : null, [data, include, evaluating]);
   const jobs = data ? [data.readJob, data.evalJob] : [];
   const status = data && built ? appStatus(data.app, built, jobs) : null;
   const confirmed = !!data?.app.confirmed;
@@ -122,8 +122,8 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
         <tbody>{built.relevant.map(i => <tr key={i.key} className={`${evidenceKey === i.key ? 'sel' : ''} ${i.result ? 'click' : ''}`} onClick={() => i.result && setEvidenceKey(i.key)}>
           <td><strong>{i.title}</strong></td><td>{i.grade || '—'}</td>
           <td>{equivalent(i)}</td>{inst.display.aud_credits && <td className="num">{i.audCode ? i.audCredits ?? '—' : '—'}</td>}
-          <td className={`prog ${i.cls?.value === 'Not applicable' ? 'prog-off' : ''}`} title={i.cls ? `${i.cls.why}${i.cls.by === 'case_agent' ? ' (judged by the Case agent)' : ''}` : ''}>{i.cls ? CLASS_LABEL[i.cls.value] : '—'}
-            {i.doubts > 0 && <span className="obj-badge" title={(i.state?.doubts ?? []).map(d => `${d.kind.replace(/_/g, ' ')}: ${d.reason}${d.verified ? '' : ' (not verified by code)'}`).join('\n')}>{i.doubts} doubt{i.doubts === 1 ? '' : 's'}</span>}</td>
+          <td className={`prog ${i.cls?.value === 'Not applicable' ? 'prog-off' : ''}`} title={i.cls ? `${i.cls.why}${i.cls.by === 'case_agent' ? ' (judged by the Case agent)' : ''}` : ''}>{classLabel(i)}
+            {i.doubts > 0 && <span className="obj-badge" title={(i.state?.doubts ?? []).map(d => `${DOUBT_LABEL[d.kind] ?? d.kind}: ${d.reason}${d.verified ? '' : ' (not verified by code)'}`).join('\n')}>{i.doubts} doubt{i.doubts === 1 ? '' : 's'}</span>}</td>
           <td className="status-cell"><RowStatusText s={i.status} />{i.resolved && i.action && <span className="res-tag">{RESOLUTION_LABEL[i.action.action]}</span>}
             {i.action?.action === 'SEND_FOR_REVIEW' && !i.resolved && <span className="res-tag">Sent for review</span>}
             {i.objections > 0 && <span className="obj-badge" title="The reviewer objects. Open the row for the full text.">{i.objections} objection{i.objections === 1 ? '' : 's'}</span>}</td></tr>)}</tbody></table>}

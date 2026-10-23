@@ -51,7 +51,7 @@ def action_dict(a: RowAction) -> dict[str, Any]:
 def suggestion(st) -> dict[str, Any]:
     """The system's suggestion for a row right now: what the officer is acting on."""
     m = st.mapping or {}
-    return {"aud_code": m.get("aud_code"), "credits": m.get("aud_credits") or (transfer_credits() if m else None), "status": st.status, "kind": st.kind,
+    return {"aud_code": m.get("aud_code"), "credits": m["aud_credits"] if m.get("aud_credits") is not None else (transfer_credits() if m else None), "status": st.status, "kind": st.kind,
             "mapping_version": m.get("version"), "mapping_id": m.get("id")}
 
 

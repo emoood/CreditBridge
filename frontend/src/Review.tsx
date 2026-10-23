@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, Check, ChevronDown, ChevronRight, ClipboardCopy, Download, Paperclip, ShieldCheck, X } from 'lucide-react';
 import { api } from './api';
-import { CLASS_LABEL, groups, isOpen, isReady, needOf, RESOLUTION_LABEL, rowLabel, type Built, type Item } from './model';
+import { classLabel, DOUBT_LABEL, groups, isOpen, isReady, naReason, needOf, RESOLUTION_LABEL, rowLabel, type Built, type Item } from './model';
 
 type Role = string;
 
@@ -17,7 +17,8 @@ export function ReviewBody({ built, summary, role, appId, busy, program, approve
   const relevant = built.relevant;
   const open = relevant.filter(isOpen); const ready = relevant.filter(isReady);
   const waiting = open.filter(i => i.status === 'Waiting on document'); const others = open.filter(i => i.status !== 'Waiting on document');
-  const toConfirm = built.counts.confirmable;
+  const toConfirm = built.counts.toConfirm; const confirmable = built.counts.confirmable;
+  const totals = built.placement?.totals; const planTotal = built.placement?.plan_total;
   const total = relevant.length;
   const pct = (n: number) => `${total ? (n / total) * 100 : 0}%`;
   const confirmThese = (items: Item[]) => onRun(async () => { for (const i of items) await api.rowAction(appId, i.rowId, role, { action: 'CONFIRM' }); });
@@ -25,6 +26,7 @@ export function ReviewBody({ built, summary, role, appId, busy, program, approve
   return <div className="rv">
     <div className="rv-progress" aria-label="Progress">
       <p className="rv-count"><strong>{ready.length} of {total} courses ready</strong>{open.length > 0 && <span> · {open.length} open</span>}</p>
+      {totals && <p className="muted rv-credits">Approved transfer credits: <strong>{totals.approved}</strong>{planTotal ? ` of ${planTotal} in the plan` : ''}</p>}
       <div className="rv-bar" role="img" aria-label={`${ready.length} ready, ${others.length} open, ${waiting.length} awaiting a document`}>
         <span className="seg ready" style={{ width: pct(ready.length) }} /><span className="seg needs" style={{ width: pct(others.length) }} /><span className="seg waiting" style={{ width: pct(waiting.length) }} /></div>
       <p className="rv-legend"><span className="dot ready" /> ready <span className="dot needs" /> open <span className="dot waiting" /> awaiting document</p>
@@ -40,11 +42,10 @@ export function ReviewBody({ built, summary, role, appId, busy, program, approve
     {gs.map(g => {
       const rows = filter === 'open' ? g.items.filter(isOpen) : g.items;
       if (filter === 'open' && rows.length === 0) return null;
-      const confirmLabel = g.id === 'core' ? 'core' : 'electives';
       return <section className="rv-group" key={g.id} aria-labelledby={`rv-g-${g.id}`}>
         <header className="rv-group-head"><h3 id={`rv-g-${g.id}`}>{g.title} ({g.items.length})</h3>
-          <span className="muted">{g.ready.length} ready · {g.open} open · {g.confirmed} confirmed</span><span className="push" />
-          {g.id !== 'other' && <button className="secondary-button" disabled={busy || role !== 'admissions' || g.ready.length === 0} onClick={() => confirmThese(g.ready)}>Confirm ready {confirmLabel} ({g.ready.length})</button>}</header>
+          <span className="muted">{g.ready.length} ready · {g.open} open · {g.confirmed} confirmed{g.candidates > 0 ? ` · ${g.candidates} to choose from` : ''} · {g.credits} credits, {g.approved} approved</span><span className="push" />
+          {g.id !== 'other' && <button className="secondary-button" disabled={busy || role !== 'admissions' || g.ready.length === 0} onClick={() => confirmThese(g.ready)}>Confirm ready {g.confirmLabel} ({g.ready.length})</button>}</header>
         {rows.length === 0 ? <p className="muted rv-empty">No courses here.</p> : <div className="rv-scroll"><table className="ctable rv-table"><thead><tr><th>Course</th><th>Grade</th><th>AUD equivalent</th><th className="num">Credits</th><th>Status</th><th><span className="sr-only">Action</span></th></tr></thead>
           <tbody>{rows.map(i => <GroupRow key={i.key + i.rowId} i={i} program={program} active={selectedKey === i.key} busy={busy} role={role} appId={appId} onOpen={() => onOpen(i.key)} onRun={onRun} />)}</tbody></table></div>}
       </section>;
@@ -53,8 +54,8 @@ export function ReviewBody({ built, summary, role, appId, busy, program, approve
 
     {built.notApplicable.length > 0 && <section className="rv-muted"><button className="rv-line" onClick={() => setNaOpen(!naOpen)} aria-expanded={naOpen}>{naOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       {built.notApplicable.length} course{built.notApplicable.length === 1 ? '' : 's'} not applicable to {program || 'this program'}</button>
-      {naOpen && <ul>{built.notApplicable.map(i => <li key={i.key}><span><strong>{i.title}</strong> <span className="muted">· {i.state?.reason}</span></span>
-        {role === 'admissions' ? <button className="secondary-button" disabled={busy} onClick={() => onRun(() => api.include(appId, i.rowId, role))}>Include anyway</button> : <span className="muted">officer only</span>}</li>)}</ul>}</section>}
+      {naOpen && <ul>{built.notApplicable.map(i => <li key={i.key}><span><strong>{i.title}</strong> <span className="muted">· {naReason(i)}</span></span>
+        {i.state?.kind === 'not_applicable' && i.state.can_include ? (role === 'admissions' ? <button className="secondary-button" disabled={busy} onClick={() => onRun(() => api.include(appId, i.rowId, role))}>Include anyway</button> : <span className="muted">officer only</span>) : null}</li>)}</ul>}</section>}
 
     {built.notEvaluated.length > 0 && <section className="rv-muted"><button className="rv-line" onClick={() => setNeOpen(!neOpen)} aria-expanded={neOpen}>{neOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       {built.notEvaluated.length} not evaluated (school-specific or outside the accepted curriculum)</button>
@@ -62,14 +63,14 @@ export function ReviewBody({ built, summary, role, appId, busy, program, approve
         {i.canInclude ? <button className="secondary-button" disabled={busy} onClick={() => onRun(() => api.include(appId, i.rowId, role))}>Include</button> : <span className="muted">cannot be mapped</span>}</li>)}</ul>}</section>}
 
     <p className="rv-links"><button className="link-btn" onClick={() => setAllOpen(!allOpen)}>{allOpen ? 'Hide' : 'Show'} all courses</button> · <button className="link-btn" onClick={onActivity}>See what the agents did</button></p>
-    {allOpen && <div className="rv-scroll"><table className="ctable"><thead><tr><th>Source course</th><th>Grade</th><th>AUD equivalent</th><th>Group</th><th>Status</th></tr></thead>
+    {allOpen && <div className="rv-scroll"><table className="ctable"><thead><tr><th>Source course</th><th>Grade</th><th>AUD equivalent</th><th>Slot</th><th>Status</th></tr></thead>
       <tbody>{built.items.map(i => <tr key={i.key + i.rowId} className="click" onClick={() => i.state && i.status !== 'Not evaluated' && onOpen(i.key)}><td><strong>{i.title}</strong></td><td>{i.grade || '—'}</td><td>{i.audCode ?? '—'}</td>
-        <td>{i.cls ? CLASS_LABEL[i.cls.value] : '—'}</td><td>{i.state?.kind === 'not_applicable' ? 'Not applicable' : i.status === 'Not evaluated' ? 'Not evaluated' : rowLabel(i)}</td></tr>)}</tbody></table></div>}
+        <td>{classLabel(i)}</td><td>{i.state?.kind === 'not_applicable' || i.place?.status === 'not_applicable' ? 'Not applicable' : i.status === 'Not evaluated' ? 'Not evaluated' : rowLabel(i)}</td></tr>)}</tbody></table></div>}
     <p className="muted placeholder-note">AUD codes and credits shown are placeholder mapping data for this demo, not AUD&apos;s real equivalencies.</p>
 
     <footer className="rv-foot">
       <div className="rv-foot-main">
-        <button className="primary-button" onClick={() => onRun(() => api.confirmMapped(appId, role))} disabled={busy || !toConfirm || role !== 'admissions'}>Confirm all ready{toConfirm ? ` (${toConfirm})` : ''}</button>
+        <button className="primary-button" onClick={() => onRun(() => api.confirmMapped(appId, role))} disabled={busy || !confirmable || role !== 'admissions'}>Confirm all ready{confirmable ? ` (${confirmable})` : ''}</button>
         <button className="primary-button rv-approve" onClick={() => onRun(() => api.approve(appId, role))} disabled={busy || !canApprove}>Approve case</button>
         {!approved && (open.length > 0 || toConfirm > 0) && <span className="rv-need">{open.length} open, {toConfirm} to confirm</span>}
         {approved && <span className="approved-tag"><Check size={13} /> Approved</span>}
@@ -86,11 +87,15 @@ function GroupRow({ i, program, active, busy, role, appId, onOpen, onRun }: { i:
   const label = rowLabel(i); const o = isOpen(i); const officer = role === 'admissions';
   const need = o ? needOf(i, program) : null;
   return <tr className={`rv-tr ${o ? 'open' : ''} ${active ? 'on' : ''}`}>
-    <td><button className="link-btn rv-name" onClick={onOpen}><strong>{i.title}</strong></button></td>
+    <td><button className="link-btn rv-name" onClick={onOpen}><strong>{i.title}</strong></button>
+      {i.place?.contended && !i.place.winner && i.place.fallback && <small className="muted rv-sub">Not picked: goes to {i.place.fallback}</small>}
+      {i.place?.contended && <small className="muted rv-sub">Competes with {i.place.candidates.filter(c => c !== i.rowId).length} other course{i.place.candidates.length > 2 ? 's' : ''} for this slot</small>}
+      {i.audCredits === 0 && i.status === 'Mapped' && <small className="muted rv-sub">Mapped, no credit awarded</small>}
+      {i.place?.suggested && <small className="rv-sub rv-suggest">Suggested for this slot</small>}</td>
     <td>{i.grade || '—'}</td><td>{i.audCode ?? '—'}</td><td className="num">{i.audCredits ?? '—'}</td>
     <td><span className={`rv-status s-${label.toLowerCase().replace(/ /g, '-')}`}>{label === 'Confirmed' && <Check size={14} />}{label}</span></td>
     <td className="rv-act">{need ? <button className="primary-button" disabled={busy || !officer} onClick={() => need.kind === 'reconfirm' ? onRun(() => api.rowAction(appId, i.rowId, role, { action: 'RECONFIRM' })) : onOpen()}>{need.primary}</button>
-      : label === 'Ready' ? <button className="secondary-button" disabled={busy || !officer} onClick={() => onRun(() => api.rowAction(appId, i.rowId, role, { action: 'CONFIRM' }))}>Confirm</button> : null}</td>
+      : label === 'Ready' || label === 'Candidate' ? <button className="secondary-button" disabled={busy || !officer} onClick={() => onRun(() => api.rowAction(appId, i.rowId, role, { action: 'CONFIRM' }))}>{label === 'Candidate' ? 'Choose' : 'Confirm'}</button> : null}</td>
   </tr>;
 }
 
@@ -106,7 +111,7 @@ export function RowPanel({ appId, item, role, program, onClose, onAdvance }: { a
     try { await api.rowAction(appId, item.rowId, role, body); setMode(null); onAdvance(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   };
   const doubts = s.doubts ?? [];
-  const elective = item.cls?.value === 'General elective suggestion';
+  const elective = item.place?.slot === 'GEN-ELE' || item.place?.slot === 'BQ-ELE';
   const canAct = role === 'admissions';
   return <aside className="rv-panel" aria-label="Course">
     <header className="rv-panel-head"><div><small>COURSE</small><h3>{item.title}</h3>
@@ -114,8 +119,8 @@ export function RowPanel({ appId, item, role, program, onClose, onAdvance }: { a
       <button className="icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button></header>
 
     <section className="rv-block"><h4>Finding</h4>
-      <p>{open ? need.sentence : item.resolved && item.action ? `You ${RESOLUTION_LABEL[item.action.action].toLowerCase()} this course${item.action.chosen.aud_code ? ` as ${item.action.chosen.aud_code}` : ''}.` : `Mapped to ${item.audCode ?? 'an AUD course'} by the placeholder mapping table${item.cls ? `; ${item.cls.value === 'Core course' ? `a core course for ${program}` : 'a potential general elective'}` : ''}.`}</p>
-      {doubts.map((d, i) => <p key={i} className="rv-doubt"><AlertCircle size={14} /> <strong>{d.kind.replace(/_/g, ' ')}.</strong> {d.reason} <span className="muted">{d.verified ? `Checked by code: ${d.evidence}.` : 'Not verified by code.'}</span></p>)}</section>
+      <p>{open ? need.sentence : item.resolved && item.action ? `You ${RESOLUTION_LABEL[item.action.action].toLowerCase()} this course${item.action.chosen.aud_code ? ` as ${item.action.chosen.aud_code}` : ''}.` : `Mapped to ${item.audCode ?? 'an AUD course'} by the placeholder mapping table${item.cls ? `; ${item.cls.value === 'Not applicable' ? 'no place in the plan' : `fills ${item.cls.value.toLowerCase()} in ${program}`}` : ''}.`}</p>
+      {doubts.map((d, i) => <p key={i} className="rv-doubt"><AlertCircle size={14} /> <strong>{DOUBT_LABEL[d.kind] ?? d.kind.replace(/_/g, ' ')}.</strong> {d.reason} <span className="muted">{d.verified ? `Checked by code: ${d.evidence}.` : 'Not verified by code.'}</span></p>)}</section>
 
     <section className="rv-block"><h4>Decision</h4>
       {!canAct && <p className="muted">Only an admissions officer can decide.</p>}
@@ -147,12 +152,12 @@ function YourCall({ item, elective, busy, doubts, need, f, appId, role, act, set
   const row = (primary: React.ReactNode, extra?: React.ReactNode) => <div className="rv-actions">{primary}{extra}<button className="secondary-button" onClick={() => setMode('change')}>Change course</button><button className="secondary-button" onClick={() => setMode('reject')}>Reject</button></div>;
   if (item.resolved && item.action) return <><p className="muted">{RESOLUTION_LABEL[item.action.action]} by {item.action.actor}. You can still change it.</p>{row(null)}</>;
   if (s.status === 'Mapped') {
-    const label = doubts ? 'Keep as is' : elective ? 'Confirm as elective' : item.cls?.value === 'Not applicable' ? 'Confirm anyway' : 'Confirm';
+    const label = doubts ? 'Keep as is' : item.place?.status === 'candidate' ? 'Choose this one' : elective ? 'Confirm as elective' : item.cls?.value === 'Not applicable' ? 'Confirm anyway' : 'Confirm';
     return <>{doubts && <p className="muted">Keep it as suggested, or use one of the other options.</p>}
       {row(<button className="primary-button" disabled={busy} onClick={() => act({ action: 'CONFIRM' })}>{label}</button>, null)}</>;
   }
   if (s.kind === 'stale') return <div className="rv-actions"><button className="primary-button" disabled={busy} onClick={() => act({ action: 'RECONFIRM' })}>Re-confirm against catalog</button>
-    <button className="secondary-button" disabled={busy} onClick={() => act({ action: 'REJECT', reason: 'Stale mapping removed by the officer' })}>Remove mapping</button><button className="secondary-button" onClick={() => setMode('change')}>Change course</button></div>;
+    <button className="secondary-button" disabled={busy} onClick={() => act({ action: 'REJECT', reason: 'Mapping removed by the officer' })}>Remove mapping</button><button className="secondary-button" onClick={() => setMode('change')}>Change course</button></div>;
   if (s.status === 'Waiting on document') return <WaitingForm item={item} appId={appId} role={role} onAdvance={onAdvance} setMode={setMode} setErr={setErr} setBusy={setBusy} busy={busy} />;
   if (s.status === 'Conditional' && (s.kind === 'condition_missing' || s.kind === 'condition_unmet') && need !== 'pick') return <ScoreForm item={item} appId={appId} role={role} onAdvance={onAdvance} setMode={setMode} setErr={setErr} setBusy={setBusy} busy={busy} />;
   if (s.status === 'No mapping' || s.kind === 'condition_unmet' || s.kind === 'rule_blocked') return <Candidates item={item} f={f} busy={busy} act={act} setMode={setMode} />;

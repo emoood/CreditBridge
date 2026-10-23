@@ -143,6 +143,7 @@ def resolve(program: str, items: list[dict[str, Any]]) -> dict[str, dict[str, An
         order = sorted(cands, key=lambda c: (not c[0].get("picked"), c[0].get("proposal") != slot, len(c[1]), live.index(c)))
         winners = order[:cap]
         ids = [c[0]["row_id"] for c in cands]
+        open_contest = len(cands) > cap and not any(c[0].get("picked") for c in cands)  # once the officer has picked a course, the others fall to their next option
         for it, _o in winners:
             assigned[it["row_id"]] = slot
             taken.setdefault(slot, set()).add(it["row_id"])
@@ -153,8 +154,7 @@ def resolve(program: str, items: list[dict[str, Any]]) -> dict[str, dict[str, An
                 if won and r["fallback"] is None:
                     r["fallback"] = slot
                 continue
-            r.update(slot=slot, contended=len(cands) > cap, candidates=ids, winner=won, fallback=None,
-                     status="placed" if len(cands) <= cap else "candidate")
+            r.update(slot=slot, contended=open_contest, candidates=ids, winner=won, fallback=None, status="candidate" if open_contest else "placed")
     for it, o in live:  # core first
         if CORE in o:
             settle(CORE, 99)

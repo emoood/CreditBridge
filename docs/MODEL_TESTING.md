@@ -114,3 +114,6 @@ Known issues found by the first real A2 run (2026-10-23, `qwen3.5:4b`), for the 
 - The model copied the credits into the points column on four fall rows. A code rule now drops points that equal the credits when the letter says otherwise (`move_credits_from_points`), so the extraction check is clean on replay.
 - Statistics (needs a score of 4+) comes out of the recorded Case agent as **Waiting on document**, not Conditional; both open an inline form that takes the score.
 - With no recorded Auditor reply, a planted copy error is still caught by the code checks and explained from the verified difference, but no fix is proposed. Recording `a2c` adds the proposal.
+
+## Note: real mapping data and plan placement (docs/REQUIREMENTS.md)
+`policies/data/mapping_ap.csv` replaces the dummy mappings, the nine plans in `policies/data/programs/` replace the program plans, and placement (`services/placement.py`) replaces the core/elective classification. Program names are now the plan names (`demo_students.yaml`). Every recording made before this change is **out of date** (`demo_a2` was recorded against the dummy mappings and old plans): its Case agent replies do not cover the new rows or the new `propose_placement` step. Re-record A2 (and the variants) after this change; replay still runs, with code verdicts where no reply was recorded.
