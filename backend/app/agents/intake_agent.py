@@ -135,7 +135,7 @@ def ensure_planted(ctx: IntakeContext) -> None:
         return
     f = ctx.plant.get("field", "mark")
     cands = [(k, i, r) for k, b in ctx.ordered().items() if not b.get("failed") and not b.get("reread") for i, r in enumerate(b.get("rows", []))
-             if r.get(f) is not None and r.get("mark") is not None and not xc.is_non_course(r)]
+             if r.get(f) is not None and (r.get("mark") is not None or f == "letter") and not xc.is_non_course(r)]
     pick = next((c for c in cands if ctx.plant["subject"].lower() in (c[2].get("subject") or "").lower()), None) or (cands[0] if cands else None)
     if pick is None:
         return

@@ -25,7 +25,8 @@ from .common import DECIDER_ROLE, app_summary, get_app, short_id
 router = APIRouter(prefix="/api/v1")
 EDITABLE = ("code", "title", "credits", "grade", "term")
 # PLANTED FOR DEMO presets (demo mode only): B changes a mark, D changes a letter grade. Both are replaced by a wrong value before the extraction checks run.
-PLANTS = {"B": {"subject": "AP Chemistry", "field": "mark", "wrong": 65}, "D": {"subject": "AP Statistics", "field": "letter", "wrong": "B"}}
+PLANTS = {"B": {"subject": "AP Chemistry", "field": "mark", "wrong": 65}, "D": {"subject": "AP Statistics", "field": "letter", "wrong": "B"}, "A2": {"subject": "AP Chemistry", "field": "letter", "wrong": "C+"}}
+PLANT_FOR_CASE = {"CB-2026-0105": "D", "CB-2026-0104": "A2"}
 
 
 def _detail(db, app: Application) -> dict[str, Any]:
@@ -72,7 +73,7 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         student_label, student_id, program, qualification = rec["name"], rec["student_id"], rec["program"], qualification or rec["curriculum"]
     with app_session() as db:
         app = Application(id=f"APP-{uuid.uuid4().hex[:8].upper()}", kind="upload", student=student_label.strip() or "Uploaded transcript",
-                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={"student_id": student_id.strip(), **({"student_record": rec} if rec else {}), **({"demo": {"run": run["name"], "speed": demo_speed if demo_speed in ("instant", "fast") else "fast", "label": run["label"]}} if run else {}), **({"planted_misread": PLANTS["D" if rec and rec["case_number"] == "CB-2026-0105" else "B"]} if plant_misread.strip().lower() in ("1", "true", "on") and get_settings().demo_mode else {})})
+                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={"student_id": student_id.strip(), **({"student_record": rec} if rec else {}), **({"demo": {"run": run["name"], "speed": demo_speed if demo_speed in ("instant", "fast") else "fast", "label": run["label"]}} if run else {}), **({"planted_misread": PLANTS[PLANT_FOR_CASE.get(rec["case_number"] if rec else "", "B")]} if plant_misread.strip().lower() in ("1", "true", "on") and get_settings().demo_mode else {})})
         job = Job(id=uuid.uuid4().hex[:12], app_id=app.id, phase="READING", status="QUEUED")
         db.add_all([app, job])
         db.commit()

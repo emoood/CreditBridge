@@ -2,7 +2,7 @@
 timings, model calls (from the usage ledger), the agents' tool calls (from the trace) and what went wrong. Saves a recording only when the run is clean
 (no failed job, no refused tool call, no agent failure) and, for B, only when the Intake recheck really re-read the block and the corrected value passed.
 
-    python scripts/overnight_runs.py a2 | b | c          # one run, no retries
+    python scripts/overnight_runs.py a2 | a2c | a2m | b | c | d | dp   # one run, no retries (a2c: copy-error variant, a2m: planted misread)
 Synthetic fixtures only. Output: data/overnight/<name>.json (gitignored) plus a summary on stdout."""
 import json
 import sys
@@ -111,35 +111,80 @@ def finish(name: str, rec_name: str | None, ok: bool, case_number: str = "") -> 
     print(json.dumps(keep, indent=1, default=str))
 
 
-def run_a2() -> None:
-    app_id, job = upload("transcript_a2_batch.pdf", "Rania Haddad", "SYN-1004", case_number="CB-2026-0104")
-    read_phase(app_id, job)
-    evaluate_phase(app_id)
-    log["states_after_evaluation"] = snapshot_states(app_id)
-    rows = {r["title"]: r["id"] for r in c.get(f"/applications/{app_id}").json()["rows"]}
-    calc = rows["AP Calculus AB"]
-    log["calc_before"] = log["states_after_evaluation"]["AP Calculus AB"]
-    t = now()
-    j = c.post(f"/applications/{app_id}/rows/{calc}/evidence", data={"facts": '{"exam_score": 5}'}, headers=H).json()
-    wait(j["job_id"])
-    log["steps"]["calc_resume_s"] = round(now() - t, 1)
-    log["calc_after"] = snapshot_states(app_id)["AP Calculus AB"]
-    log["confirm_mapped"] = c.post(f"/applications/{app_id}/confirm-mapped", headers=H).json()
-    log["states_final"] = snapshot_states(app_id)
+def _audit_and_wait(app_id: str, tag: str) -> dict:
     t = now()
     chk = c.post(f"/applications/{app_id}/export-check", headers=H).json()
     if chk.get("job_id"):
         wj = wait(chk["job_id"])
         if wj["flags"]:
             log["problems"].append(f"export audit flags {wj['flags']}")
-    log["steps"]["export_audit_s"] = round(now() - t, 1)
+    log["steps"][f"export_audit_{tag}_s"] = round(now() - t, 1)
     sh = c.get(f"/applications/{app_id}/sheet").json()
-    log["export_audit"] = {k: (sh["audit"] or {}).get(k) for k in ("clean", "summary", "warnings", "differences", "proposals", "flags", "agent_comment")}
+    log[f"export_audit_{tag}"] = {k: (sh["audit"] or {}).get(k) for k in ("clean", "summary", "warnings", "differences", "proposals", "explanations", "flags", "agent_comment")}
+    return sh
+
+
+def run_a2(variant: str = "clean") -> None:
+    """Rania (BBA, A2). clean: Statistics gets a score of 5, Human Geography waits on a syllabus. copy: also the planted copy-error and the Auditor catch.
+    misread: the planted misread (AP Chemistry's letter) must be repaired by the Intake agent."""
+    plant = variant == "misread"
+    app_id, job = upload("transcript_a2_batch.pdf", "Rania Haddad", "SYN-1004", plant=plant, case_number="CB-2026-0104")
+    app = read_phase(app_id, job)
+    intake = app["extraction"].get("intake") or {}
+    planted = (app["extraction"].get("planted_misread") or {}).get("applied") or []
+    if plant:
+        changes = intake.get("changes") or []
+        log["planted_applied"] = planted
+        fixed = bool(planted) and any(str(c_.get("row")) == str(planted[0]["subject"]) and c_.get("field") == planted[0]["field"] and c_.get("to") == planted[0]["from"] for c_ in changes)
+        log["repair_genuine"] = bool(fixed and intake.get("recovery_used", 0) >= 1)
+        if not log["repair_genuine"]:
+            log["problems"].append("no genuine repair of the planted value: not recorded")
+    evaluate_phase(app_id)
+    log["states_after_evaluation"] = snapshot_states(app_id)
+    st0 = log["states_after_evaluation"]
+    rows = {r["title"]: r["id"] for r in c.get(f"/applications/{app_id}").json()["rows"]}
+    hg = st0.get("AP Human Geography", {})
+    log["human_geography"] = hg
+    if hg.get("status") != "Waiting on document" or not hg.get("requests"):
+        log["problems"].append(f"AP Human Geography is {hg.get('status')} with requests {hg.get('requests')}; expected Waiting on document with a drafted request")
+    stat0 = st0.get("AP Statistics", {})
+    if stat0.get("kind") != "condition_missing":
+        log["problems"].append(f"AP Statistics is {stat0.get('status')}/{stat0.get('kind')}; expected Conditional, exam score missing")
+    t = now()
+    j = c.post(f"/applications/{app_id}/rows/{rows['AP Statistics']}/evidence", data={"facts": '{"exam_score": 5}'}, headers=H).json()
+    wait(j["job_id"])
+    log["steps"]["score_resume_s"] = round(now() - t, 1)
+    st1 = snapshot_states(app_id)
+    log["stat_after"] = st1["AP Statistics"]
+    changed = sorted(k for k in st1 if st1[k] != st0.get(k))
+    log["rows_changed_by_the_score"] = changed
+    if st1["AP Statistics"]["status"] != "Mapped":
+        log["problems"].append("AP Statistics did not become Mapped after the exam score")
+    if changed != ["AP Statistics"]:
+        log["problems"].append(f"submitting the score changed {changed}; only AP Statistics should resume")
+    log["confirm_mapped"] = c.post(f"/applications/{app_id}/confirm-mapped", headers=H).json()
+    log["states_final"] = snapshot_states(app_id)
+    sh = _audit_and_wait(app_id, "clean")
     log["sheet_ok"] = sh["ok"]
+    ok = not log["problems"]
+    if variant == "copy":
+        log["planted"] = c.post(f"/applications/{app_id}/demo/plant-copy-error", json={"on": True}, headers=H).json()
+        pl = (log["planted"] or {}).get("planted") or {}
+        sh = _audit_and_wait(app_id, "planted")
+        diffs = [d for d in (sh["audit"] or {}).get("differences", [])]
+        expl = json.dumps((sh["audit"] or {}).get("explanations") or diffs)
+        log["detected_by_checks_or_diff"] = bool(sh["checks"] or diffs)
+        match = bool(pl) and any(d.get("row_id") == pl.get("row_id") for d in diffs) and pl["from"] in expl and pl["to"] in expl and len(diffs) == 1
+        log["auditor_explanation_matches_verified_difference"] = match
+        if not match:
+            log["problems"].append("the Auditor's explanation does not match the verified difference: the copy-error variant is not recorded")
+        ok = ok and match
+        log["audit_planted"] = sh["audit"]
     collect_activity(app_id)
-    finish("a2", "demo_a2", log["calc_after"]["status"] == "Mapped", "CB-2026-0104")
-    if log["calc_after"]["status"] != "Mapped":
-        log["problems"].append("AP Calculus AB did not become Mapped after the exam score")
+    name = {"clean": "demo_a2", "copy": "demo_a2_copy_error", "misread": "demo_a2_misread"}[variant]
+    if variant == "misread":
+        ok = ok and log.get("repair_genuine", False)
+    finish("a2" if variant == "clean" else f"a2_{variant}", name if ok else None, ok, "CB-2026-0104")
 
 
 def run_b() -> None:
@@ -226,4 +271,4 @@ def run_c() -> None:
 
 
 if __name__ == "__main__":
-    {"a2": run_a2, "b": run_b, "c": run_c, "d": run_d, "dp": lambda: run_d(True)}[sys.argv[1]]()
+    {"a2": run_a2, "a2c": lambda: run_a2("copy"), "a2m": lambda: run_a2("misread"), "b": run_b, "c": run_c, "d": run_d, "dp": lambda: run_d(True)}[sys.argv[1]]()

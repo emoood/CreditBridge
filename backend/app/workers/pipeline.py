@@ -117,7 +117,7 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
             done = [u.result for u in store.units_of(db, job.id) if u.stage == "read" and u.status == "DONE"]
             merged = gc_merge(done, scale)
             synopsis = {(r.get("subject") or "").strip(): r["description"].strip() for res in done for r in res.get("rows", []) if r.get("description") and r.get("subject") and len(r["description"].strip()) >= 40 and r["description"].strip() != r["subject"].strip()}
-            synopsis_found = synopsis
+            synopsis_found = synopsis or dict(((app.extraction or {}).get("student_record") or {}).get("synopsis") or {})  # the demo student record can stand in for a synopsis page
             intake_info = {"agent": s.intake_agent, "recovery_used": ictx.recovery_used, "changes": ictx.changes, "skipped": ictx.skipped, "read_by_code": ictx.by_code,
                            "name_check": ictx.name_check, "text_layer_crosscheck": ictx.text is not None, "agent_questions": ictx.questions}
             if ictx.name_check.get("status") == "mismatch":

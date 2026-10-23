@@ -246,3 +246,10 @@ async def test_a_blocked_course_is_refused_as_a_change_and_in_the_picker(case_en
     stat = next(r for r in rows if r["title"] == "AP Statistics")
     r = await case_env.client.post(f"/api/v1/applications/{app_id}/rows/{stat['id']}/action", json={"action": "CHANGE", "aud_code": "CS101", "credits": 3, "reason": "Better fit"}, headers=ADMIN)
     assert r.status_code == 409 and "not open to BBA" in r.text
+
+
+def test_synopsis_match_is_exact_on_the_normalized_name():
+    from backend.app.services.mapping import synopsis_for
+    syn = {"AP Statistics": "x" * 50, "Economics": "y" * 50}
+    assert synopsis_for({"title": "Statistics"}, syn) and synopsis_for({"title": "ap  statistics"}, syn) is not None
+    assert synopsis_for({"title": "AP Macroeconomics"}, syn) is None and synopsis_for({"title": "AP Human Geography"}, syn) is None

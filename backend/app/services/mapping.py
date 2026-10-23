@@ -4,6 +4,7 @@
 
 Statuses: Mapped | Conditional | No mapping | Waiting on document | Not evaluated.
 No mapping, an unmet or unprovable condition, a stale mapping, or a rule failure are unresolved: the Case agent works those rows (the officer sees them as "Needs your input")."""
+import re
 import json
 from pathlib import Path
 from typing import Any
@@ -131,10 +132,10 @@ def policy_fails(grade: str | None, aud_code: str, repo) -> list[str]:
 
 
 def synopsis_for(row: dict[str, Any], synopsis: dict[str, str] | None) -> str | None:
-    """The synopsis-page description for this course (matched on the title, case and punctuation ignored), or None."""
-    norm = lambda t: "".join(ch for ch in (t or "").lower() if ch.isalnum())
+    """The synopsis-page description for this course: an exact match on the normalized course name (case, a leading "AP" and punctuation ignored), or None."""
+    norm = lambda t: "".join(ch for ch in re.sub(r"^\s*ap\b", "", (t or "").lower()) if ch.isalnum())
     me = norm(row.get("title"))
-    return next((d for t, d in (synopsis or {}).items() if me and (norm(t) == me or norm(t) in me or me in norm(t))), None)
+    return next((d for t, d in (synopsis or {}).items() if me and norm(t) == me), None)
 
 
 def decide_row(row: dict[str, Any], mapping: CourseMapping | None, facts: dict[str, Any], override: bool, repo,
