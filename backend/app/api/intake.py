@@ -13,6 +13,7 @@ from sqlalchemy import select
 from ..config import get_settings
 from ..db.models import Application, Job
 from ..db.session import app_session
+from ..services import prepared
 from ..services import student_record as sr
 from ..services.curriculum import curriculum
 from ..services.documents import UploadError, render_page_png, save_upload
@@ -47,7 +48,7 @@ def get_application(app_id: str):
 
 @router.post("/applications")
 async def create_application(file: UploadFile = File(...),  # noqa: B008
-                             student_label: str = Form(""), student_id: str = Form(""), plant_misread: str = Form(""), program: str = Form(""), qualification: str = Form(""), case_number: str = Form(""),
+                             student_label: str = Form(""), student_id: str = Form(""), plant_misread: str = Form(""), program: str = Form(""), qualification: str = Form(""), case_number: str = Form(""), demo: str = Form(""), demo_speed: str = Form("fast"),
                              x_role: str | None = Header(default=None)):
     """Store + hash the file, create the application and the reading job, return immediately. Reading happens in the worker."""
     data = await file.read()
@@ -55,6 +56,15 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         doc = save_upload(get_settings().document_root, file.filename or "upload", data, 15, 40)
     except UploadError as e:
         raise HTTPException(400, str(e)) from e
+    run = None
+    if demo.strip().lower() in ("1", "true", "on"):  # Demo mode: the model's side comes from the prepared run for this file; nothing is invented
+        if not get_settings().demo_mode:
+            raise HTTPException(404, "Demo mode is off")
+        wants_misread = plant_misread.strip().lower() in ("1", "true", "on")
+        run = prepared.find(doc["sha256"], file.filename or "", wants_misread)
+        if run is None:
+            raise HTTPException(404, "No prepared run for this misread variant of this file" if wants_misread and prepared.find(doc["sha256"], file.filename or "") else "No prepared run for this file")
+        case_number = case_number.strip() or run["case_number"]
     rec = sr.load_record(case_number) if case_number.strip() else None
     if case_number.strip() and rec is None:
         raise HTTPException(404, f"No student record for case number {case_number.strip()}")
@@ -62,7 +72,7 @@ async def create_application(file: UploadFile = File(...),  # noqa: B008
         student_label, student_id, program, qualification = rec["name"], rec["student_id"], rec["program"], qualification or rec["curriculum"]
     with app_session() as db:
         app = Application(id=f"APP-{uuid.uuid4().hex[:8].upper()}", kind="upload", student=student_label.strip() or "Uploaded transcript",
-                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={"student_id": student_id.strip(), **({"student_record": rec} if rec else {}), **({"planted_misread": PLANTS["D" if rec and rec["case_number"] == "CB-2026-0105" else "B"]} if plant_misread.strip().lower() in ("1", "true", "on") and get_settings().demo_mode else {})})
+                          program=program.strip(), status="READING", document=doc, qualification_hint=qualification, extraction={"student_id": student_id.strip(), **({"student_record": rec} if rec else {}), **({"demo": {"run": run["name"], "speed": demo_speed if demo_speed in ("instant", "fast") else "fast", "label": run["label"]}} if run else {}), **({"planted_misread": PLANTS["D" if rec and rec["case_number"] == "CB-2026-0105" else "B"]} if plant_misread.strip().lower() in ("1", "true", "on") and get_settings().demo_mode else {})})
         job = Job(id=uuid.uuid4().hex[:12], app_id=app.id, phase="READING", status="QUEUED")
         db.add_all([app, job])
         db.commit()

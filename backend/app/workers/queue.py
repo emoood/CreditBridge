@@ -10,6 +10,7 @@ from sqlalchemy import select
 from .. import runtime
 from ..db.models import Application, Job, JobUnit
 from ..db.session import app_session
+from ..services import prepared, usage
 from . import store
 from .pipeline import run_audit, run_evaluation, run_reading, run_row
 
@@ -64,7 +65,22 @@ class JobWorker:
             if job is None or job.status not in ("QUEUED", "INTERRUPTED"):
                 return
             phase = job.phase
-        provider = runtime.get_provider()
+        with app_session() as db:
+            job = db.get(Job, job_id)
+            demo = ((db.get(Application, job.app_id).extraction or {}).get("demo")) if job else None
+        token = None
+        if demo:  # a prepared run answers the model's calls; the agents and every tool still run live in code, and nothing here needs Ollama or the network
+            provider = prepared.DemoProvider(prepared.load(demo["run"]), prepared.delay_for(demo.get("speed", "fast")))
+            token = usage.RECORDED.set(demo["label"])
+        else:
+            provider = runtime.get_provider()
+        try:
+            await self._run_phase(phase, job_id, provider)
+        finally:
+            if token is not None:
+                usage.RECORDED.reset(token)
+
+    async def _run_phase(self, phase: str, job_id: str, provider) -> None:
         if phase == "READING":
             await run_reading(job_id, provider)
         elif phase == "AUDIT":

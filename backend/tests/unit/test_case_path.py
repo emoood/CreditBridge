@@ -190,3 +190,42 @@ def test_a_course_missing_from_the_schools_synopsis_waits_for_its_syllabus_and_a
     none = mp.decide_row(row("AP Chemistry"), m, {}, False, repo, synopsis=None)
     assert have["status"] == "Mapped" and sent["status"] == "Mapped" and none["status"] == "Mapped"   # no synopsis page, no such rule
     assert miss["status"] == "Conditional" and miss["condition_result"]["missing"][0]["field"] == "syllabus"
+
+
+# ---- Demo mode: a prepared run answers the model's calls; code stays live; repeated runs give the same result
+async def _demo_upload(env, name="school_transcript.png", **extra):
+    from backend.tests.conftest import FIX
+    data = (FIX / name).read_bytes()
+    return await env.client.post("/api/v1/applications", files={"file": (name, data, "image/png")}, headers=ADMIN, data={"demo": "1", "demo_speed": "instant", **extra})
+
+
+async def test_demo_mode_plays_back_a_prepared_run_with_no_model_and_repeats_identically(case_env, monkeypatch, tmp_path):
+    from backend.app.services import prepared
+    monkeypatch.setattr(prepared, "DIR", tmp_path)
+    app1 = await run_to_review(case_env)
+    st1, _rows1, _ = await states(case_env, app1)
+    prepared.save(app1, "t_run", "CB-2026-0101")
+    assert [c["case_number"] for c in prepared.listing()] == ["CB-2026-0101"]
+    calls_before = len(case_env.model.calls)
+    out = []
+    for _ in range(2):  # twice: the same file gives the same result both times
+        r = await _demo_upload(case_env)
+        assert r.status_code == 200, r.text
+        app_id = r.json()["id"]
+        await case_env.worker.idle()
+        await case_env.client.post(f"/api/v1/applications/{app_id}/confirm", headers=ADMIN)
+        await case_env.worker.idle()
+        st, _rows, _res = await states(case_env, app_id)
+        out.append({t: (s["status"], s["kind"]) for t, s in st.items()})
+        act = (await case_env.client.get(f"/api/v1/applications/{app_id}/activity")).json()
+        assert act["usage"]["live_calls"] == 0 and act["usage"]["recorded_calls"] > 0          # every model call came from the prepared run
+        assert act["trace"] and all(e["recorded"] for e in act["trace"] if e["actor"] == "case_agent")
+    assert len(case_env.model.calls) == calls_before                                            # the model was never called
+    assert out[0] == out[1] == {t: (s["status"], s["kind"]) for t, s in st1.items()}              # same file, same result, same as the real run
+
+
+async def test_demo_mode_says_so_when_there_is_no_prepared_run_for_a_file(case_env, monkeypatch, tmp_path):
+    from backend.app.services import prepared
+    monkeypatch.setattr(prepared, "DIR", tmp_path)
+    r = await _demo_upload(case_env)
+    assert r.status_code == 404 and r.json()["detail"] == "No prepared run for this file"

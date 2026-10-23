@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 
 from .api.cases import router as cases_router
 from .api.common import seed_demo
+from .api.demo import router as demo_router
 from .api.evaluation import router as evaluation_router
 from .api.intake import router as intake_router
 from .api.officer import router as officer_router
@@ -51,6 +52,7 @@ app.include_router(evaluation_router)
 app.include_router(cases_router)
 app.include_router(officer_router)
 app.include_router(recordings_router)
+app.include_router(demo_router)
 
 
 @app.get("/api/v1/health")

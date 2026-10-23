@@ -1,5 +1,6 @@
 """Usage ledger (one row per model call) and the action trace. Both are persisted, per application and row, and shown in the
 activity drawer. Nothing here stores document text."""
+from contextvars import ContextVar
 from typing import Any
 
 from sqlalchemy import select
@@ -36,9 +37,13 @@ class MeteredProvider:
         return resp
 
 
+RECORDED: ContextVar[str | None] = ContextVar("recorded", default=None)  # set while a prepared run is being played back: the label every trace entry then carries
+
+
 def trace(app_id: str, row_id: str, actor: str, name: str, args: dict[str, Any] | None = None, ok: bool = True, detail: str = "") -> None:
+    label = RECORDED.get()
     with app_session() as db:
-        db.add(TraceEvent(app_id=app_id, row_id=row_id, actor=actor, name=name, args=args or {}, ok=ok, detail=detail[:600]))
+        db.add(TraceEvent(app_id=app_id, row_id=row_id, actor=actor, name=name, args={**(args or {}), **({"_recorded": label} if label else {})}, ok=ok, detail=detail[:600]))
         db.commit()
 
 

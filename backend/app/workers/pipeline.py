@@ -19,7 +19,7 @@ from ..runtime import rt
 from ..services import cross_check as cc
 from ..services import grade_checks as gc
 from ..services import mapping as mp
-from ..services import recording, usage
+from ..services import prepared, recording, usage
 from ..services import student_record as sr
 from ..services import vision_reader as vr
 from ..services.curriculum import curriculum
@@ -141,13 +141,21 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         job.stage = "curriculum"
         db.commit()
         cur_units = store.plan_units(db, job, "curriculum", [r["id"] for r in rows], True)
-        await asyncio.to_thread(curriculum.subjects)  # loads once; sets curriculum.error instead of raising
+        demo = (app.extraction or {}).get("demo")
+        links = prepared.load(demo["run"])["links"] if demo else {}  # a prepared run carries the curriculum links it was made with, so Demo mode needs no network
+        if not demo:
+            await asyncio.to_thread(curriculum.subjects)  # loads once; sets curriculum.error instead of raising
         cur_flags = []
-        if curriculum.error:
+        if curriculum.error and not demo:
             cur_flags.append(f"curriculum_unavailable({curriculum.error})")
         for row, u in zip(rows, cur_units, strict=True):
             store.start_unit(db, job, u, "string_match")
-            await asyncio.to_thread(autolink, row, app.qualification_hint or None)
+            if demo:
+                row["subject"] = links.get((row["title"] or "").strip().lower())
+                row["curriculum_status"] = "LINKED" if row["subject"] else "NEEDS_SYLLABUS"
+                await _stage_pause(demo)
+            else:
+                await asyncio.to_thread(autolink, row, app.qualification_hint or None)
             store.finish_unit(db, u, "DONE", {"linked": bool(row["subject"])})
         unrecognized = sum(1 for r in rows if not r["subject"])
 
@@ -155,7 +163,7 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         store.set_json(app, "rows", rows)
         store.set_json(app, "extracted_rows", rows)
         failed = [b for b in blocks_meta if b["status"] != "DONE"]
-        store.set_json(app, "extraction", {"student_id": (app.extraction or {}).get("student_id", ""), "student_record": (app.extraction or {}).get("student_record"), "planted_misread": ({**plant_cfg, "applied": planted_log} if plant_cfg else None), "method": method, "blocks": blocks_meta, "failed_blocks": len(failed), "intake": intake_info, "synopsis": synopsis_found, "flags": merged["flags"] + cur_flags,
+        store.set_json(app, "extraction", {"student_id": (app.extraction or {}).get("student_id", ""), "demo": (app.extraction or {}).get("demo"), "student_record": (app.extraction or {}).get("student_record"), "planted_misread": ({**plant_cfg, "applied": planted_log} if plant_cfg else None), "method": method, "blocks": blocks_meta, "failed_blocks": len(failed), "intake": intake_info, "synopsis": synopsis_found, "flags": merged["flags"] + cur_flags,
                                            "cumulative": merged["cumulative"], "scale": merged["scale"], "grading_scale": merged.get("printed_scale") or gc.scale_from_text(merged.get("dropped_text", "")) or ({**scale, "source": "configured"} if scale_name else None), "unrecognized": unrecognized,
                                            "dropped_non_course_rows": merged.get("dropped_rows", 0),
                                            "rows_found": len(rows)})
@@ -164,6 +172,12 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         job.flags = (["BLOCKS_FAILED"] if failed else []) + (["UNRECOGNIZED_SUBJECTS"] if unrecognized else []) + (["CHECK_FLAGS"] if merged["flags"] else [])
         db.commit()
         store.audit(db, app.id, "system", "extraction_review_required", job.id, rows=len(rows), failed_blocks=len(failed), unrecognized=unrecognized)
+
+
+async def _stage_pause(demo: dict[str, Any] | None, share: float = 1.0) -> None:
+    """Demo mode: a code stage (relevance gate, mapping lookup) also takes a moment, so the stages appear one after another. Instant mode does not wait."""
+    if demo:
+        await asyncio.sleep(prepared.delay_for(demo.get("speed", "fast")) * share)
 
 
 def _row_id(app: Application, index: int, title: str | None) -> str:
@@ -309,7 +323,11 @@ async def _work_unit(db, job: Job, app: Application, row: dict[str, Any], u, pro
     try:
         outcomes: list[dict[str, Any]] = []
         if (state["status"] in mp.WORKABLE or mode == "review_package") and row.get("subject"):
-            outcomes = await asyncio.to_thread(curriculum.outcomes, row["subject"]["id"])
+            try:
+                outcomes = await asyncio.to_thread(curriculum.outcomes, row["subject"]["id"])
+            except Exception:
+                if not (app.extraction or {}).get("demo"):
+                    raise
         syn = mp.synopsis_for(row, (app.extraction or {}).get("synopsis"))
         if syn:  # the school's own synopsis page is the syllabus excerpt for this course
             outcomes = [{"text": syn, "page": 2, "kind": "synopsis"}]
@@ -350,6 +368,7 @@ async def run_evaluation(job_id: str, provider: LLMProvider) -> None:
         db.commit()
         reset = not job.summary.get("resumed")
         rows = [dict(r) for r in app.rows]
+        await _stage_pause((app.extraction or {}).get("demo"), 2)  # relevance gate + mapping lookup
         states = _lookup_rows(db, app, rows)
         todo = [r for r in rows if r.get("source_id") and states[r["id"]]["status"] != mp.NOT_EVAL]
         todo.sort(key=lambda r: states[r["id"]]["status"] != mp.MAPPED)  # mapped rows (no model) run and show first; the agent rows follow and stream in as they finish
