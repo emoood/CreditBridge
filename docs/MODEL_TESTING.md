@@ -89,3 +89,7 @@ Per vision call 4 to 13 s per block; vision now reads every upload including dig
 
 ## Note: Rania's demo data changed after `demo_a2` was recorded
 For Rania (BBA) AP Statistics is now conditional on an exam score of at least 4 and AP Microeconomics has a stale mapping; AP Calculus AB and AP Computer Science A are now "Not applicable" (engineering areas are restricted for BBA programs). The recorded Case agent replies do not cover the two new open rows, so in Demo mode those rows use the code's verdict and sentence (the review modal never shows raw agent text). Re-record A2 to capture the agents' work for the new situation: `python scripts/overnight_runs.py a2`.
+
+## Note: classification changed to policies/program_constraints.yaml
+Each mapped course is now classed, in order: **Not applicable** (blocked area or blocked course for the program), **Core course** (in the program's core list), else **General elective suggestion**. There is no allowed-elective list, no credit cap, no "Not in the plan" label and no elective judging by the Case agent (the `set_classification` tool and the `program_mismatch` doubt are gone). The Case review prompt (`case_v3.txt`) lost its elective step, so any recording made before this change differs from a fresh run. The review list is grouped (Core courses, General electives).
+Recordings made before this change: `demo_a2` (the only one). Re-record A2, and record C and D, after the real-model runs are approved.

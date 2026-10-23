@@ -1,10 +1,10 @@
 // Maps the backend's statuses and data onto the officer-facing vocabulary. Pure functions.
 // Row vocabulary:  Mapped | Conditional | No mapping | Waiting on document | Not evaluated   (+ the officer's resolution, if any)
-// Application vocabulary: Processing | Needs you | Waiting on document | Ready
+// Application vocabulary: Processing | Open | Waiting on document | Ready
 import type { ActionInfo, AppInfo, CaseResult, Job, ProgramClass, Row, RowStateInfo, RowStatus, Sheet } from './api';
 
 export type { RowStatus };
-export type AppStatus = 'Processing' | 'Needs you' | 'Waiting on document' | 'Ready';
+export type AppStatus = 'Processing' | 'Open' | 'Waiting on document' | 'Ready';
 
 const RESOLVING = ['CONFIRM', 'CHANGE', 'REJECT', 'NO_CREDIT', 'CORRECT', 'RECONFIRM'];
 export const RESOLUTION_LABEL: Record<string, string> = { CONFIRM: 'Confirmed', CHANGE: 'Changed', REJECT: 'Rejected', NO_CREDIT: 'No credit', CORRECT: 'Corrected', RECONFIRM: 'Re-confirmed' };
@@ -17,7 +17,7 @@ export type Item = {
   result: CaseResult | null;
   status: RowStatus;
   reason: string;         // why it has this status, in plain words
-  finding?: string;       // short finding for the "Needs your input" card
+  finding?: string;       // short finding for an open row
   objections: number;     // reviewer objections
   canInclude: boolean;    // a "Not evaluated" row the officer may bring in
   state?: RowStateInfo;   // the backend's verdict for this row
@@ -25,9 +25,10 @@ export type Item = {
   resolved: boolean;      // confirmed, changed, rejected or no credit
   audCode: string | null; // what the row stands at now (the officer's choice, else the suggestion)
   audCredits: number | null;
-  cls: ProgramClass | null; // the program-plan class of the mapped equivalent (Program course, General elective suggestion, Not applicable)
+  cls: ProgramClass | null; // the program-plan class of the mapped equivalent (Core course, General elective suggestion, Not applicable)
   doubts: number;         // doubts the Case agent raised that code corroborated or recorded
-  needsInput: boolean;    // No mapping, Conditional or Waiting on document, and not yet resolved: shown in "Needs your input"
+  needsInput: boolean;    // No mapping, Conditional or Waiting on document, and not yet resolved
+  order: number;          // position in the transcript, so a list never reorders when a row is confirmed
 };
 
 // Stand-in for results of older runs that have no backend row state: a subject without a syllabus counts as waiting only if it looks advanced.
@@ -60,7 +61,7 @@ export function classify(row: Row | null, result: CaseResult | null, included: b
   const needsInput = (status === 'No mapping' || status === 'Conditional' || status === 'Waiting on document') && !resolved;
   return { key: result?.course.code ?? row?.id ?? title, rowId: row?.id ?? '', title, grade: result?.course.grade ?? row?.grade ?? '', result, status, reason,
     finding: needsInput ? (state?.finding?.headline ?? reason) : undefined, objections: result?.review?.status === 'CHALLENGED' ? result.review.objections.length || 1 : 0,
-    canInclude: state ? status === 'Not evaluated' && state.can_include : legacy.canInclude, state, action, resolved, audCode, audCredits, needsInput, cls: state?.classification ?? null, doubts: state?.doubts?.length ?? 0 };
+    canInclude: state ? status === 'Not evaluated' && state.can_include : legacy.canInclude, state, action, resolved, audCode, audCredits, needsInput, order: 0, cls: state?.classification ?? null, doubts: state?.doubts?.length ?? 0 };
 }
 
 export type Built = {
@@ -82,6 +83,7 @@ export function build(app: AppInfo, results: CaseResult[], pending: { key: strin
   }
   for (const r of results) if (!used.has(r.course.code)) items.push(classify(null, r, include.has(r.course.code), failed, evaluating)); // demo fixtures have no source ids
   const rank: Record<RowStatus, number> = { 'No mapping': 0, Conditional: 1, 'Waiting on document': 2, Mapped: 3, 'Not evaluated': 4 };
+  items.forEach((it, n) => { it.order = n; });
   items.sort((a, b) => Number(a.resolved) - Number(b.resolved) || rank[a.status] - rank[b.status]);
   const relevant = items.filter(i => i.status !== 'Not evaluated');
   const n = (s: RowStatus) => relevant.filter(i => i.status === s).length;
@@ -98,14 +100,14 @@ export function isBusy(app: AppInfo, jobs: (Job | null)[]): boolean {
 
 export function appStatus(app: AppInfo, b: Built, jobs: (Job | null)[]): AppStatus {
   if (isBusy(app, jobs)) return 'Processing';
-  if (app.status === 'EXTRACTION_REVIEW_REQUIRED' || app.status === 'READY_FOR_EVALUATION') return 'Needs you';
-  if (jobs.some(j => j && (j.status === 'INTERRUPTED' || j.status === 'FAILED'))) return 'Needs you';
-  if (b.needsInput.some(i => i.status !== 'Waiting on document')) return 'Needs you';
+  if (app.status === 'EXTRACTION_REVIEW_REQUIRED' || app.status === 'READY_FOR_EVALUATION') return 'Open';
+  if (jobs.some(j => j && (j.status === 'INTERRUPTED' || j.status === 'FAILED'))) return 'Open';
+  if (b.needsInput.some(i => i.status !== 'Waiting on document')) return 'Open';
   if (b.needsInput.length > 0) return 'Waiting on document';
   return 'Ready';
 }
 
-export const APP_ORDER: Record<AppStatus, number> = { 'Needs you': 0, Processing: 1, 'Waiting on document': 2, Ready: 3 };
+export const APP_ORDER: Record<AppStatus, number> = { Open: 0, Processing: 1, 'Waiting on document': 2, Ready: 3 };
 
 export function curriculumOf(app: AppInfo, results: CaseResult[]): string {
   const tally = new Map<string, number>();
@@ -123,7 +125,7 @@ export function sheetRows(s: Sheet): string[][] {
 export const toTsv = (s: Sheet) => sheetRows(s).map(r => r.map(c => c.replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
 export const toCsv = (s: Sheet) => sheetRows(s).map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
 
-export const CLASS_LABEL: Record<string, string> = { 'Program course': 'Program course', 'General elective suggestion': 'Elective suggestion', 'Not applicable': 'Not in the plan' };
+export const CLASS_LABEL: Record<string, string> = { 'Core course': 'Core course', 'General elective suggestion': 'General elective', 'Not applicable': 'Not applicable' };
 
 
 // ---- the review modal: what each open row needs, in one plain sentence, and the one button that moves it forward
@@ -134,12 +136,12 @@ export type Need = { sentence: string; primary: string; kind: OpenKind };
 export const isReady = (i: Item) => i.status !== 'Not evaluated' && (i.resolved || (i.status === 'Mapped' && !i.doubts && i.cls?.value !== 'Not applicable'));
 export const isOpen = (i: Item) => i.status !== 'Not evaluated' && !isReady(i);
 
-export function needOf(i: Item, program: string): Need {
+export function needOf(i: Item, _program = ''): Need {
   const s = i.state; const cond = s?.mapping?.condition; const code = s?.mapping?.aud_code ?? '';
   const missing = s?.condition_result?.missing ?? [];
   if (i.status === 'Mapped') {
     const d = s?.doubts?.[0];
-    return { sentence: d ? d.reason : `${code} is not on the ${program || 'program'} plan.`, primary: 'Review', kind: 'review' };
+    return { sentence: d ? d.reason : `${code} needs a second look.`, primary: 'Review', kind: 'review' };
   }
   if (i.status === 'Waiting on document') {
     const req = (s?.requests ?? []).find(q => q.status !== 'RECEIVED');
@@ -163,5 +165,25 @@ export function plainSummary(b: Built, program: string, agentText: string): stri
   const names = b.items.filter(i => first.includes(i.title) && i.title.length > 3);
   if (first && names.every(i => isOpen(i)) && names.length > 0) return first;
   if (open.length === 0) return b.relevant.length ? 'Every course is ready to confirm.' : '';
-  return `Needs you: ${open.map(i => `${i.title} (${KIND_WORDS[needOf(i, program).kind]})`).join(', ')}.`;
+  return `Open: ${open.map(i => `${i.title} (${KIND_WORDS[needOf(i, program).kind]})`).join(', ')}.`;
+}
+
+
+// ---- the grouped review list: one list, Core courses then General electives
+export type RowLabel = 'Ready' | 'Conditional' | 'Stale mapping' | 'Awaiting document' | 'Confirmed' | 'No mapping' | 'Flagged' | 'Changed' | 'Rejected' | 'No credit';
+export function rowLabel(i: Item): RowLabel {
+  if (i.resolved && i.action) return i.action.action === 'CONFIRM' || i.action.action === 'RECONFIRM' ? 'Confirmed' : i.action.action === 'CHANGE' || i.action.action === 'CORRECT' ? 'Changed' : i.action.action === 'REJECT' ? 'Rejected' : 'No credit';
+  if (i.status === 'Mapped') return i.doubts ? 'Flagged' : 'Ready';
+  if (i.status === 'Waiting on document') return 'Awaiting document';
+  if (i.state?.kind === 'stale') return 'Stale mapping';
+  return i.status === 'No mapping' ? 'No mapping' : 'Conditional';
+}
+export type Group = { id: 'core' | 'elective' | 'other'; title: string; items: Item[]; ready: Item[]; open: number; confirmed: number };
+/** Rows by class, in the order they came in. A group never reorders when a row is confirmed. */
+export function groups(b: Built): Group[] {
+  const mk = (id: Group['id'], title: string, items: Item[]): Group => ({ id, title, items, ready: items.filter(i => isReady(i) && !i.resolved), open: items.filter(isOpen).length, confirmed: items.filter(i => i.resolved).length });
+  const rel = [...b.relevant].sort((a, c) => a.order - c.order);
+  const out = [mk('core', 'Core courses', rel.filter(i => i.cls?.value === 'Core course')), mk('elective', 'General electives', rel.filter(i => i.cls?.value === 'General elective suggestion')),
+    mk('other', 'No equivalent yet', rel.filter(i => !i.cls || i.cls.value === 'Not applicable'))];
+  return out.filter(g => g.id !== 'other' ? true : g.items.length > 0);
 }

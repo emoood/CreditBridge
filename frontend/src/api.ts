@@ -42,7 +42,7 @@ export type RowStateInfo = { row_id: string; status: RowStatus; kind: string; re
   mapping: { aud_code: string; aud_credits: number; version: string; status: string; programs?: string[] | null; condition: { type: string; value: unknown; evidence?: string } | null } | null;
   condition_result: { status: string; reason: string; missing: { field: string; evidence: string }[] } | null; finding: Finding | null; requests: DraftedRequest[]; facts: Record<string, unknown>;
   classification?: ProgramClass | null; doubts?: Doubt[] };
-export type ProgramClass = { value: 'Program course' | 'General elective suggestion' | 'Not applicable'; why: string; by: 'code' | 'case_agent'; aud_code: string };
+export type ProgramClass = { value: 'Core course' | 'General elective suggestion' | 'Not applicable'; why: string; by: 'code' | 'case_agent'; aud_code: string };
 export type Doubt = { kind: string; reason: string; verified: boolean; evidence: string; by: string };
 export type DemoCase = { case_number: string; name: string | null; program: string | null; student_id: string | null; filename: string | null;
   run: { name: string; label: string; recorded_at: string; model: string } | null; misread_run: { name: string; label: string } | null };
@@ -101,7 +101,7 @@ export const api = {
   exportCheck: (id: string, role: string) => fetch(`/api/v1/applications/${id}/export-check`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ ready: boolean; job_id?: string }>),
   studentRecord: (caseNumber: string) => fetch(`/api/v1/students/${encodeURIComponent(caseNumber)}`).then(j<StudentRecord & { plan: unknown }>),
   applyAudit: (id: string, role: string, rowIds: string[]) => fetch(`/api/v1/applications/${id}/audit/apply`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ row_ids: rowIds }) }).then(j<{ applied: string[]; sheet_ok: boolean }>),
-  searchCatalog: (q: string) => fetch(`/api/v1/catalog/search?q=${encodeURIComponent(q)}`).then(j<{ code: string; title: string; level: number }[]>),
+  searchCatalog: (q: string, program = '') => fetch(`/api/v1/catalog/search?q=${encodeURIComponent(q)}&program=${encodeURIComponent(program)}`).then(j<{ code: string; title: string; level: number }[]>),
   setStudent: (id: string, name: string, studentId: string) => fetch(`/api/v1/applications/${id}/student`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify({ name, student_id: studentId }) }).then(j<AppInfo>),
   activity: (id: string) => fetch(`/api/v1/applications/${id}/activity`).then(j<Activity>),
   institution: () => fetch('/api/v1/config/institution').then(j<Institution>),

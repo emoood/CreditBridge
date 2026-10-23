@@ -81,16 +81,15 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
   }
 
   const isUpload = app.kind === 'upload';
-  const openItems = built.relevant.filter(isOpen);
   const advance = async () => { const row = selected?.rowId ?? null; await reload(); setAdv(row); };
-  const newPanel = isUpload && selected && !activity ? <RowPanel key={selected.key} appId={appId} item={selected} role={role} program={app.program} onClose={() => setEvidenceKey(null)} onAdvance={advance} onShowElectives={() => setEvidenceKey(null)} /> : null;
+  const newPanel = isUpload && selected && !activity ? <RowPanel key={selected.key} appId={appId} item={selected} role={role} program={app.program} onClose={() => setEvidenceKey(null)} onAdvance={advance} /> : null;
   return <Shell onClose={onClose} wide={gate} side={isUpload && (newPanel || activity) ? (newPanel ?? <Activity data={data} onClose={() => setActivity(false)} />) : selected?.result ? <Evidence appId={appId} r={selected.result} item={selected} role={role} onChanged={reload} onClose={() => setEvidenceKey(null)} />
     : activity ? <Activity data={data} onClose={() => setActivity(false)} /> : null}>
     <header className="pop-head">
       <div><small>STUDENT</small><h2>{app.student}</h2>
         <p className="muted">ID {app.student_id || app.id} · {app.program || curriculumOf(app, results)}{app.program ? ` · ${curriculumOf(app, results)}` : ''}{app.student_record?.term ? ` · ${app.student_record.term}` : ''}{app.student_record ? ` · case ${app.student_record.case_number}` : ''}</p>
         {app.student_record && <details className="rv-contact"><summary>Contact details</summary><p className="muted">{app.student_record.email} · {app.student_record.phone}</p></details>}</div>
-      <div className="pop-head-right">{approved ? <span className="approved-tag"><Check size={13} /> Approved</span> : isUpload && !reading && !gate && !evaluating ? <span className={`need-chip ${openItems.length ? '' : 'clear'}`}>{openItems.length ? `${openItems.length} need${openItems.length === 1 ? 's' : ''} you` : 'Ready'}</span> : <AppPill s={status} />}<button className="icon-button" onClick={onClose} aria-label="Close"><X size={22} /></button></div>
+      <div className="pop-head-right">{approved ? <span className="approved-tag"><Check size={13} /> Approved</span> : isUpload && !reading && !gate && !evaluating ? null : <AppPill s={status} />}<button className="icon-button" onClick={onClose} aria-label="Close"><X size={22} /></button></div>
     </header>
     {app.replay && <div className="replay-banner"><History size={15} /> <span><strong>{app.replay.label}</strong>. {app.replay.live.length ? `Nothing here was produced just now except ${app.replay.live.length} course(s) run live.` : 'Nothing here was produced just now: no model was called.'}</span></div>}
     {err && <div className="eval-error"><AlertCircle size={15} /> {err}</div>}
@@ -138,11 +137,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
 
       {built.relevant.length > 0 && <p className="muted placeholder-note">AUD codes and credits shown are placeholder mapping data for this demo, not AUD&apos;s real equivalencies.</p>}
 
-      {built.electives.length > 0 && <section className="electives"><h4>General elective suggestions <span className="count">{built.electives.length}</span></h4>
-        <p className="muted">Mapped courses outside {app.program || 'the program'} that can count as free electives. Confirm them like any other row.</p>
-        <ul>{built.electives.map(i => <li key={i.key}><strong>{i.title}</strong> <span className="muted">→ {i.audCode}{i.cls?.by === 'case_agent' ? ' · judged by the Case agent: ' + i.cls.why : ''}</span></li>)}</ul></section>}
-
-      {built.needsInput.length > 0 && <section className="needs"><h4>Needs your input <span className="count">{built.needsInput.length}</span></h4>
+      {built.needsInput.length > 0 && <section className="needs"><h4>Open items <span className="count">{built.needsInput.length}</span></h4>
         <div className="needs-cards">{built.needsInput.map(i => <NeedCard key={i.key} i={i} appId={appId} role={role} busy={busy} onOpen={() => i.result && setEvidenceKey(i.key)} onChanged={reload} />)}</div></section>}
 
       {built.notEvaluated.length > 0 && <details className="noteval" open={notEvalOpen} onToggle={e => setNotEvalOpen((e.target as HTMLDetailsElement).open)}>

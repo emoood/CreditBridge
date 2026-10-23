@@ -172,7 +172,7 @@ export default function Worklist() {
       )}
       <section className="panel wl-head">
         <p className="muted wl-hint">
-          What needs you comes first. Click a row to open the student.
+          Open applications come first. Click a row to open the student.
         </p>
         <div className="wl-actions">
           {!demo.on && (

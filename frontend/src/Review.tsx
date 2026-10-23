@@ -1,47 +1,55 @@
 import { useState } from 'react';
 import { AlertCircle, Check, ChevronDown, ChevronRight, ClipboardCopy, Download, Paperclip, ShieldCheck, X } from 'lucide-react';
 import { api } from './api';
-import { CLASS_LABEL, isOpen, isReady, needOf, RESOLUTION_LABEL, type Built, type Item } from './model';
+import { CLASS_LABEL, groups, isOpen, isReady, needOf, RESOLUTION_LABEL, rowLabel, type Built, type Item } from './model';
 
 type Role = string;
-const money = (i: Item) => (i.audCode ? `${i.audCode}${i.audCredits ? ` · ${i.audCredits} cr` : ''}` : 'no AUD course yet');
 
-/** The review overview: who, how far along, what needs a decision, what is ready. Everything else is one click away. */
+/** The review overview: who, how far along, then one grouped list (core courses, general electives). Everything else is one click away. */
 export function ReviewBody({ built, summary, role, appId, busy, program, approved, canApprove, selectedKey, onOpen, onRun, onCopy, onCsv, onActivity, children }: {
   built: Built; summary: string; role: Role; appId: string; busy: boolean; program: string; approved: boolean; canApprove: boolean;
   selectedKey: string | null; onOpen: (key: string) => void; onRun: (f: () => Promise<unknown>) => Promise<void>; onCopy: () => void; onCsv: () => void; onActivity: () => void; children?: React.ReactNode;
 }) {
-  const [readyOpen, setReadyOpen] = useState(false);
   const [naOpen, setNaOpen] = useState(false);
   const [neOpen, setNeOpen] = useState(false);
   const [allOpen, setAllOpen] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'open'>('all');
   const relevant = built.relevant;
   const open = relevant.filter(isOpen); const ready = relevant.filter(isReady);
-  const waiting = open.filter(i => i.status === 'Waiting on document'); const needs = open.filter(i => i.status !== 'Waiting on document');
+  const waiting = open.filter(i => i.status === 'Waiting on document'); const others = open.filter(i => i.status !== 'Waiting on document');
+  const toConfirm = built.counts.confirmable;
   const total = relevant.length;
   const pct = (n: number) => `${total ? (n / total) * 100 : 0}%`;
-  const left = built.counts.unresolved;
-  const sentence = summary;
+  const confirmThese = (items: Item[]) => onRun(async () => { for (const i of items) await api.rowAction(appId, i.rowId, role, { action: 'CONFIRM' }); });
+  const gs = groups(built);
   return <div className="rv">
     <div className="rv-progress" aria-label="Progress">
-      <p className="rv-count"><strong>{ready.length} of {total} courses ready</strong>{needs.length + waiting.length > 0 && <span> · {needs.length + waiting.length} need{needs.length + waiting.length === 1 ? 's' : ''} you</span>}</p>
-      <div className="rv-bar" role="img" aria-label={`${ready.length} ready, ${needs.length} need you, ${waiting.length} waiting on a document`}>
-        <span className="seg ready" style={{ width: pct(ready.length) }} /><span className="seg needs" style={{ width: pct(needs.length) }} /><span className="seg waiting" style={{ width: pct(waiting.length) }} /></div>
-      <p className="rv-legend"><span className="dot ready" /> ready <span className="dot needs" /> needs you <span className="dot waiting" /> waiting on a document</p>
-      {sentence && <p className="rv-summary">{sentence}</p>}
+      <p className="rv-count"><strong>{ready.length} of {total} courses ready</strong>{open.length > 0 && <span> · {open.length} open</span>}</p>
+      <div className="rv-bar" role="img" aria-label={`${ready.length} ready, ${others.length} open, ${waiting.length} awaiting a document`}>
+        <span className="seg ready" style={{ width: pct(ready.length) }} /><span className="seg needs" style={{ width: pct(others.length) }} /><span className="seg waiting" style={{ width: pct(waiting.length) }} /></div>
+      <p className="rv-legend"><span className="dot ready" /> ready <span className="dot needs" /> open <span className="dot waiting" /> awaiting document</p>
+      {summary && <p className="rv-summary">{summary}</p>}
     </div>
 
     {children}
 
-    {open.length > 0 && <section className="rv-section" aria-labelledby="rv-open"><h3 id="rv-open">Needs your decision <span className="count">{open.length}</span></h3>
-      <div className="rv-cards">{open.map(i => <NeedCard key={i.key} i={i} program={program} active={selectedKey === i.key} busy={busy} role={role} appId={appId} onOpen={() => onOpen(i.key)} onRun={onRun} />)}</div></section>}
-    {open.length === 0 && total > 0 && <p className="rv-allclear"><Check size={16} /> Nothing needs your decision. {left > 0 ? `Confirm the ${ready.length - (built.counts.resolved)} ready course${ready.length === 1 ? '' : 's'} below to finish.` : 'Every course is resolved.'}</p>}
+    <div className="rv-filter" role="group" aria-label="Show">
+      <button className={filter === 'all' ? 'on' : ''} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All</button>
+      <button className={filter === 'open' ? 'on' : ''} aria-pressed={filter === 'open'} onClick={() => setFilter('open')}>Open only</button></div>
 
-    {ready.length > 0 && <section className="rv-section" aria-labelledby="rv-ready"><h3 id="rv-ready">Ready to confirm <span className="count">{ready.length}</span>
-      <button className="link-btn rv-showall" onClick={() => setReadyOpen(!readyOpen)} aria-expanded={readyOpen}>{readyOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />} {readyOpen ? 'Hide' : 'Show all'}</button></h3>
-      {readyOpen && <ul className="rv-ready">{ready.map(i => <li key={i.key}><button className={`rv-row ${selectedKey === i.key ? 'on' : ''}`} onClick={() => onOpen(i.key)}>
-        <span className="t"><strong>{i.title}</strong> <span className="muted">{i.grade}</span></span><span>{money(i)}</span>
-        <span className="tag">{i.resolved && i.action ? RESOLUTION_LABEL[i.action.action] : i.cls ? CLASS_LABEL[i.cls.value] : ''}</span></button></li>)}</ul>}</section>}
+    {gs.map(g => {
+      const rows = filter === 'open' ? g.items.filter(isOpen) : g.items;
+      if (filter === 'open' && rows.length === 0) return null;
+      const confirmLabel = g.id === 'core' ? 'core' : 'electives';
+      return <section className="rv-group" key={g.id} aria-labelledby={`rv-g-${g.id}`}>
+        <header className="rv-group-head"><h3 id={`rv-g-${g.id}`}>{g.title} ({g.items.length})</h3>
+          <span className="muted">{g.ready.length} ready · {g.open} open · {g.confirmed} confirmed</span><span className="push" />
+          {g.id !== 'other' && <button className="secondary-button" disabled={busy || role !== 'admissions' || g.ready.length === 0} onClick={() => confirmThese(g.ready)}>Confirm ready {confirmLabel} ({g.ready.length})</button>}</header>
+        {rows.length === 0 ? <p className="muted rv-empty">No courses here.</p> : <div className="rv-scroll"><table className="ctable rv-table"><thead><tr><th>Course</th><th>Grade</th><th>AUD equivalent</th><th className="num">Credits</th><th>Status</th><th><span className="sr-only">Action</span></th></tr></thead>
+          <tbody>{rows.map(i => <GroupRow key={i.key + i.rowId} i={i} program={program} active={selectedKey === i.key} busy={busy} role={role} appId={appId} onOpen={() => onOpen(i.key)} onRun={onRun} />)}</tbody></table></div>}
+      </section>;
+    })}
+    {total > 0 && open.length === 0 && !approved && toConfirm === 0 && <p className="rv-allclear"><Check size={16} /> Every course is confirmed.</p>}
 
     {built.notApplicable.length > 0 && <section className="rv-muted"><button className="rv-line" onClick={() => setNaOpen(!naOpen)} aria-expanded={naOpen}>{naOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       {built.notApplicable.length} course{built.notApplicable.length === 1 ? '' : 's'} not applicable to {program || 'this program'}</button>
@@ -54,16 +62,16 @@ export function ReviewBody({ built, summary, role, appId, busy, program, approve
         {i.canInclude ? <button className="secondary-button" disabled={busy} onClick={() => onRun(() => api.include(appId, i.rowId, role))}>Include</button> : <span className="muted">cannot be mapped</span>}</li>)}</ul>}</section>}
 
     <p className="rv-links"><button className="link-btn" onClick={() => setAllOpen(!allOpen)}>{allOpen ? 'Hide' : 'Show'} all courses</button> · <button className="link-btn" onClick={onActivity}>See what the agents did</button></p>
-    {allOpen && <table className="ctable"><thead><tr><th>Source course</th><th>Grade</th><th>AUD equivalent</th><th>Program</th><th>Status</th></tr></thead>
+    {allOpen && <div className="rv-scroll"><table className="ctable"><thead><tr><th>Source course</th><th>Grade</th><th>AUD equivalent</th><th>Group</th><th>Status</th></tr></thead>
       <tbody>{built.items.map(i => <tr key={i.key + i.rowId} className="click" onClick={() => i.state && i.status !== 'Not evaluated' && onOpen(i.key)}><td><strong>{i.title}</strong></td><td>{i.grade || '—'}</td><td>{i.audCode ?? '—'}</td>
-        <td>{i.cls ? CLASS_LABEL[i.cls.value] : '—'}</td><td>{i.state?.kind === 'not_applicable' ? 'Not applicable' : i.resolved && i.action ? RESOLUTION_LABEL[i.action.action] : i.status}</td></tr>)}</tbody></table>}
+        <td>{i.cls ? CLASS_LABEL[i.cls.value] : '—'}</td><td>{i.state?.kind === 'not_applicable' ? 'Not applicable' : i.status === 'Not evaluated' ? 'Not evaluated' : rowLabel(i)}</td></tr>)}</tbody></table></div>}
     <p className="muted placeholder-note">AUD codes and credits shown are placeholder mapping data for this demo, not AUD&apos;s real equivalencies.</p>
 
     <footer className="rv-foot">
       <div className="rv-foot-main">
-        <button className="primary-button" onClick={() => onRun(() => api.confirmMapped(appId, role))} disabled={busy || !built.counts.confirmable || role !== 'admissions'}>Confirm {built.counts.confirmable || ''} mapped</button>
+        <button className="primary-button" onClick={() => onRun(() => api.confirmMapped(appId, role))} disabled={busy || !toConfirm || role !== 'admissions'}>Confirm all ready{toConfirm ? ` (${toConfirm})` : ''}</button>
         <button className="primary-button rv-approve" onClick={() => onRun(() => api.approve(appId, role))} disabled={busy || !canApprove}>Approve case</button>
-        {!approved && left > 0 && <span className="rv-need">Resolve {left} row{left === 1 ? '' : 's'} to approve</span>}
+        {!approved && (open.length > 0 || toConfirm > 0) && <span className="rv-need">{open.length} open, {toConfirm} to confirm</span>}
         {approved && <span className="approved-tag"><Check size={13} /> Approved</span>}
         <span className="push" />
         <button className="secondary-button" onClick={onCopy} disabled={busy || !built.counts.resolved && !built.counts.mapped}><ClipboardCopy size={16} /> Copy for spreadsheet</button>
@@ -74,19 +82,20 @@ export function ReviewBody({ built, summary, role, appId, busy, program, approve
   </div>;
 }
 
-function NeedCard({ i, program, active, busy, role, appId, onOpen, onRun }: { i: Item; program: string; active: boolean; busy: boolean; role: Role; appId: string; onOpen: () => void; onRun: (f: () => Promise<unknown>) => Promise<void> }) {
-  const need = needOf(i, program);
-  return <article className={`rv-card ${active ? 'on' : ''}`}>
-    <header><strong>{i.title}</strong><span className="muted">{i.grade}</span><span className="push" /><span className="muted">{money(i)}</span></header>
-    <p>{need.sentence}</p>
-    <div className="rv-card-actions">
-      <button className="primary-button" disabled={busy || role !== 'admissions'} onClick={() => need.kind === 'reconfirm' ? onRun(() => api.rowAction(appId, i.rowId, role, { action: 'RECONFIRM' })) : onOpen()}>{need.primary}</button>
-      <button className="link-btn" onClick={onOpen}>Details</button></div>
-  </article>;
+function GroupRow({ i, program, active, busy, role, appId, onOpen, onRun }: { i: Item; program: string; active: boolean; busy: boolean; role: Role; appId: string; onOpen: () => void; onRun: (f: () => Promise<unknown>) => Promise<void> }) {
+  const label = rowLabel(i); const o = isOpen(i); const officer = role === 'admissions';
+  const need = o ? needOf(i, program) : null;
+  return <tr className={`rv-tr ${o ? 'open' : ''} ${active ? 'on' : ''}`}>
+    <td><button className="link-btn rv-name" onClick={onOpen}><strong>{i.title}</strong></button></td>
+    <td>{i.grade || '—'}</td><td>{i.audCode ?? '—'}</td><td className="num">{i.audCredits ?? '—'}</td>
+    <td><span className={`rv-status s-${label.toLowerCase().replace(/ /g, '-')}`}>{label === 'Confirmed' && <Check size={14} />}{label}</span></td>
+    <td className="rv-act">{need ? <button className="primary-button" disabled={busy || !officer} onClick={() => need.kind === 'reconfirm' ? onRun(() => api.rowAction(appId, i.rowId, role, { action: 'RECONFIRM' })) : onOpen()}>{need.primary}</button>
+      : label === 'Ready' ? <button className="secondary-button" disabled={busy || !officer} onClick={() => onRun(() => api.rowAction(appId, i.rowId, role, { action: 'CONFIRM' }))}>Confirm</button> : null}</td>
+  </tr>;
 }
 
 // ------------------------------------------------------------------------------------------------------------------ the row panel
-export function RowPanel({ appId, item, role, program, onClose, onAdvance, onShowElectives }: { appId: string; item: Item; role: Role; program: string; onClose: () => void; onAdvance: () => void; onShowElectives: () => void }) {
+export function RowPanel({ appId, item, role, program, onClose, onAdvance }: { appId: string; item: Item; role: Role; program: string; onClose: () => void; onAdvance: () => void }) {
   const s = item.state; const need = needOf(item, program); const open = isOpen(item);
   const [mode, setMode] = useState<'change' | 'reject' | null>(null);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
@@ -105,13 +114,13 @@ export function RowPanel({ appId, item, role, program, onClose, onAdvance, onSho
       <button className="icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button></header>
 
     <section className="rv-block"><h4>Finding</h4>
-      <p>{open ? need.sentence : item.resolved && item.action ? `You ${RESOLUTION_LABEL[item.action.action].toLowerCase()} this course${item.action.chosen.aud_code ? ` as ${item.action.chosen.aud_code}` : ''}.` : `Mapped to ${item.audCode ?? 'an AUD course'} by the placeholder mapping table${item.cls ? `; ${CLASS_LABEL[item.cls.value].toLowerCase()} for ${program}` : ''}.`}</p>
+      <p>{open ? need.sentence : item.resolved && item.action ? `You ${RESOLUTION_LABEL[item.action.action].toLowerCase()} this course${item.action.chosen.aud_code ? ` as ${item.action.chosen.aud_code}` : ''}.` : `Mapped to ${item.audCode ?? 'an AUD course'} by the placeholder mapping table${item.cls ? `; ${item.cls.value === 'Core course' ? `a core course for ${program}` : 'a potential general elective'}` : ''}.`}</p>
       {doubts.map((d, i) => <p key={i} className="rv-doubt"><AlertCircle size={14} /> <strong>{d.kind.replace(/_/g, ' ')}.</strong> {d.reason} <span className="muted">{d.verified ? `Checked by code: ${d.evidence}.` : 'Not verified by code.'}</span></p>)}</section>
 
-    <section className="rv-block"><h4>Your call</h4>
+    <section className="rv-block"><h4>Decision</h4>
       {!canAct && <p className="muted">Only an admissions officer can decide.</p>}
-      {canAct && !mode && <YourCall item={item} elective={elective} busy={busy} doubts={doubts.length > 0} need={need.kind} f={f} appId={appId} role={role} act={act} setMode={setMode} onAdvance={onAdvance} onShowElectives={onShowElectives} setErr={setErr} setBusy={setBusy} />}
-      {canAct && mode === 'change' && <ChangeForm busy={busy} onCancel={() => setMode(null)} onSave={(code, credits, reason) => act({ action: 'CHANGE', aud_code: code || undefined, credits, reason })} />}
+      {canAct && !mode && <YourCall item={item} elective={elective} busy={busy} doubts={doubts.length > 0} need={need.kind} f={f} appId={appId} role={role} act={act} setMode={setMode} onAdvance={onAdvance} setErr={setErr} setBusy={setBusy} />}
+      {canAct && mode === 'change' && <ChangeForm program={program} busy={busy} onCancel={() => setMode(null)} onSave={(code, credits, reason) => act({ action: 'CHANGE', aud_code: code || undefined, credits, reason })} />}
       {canAct && mode === 'reject' && <RejectForm busy={busy} onCancel={() => setMode(null)} onSave={reason => act({ action: 'REJECT', reason })} />}
       {err && <div className="eval-error"><AlertCircle size={15} /> {err}</div>}</section>
 
@@ -120,7 +129,7 @@ export function RowPanel({ appId, item, role, program, onClose, onAdvance, onSho
     <details className="rv-block rv-evidence"><summary>Evidence</summary>
       {s.mapping && <p><strong>Mapping.</strong> {s.mapping.aud_code}, version {s.mapping.version} ({s.mapping.status.toLowerCase()}){s.mapping.programs ? `, for ${s.mapping.programs.join(', ')} only` : ''}{s.mapping.condition ? `. Condition: ${s.mapping.condition.type.replace(/_/g, ' ')} ${JSON.stringify(s.mapping.condition.value)}` : ''}.</p>}
       {s.condition_result && <p><strong>Condition check (code).</strong> {s.condition_result.reason}</p>}
-      {item.cls && <p><strong>Program plan (code{item.cls.by === 'case_agent' ? ', judged by the Case agent' : ''}).</strong> {item.cls.why}</p>}
+      {item.cls && <p><strong>Classification (code).</strong> {item.cls.why}</p>}
       {(item.result?.rules ?? []).length > 0 && <><strong>Policy checks (code)</strong><ul>{(item.result?.rules ?? []).map(r => <li key={r.rule_id}>{r.status.replace(/_/g, ' ').toLowerCase()}: {r.reason}</li>)}</ul></>}
       {(item.result?.match.supported_outcomes ?? []).length > 0 && <><strong>Syllabus excerpts</strong>{(item.result?.match.supported_outcomes ?? []).map((o, i) => <blockquote key={i}>{o.subject.text}</blockquote>)}</>}
       {f && <><strong>Case agent&apos;s reasoning</strong><p>{f.headline}</p>{[...(f.gaps ?? []), ...(f.review_package ?? [])].length > 0 && <ul>{[...(f.gaps ?? []), ...(f.review_package ?? [])].map((x, i) => <li key={i}>{x}</li>)}</ul>}</>}
@@ -130,9 +139,9 @@ export function RowPanel({ appId, item, role, program, onClose, onAdvance, onSho
 
 type Act = (b: { action: string; aud_code?: string; credits?: number; reason?: string }) => Promise<void>;
 
-function YourCall({ item, elective, busy, doubts, need, f, appId, role, act, setMode, onAdvance, onShowElectives, setErr, setBusy }: {
+function YourCall({ item, elective, busy, doubts, need, f, appId, role, act, setMode, onAdvance, setErr, setBusy }: {
   item: Item; elective: boolean; busy: boolean; doubts: boolean; need: string; f: Item['state'] extends infer S ? (S extends { finding: infer F } ? F : never) : never; appId: string; role: Role; act: Act;
-  setMode: (m: 'change' | 'reject') => void; onAdvance: () => void; onShowElectives: () => void; setErr: (e: string | null) => void; setBusy: (b: boolean) => void;
+  setMode: (m: 'change' | 'reject') => void; onAdvance: () => void; setErr: (e: string | null) => void; setBusy: (b: boolean) => void;
 }) {
   const s = item.state!;
   const row = (primary: React.ReactNode, extra?: React.ReactNode) => <div className="rv-actions">{primary}{extra}<button className="secondary-button" onClick={() => setMode('change')}>Change course</button><button className="secondary-button" onClick={() => setMode('reject')}>Reject</button></div>;
@@ -140,7 +149,7 @@ function YourCall({ item, elective, busy, doubts, need, f, appId, role, act, set
   if (s.status === 'Mapped') {
     const label = doubts ? 'Keep as is' : elective ? 'Confirm as elective' : item.cls?.value === 'Not applicable' ? 'Confirm anyway' : 'Confirm';
     return <>{doubts && <p className="muted">Keep it as suggested, or use one of the other options.</p>}
-      {row(<button className="primary-button" disabled={busy} onClick={() => act({ action: 'CONFIRM' })}>{label}</button>, elective ? <button className="link-btn" onClick={onShowElectives}>See the elective list</button> : null)}</>;
+      {row(<button className="primary-button" disabled={busy} onClick={() => act({ action: 'CONFIRM' })}>{label}</button>, null)}</>;
   }
   if (s.kind === 'stale') return <div className="rv-actions"><button className="primary-button" disabled={busy} onClick={() => act({ action: 'RECONFIRM' })}>Re-confirm against catalog</button>
     <button className="secondary-button" disabled={busy} onClick={() => act({ action: 'REJECT', reason: 'Stale mapping removed by the officer' })}>Remove mapping</button><button className="secondary-button" onClick={() => setMode('change')}>Change course</button></div>;
@@ -194,9 +203,9 @@ function Candidates({ item, f, busy, act, setMode }: { item: Item; f: { candidat
     <div className="rv-actions"><button className="primary-button" onClick={() => setMode('change')}>Pick a course</button><button className="secondary-button" onClick={() => setMode('reject')}>Reject</button></div></div>;
 }
 
-function ChangeForm({ busy, onCancel, onSave }: { busy: boolean; onCancel: () => void; onSave: (code: string, credits: number | undefined, reason: string) => void }) {
+function ChangeForm({ program, busy, onCancel, onSave }: { program: string; busy: boolean; onCancel: () => void; onSave: (code: string, credits: number | undefined, reason: string) => void }) {
   const [q, setQ] = useState(''); const [hits, setHits] = useState<{ code: string; title: string; level: number }[]>([]); const [code, setCode] = useState(''); const [credits, setCredits] = useState(''); const [reason, setReason] = useState('');
-  function search(v: string) { setQ(v); if (v.trim().length < 2) { setHits([]); return; } api.searchCatalog(v).then(setHits).catch(() => setHits([])); }
+  function search(v: string) { setQ(v); if (v.trim().length < 2) { setHits([]); return; } api.searchCatalog(v, program).then(setHits).catch(() => setHits([])); }
   return <div className="rv-form">
     <label><span>Search AUD courses</span><input autoFocus value={q} onChange={e => search(e.target.value)} placeholder="for example calculus" /></label>
     <div className="rv-hits">{hits.map(h => <button key={h.code} className={`hit ${code === h.code ? 'on' : ''}`} onClick={() => setCode(h.code)}><strong>{h.code}</strong> {h.title}</button>)}</div>
