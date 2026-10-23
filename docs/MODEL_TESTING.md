@@ -28,11 +28,13 @@ Driver: `scripts/overnight_runs.py <case>`. It uploads the file through the real
 
 | Case | Command | Student / file | Saved as | What "clean" means |
 |---|---|---|---|---|
-| A2 | `python scripts/overnight_runs.py a2` | Rania Haddad, `transcript_a2_batch.pdf`, case `CB-2026-0104` | `demo_a2` | all 11 rows read; no refused tool call; AP Calculus AB waits on a document, then Mapped after the exam score; export audit clean |
-| C | `python scripts/overnight_runs.py c` | Sofia Lindqvist, `transcript_c_copy_error.pdf`, `CB-2026-0103` | `demo_c` | the planted copy error is caught by the normal sheet check and the Auditor's proposal restores the original equivalent |
-| D | `python scripts/overnight_runs.py d` | Rami Test-Student, `transcript_d_demo2.pdf`, `CB-2026-0105` | `demo_d` | see "D" below |
-| D, planted misread | `python scripts/overnight_runs.py dp` | same file, misread switch on | `demo_d_misread` | saved only if the Intake agent **really repaired** the planted value (re-read value passes its check) |
-| B (optional) | `python scripts/overnight_runs.py b` | Daniel Ferreira, `transcript_b_intake.pdf` (image only) | `demo_b_intake` | saved only if the planted misread was really repaired |
+| A2 | `python scripts/overnight_runs.py a2` | Rania Haddad, `transcript_a2_batch.pdf`, case `CB-2026-0104` | `demo_ap_rania_clean` | all 11 rows read; no refused tool call; AP Statistics waits on exam score, then Mapped after score 5; AP Human Geography waits on syllabus; export audit clean |
+| A2 copy error | `python scripts/overnight_runs.py a2c` | same file, copy error switch on | `demo_ap_rania_copy_error` | planted copy error caught by sheet check and Auditor explanation matches verified difference |
+| A2 misread | `python scripts/overnight_runs.py a2m` | same file, misread switch on | `demo_ap_rania_misread` | saved only if Intake agent really repaired the planted value (re-read value passes check) |
+| C | `python scripts/overnight_runs.py c` | Sofia Lindqvist, `transcript_c_copy_error.pdf`, `CB-2026-0103` | `demo_ap_sofia_copy_error` | the planted copy error is caught by the normal sheet check and the Auditor's proposal restores the original equivalent |
+| D | `python scripts/overnight_runs.py d` | Rami Test-Student, `transcript_d_demo2.pdf`, `CB-2026-0105` | `demo_ap_rami_clean` | see "D" below |
+| D, planted misread | `python scripts/overnight_runs.py dp` | same file, misread switch on | `demo_ap_rami_misread` | saved only if the Intake agent **really repaired** the planted value (re-read value passes its check) |
+| B (optional) | `python scripts/overnight_runs.py b` | Daniel Ferreira, `transcript_b_intake.pdf` (image only) | `demo_ap_daniel_clean` | saved only if the planted misread was really repaired |
 
 Run them one at a time (the app has one worker). A2 takes about 2 to 3 minutes on an M-series Mac with the 4B model; D takes longer (about 14 blocks to read).
 

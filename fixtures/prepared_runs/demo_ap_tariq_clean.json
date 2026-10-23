@@ -1,0 +1,1021 @@
+{
+ "version": 1,
+ "name": "demo_ap_tariq_clean",
+ "case_number": "CB-2026-0201",
+ "recorded_at": "2026-10-23T20:47:28.398300+00:00",
+ "model": "gemini-3.5-flash-lite",
+ "notes": "anonymized user run, 41 rows",
+ "data_version": "2ae235079ab95c34",
+ "reading_version": "intake_v3+c1+layout2",
+ "label": "Prepared run, recorded 2026-10-23, gemini-3.5-flash-lite",
+ "source": {
+  "filename": "transcript_anonymized_user.pdf",
+  "sha256": "e91ad87212b5f35d4c1760e0e2a83a142b2e7494dc7d31126484452d8f8d059f"
+ },
+ "planted": {
+  "misread": false,
+  "copy_error": false
+ },
+ "links": {
+  "ap physics 1": {
+   "id": "01c8a6f3-ccdd-5b0a-ae57-5c70c0f32949",
+   "name": "Physics 1: Algebra-Based",
+   "code": "AP-PHYS-1",
+   "qualification": "Advanced Placement"
+  },
+  "ap biology": {
+   "id": "11eda15a-9da6-54c2-a391-679b2dddeb97",
+   "name": "Biology",
+   "code": "AP-BIO",
+   "qualification": "Advanced Placement"
+  },
+  "ap calculus ab": {
+   "id": "84a7b662-4658-5497-8ce9-358041b05fb1",
+   "name": "Calculus AB",
+   "code": "AP-CALC-AB",
+   "qualification": "Advanced Placement"
+  }
+ },
+ "model_calls": 22,
+ "model_log": [
+  {
+   "stage": "intake",
+   "runkey": "2b3a2d04ffc13c1a",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_169536",
+      "name": "read_block",
+      "arguments": {
+       "targets": [
+        "p1b1",
+        "p1b2",
+        "p1b3",
+        "p1b4",
+        "p1b5"
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.99,
+    "prompt_tokens": 2369,
+    "output_tokens": 47
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "ce2c22848439ca36",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_162964",
+      "name": "submit_block",
+      "arguments": {
+       "cumulative_gpa": null,
+       "term_quality_points": null,
+       "cumulative_credits": null,
+       "term_credits": null,
+       "cumulative_quality_points": null,
+       "term_gpa": null,
+       "term": null,
+       "rows": [
+        {
+         "term": "Grade: 9 Academic Year: 2019-2020",
+         "description": null,
+         "subject": "Arabic A",
+         "points": 3,
+         "mark": 85,
+         "code": null,
+         "letter": "B",
+         "credits": 1
+        },
+        {
+         "credits": 1,
+         "code": null,
+         "letter": "A-",
+         "term": "Grade: 10 Academic Year: 2020-2021",
+         "points": 3.7,
+         "mark": 90,
+         "subject": "Arabic A",
+         "description": null
+        }
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 5.34,
+    "prompt_tokens": 1565,
+    "output_tokens": 185
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "967135592d412ab7",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_111291",
+      "name": "submit_block",
+      "arguments": {
+       "term_gpa": null,
+       "term": null,
+       "rows": [
+        {
+         "points": 3.7,
+         "code": null,
+         "credits": 1,
+         "description": null,
+         "mark": 92,
+         "letter": "A-",
+         "term": null,
+         "subject": "Biology"
+        },
+        {
+         "credits": 1,
+         "points": 3.7,
+         "code": null,
+         "letter": "A-",
+         "term": null,
+         "subject": "English 9",
+         "mark": 91,
+         "description": null
+        },
+        {
+         "mark": 100,
+         "points": 4,
+         "credits": 0.5,
+         "term": null,
+         "subject": "Geography",
+         "description": null,
+         "letter": "A+",
+         "code": null
+        },
+        {
+         "term": null,
+         "mark": 100,
+         "letter": "A+",
+         "credits": 0.5,
+         "description": null,
+         "subject": "ICT (Web Development)",
+         "points": 4,
+         "code": null
+        },
+        {
+         "mark": 94,
+         "description": null,
+         "term": null,
+         "letter": "A",
+         "credits": 1,
+         "points": 4,
+         "code": null,
+         "subject": "Integrated Mathematics 1"
+        },
+        {
+         "term": null,
+         "mark": 99,
+         "subject": "Islamic A",
+         "points": 4,
+         "credits": 0.5,
+         "description": null,
+         "letter": "A+",
+         "code": null
+        },
+        {
+         "mark": 93,
+         "term": null,
+         "credits": 0,
+         "letter": "A",
+         "description": null,
+         "points": 4,
+         "code": null,
+         "subject": "Moral Education"
+        },
+        {
+         "code": null,
+         "credits": 0.5,
+         "points": 4,
+         "subject": "Physical Education",
+         "term": null,
+         "description": null,
+         "letter": "A",
+         "mark": 96
+        },
+        {
+         "term": null,
+         "mark": 93,
+         "letter": "A",
+         "subject": "UAE Social Studies",
+         "points": 4,
+         "description": null,
+         "credits": 0.5,
+         "code": null
+        },
+        {
+         "points": 3.7,
+         "credits": 0.5,
+         "code": null,
+         "subject": "Visual & Performing Arts",
+         "mark": 91,
+         "term": null,
+         "description": null,
+         "letter": "A-"
+        },
+        {
+         "description": null,
+         "points": 3.7,
+         "code": null,
+         "credits": 1,
+         "letter": "A-",
+         "term": null,
+         "mark": 92,
+         "subject": "Chemistry"
+        },
+        {
+         "term": null,
+         "mark": 96,
+         "points": 4,
+         "credits": 0.5,
+         "description": null,
+         "subject": "Computer Science: Artificial Intelligence 1",
+         "letter": "A",
+         "code": null
+        },
+        {
+         "mark": 92,
+         "term": null,
+         "credits": 1,
+         "letter": "A-",
+         "points": 3.7,
+         "description": null,
+         "code": null,
+         "subject": "English 10"
+        },
+        {
+         "subject": "Integrated Mathematics 2",
+         "term": null,
+         "mark": 99,
+         "description": null,
+         "letter": "A+",
+         "points": 4,
+         "credits": 1,
+         "code": null
+        },
+        {
+         "letter": "A+",
+         "mark": 98,
+         "term": null,
+         "subject": "Islamic A",
+         "code": null,
+         "description": null,
+         "credits": 0.5,
+         "points": 4
+        },
+        {
+         "subject": "Moral Education",
+         "points": 4,
+         "mark": 100,
+         "term": null,
+         "code": null,
+         "description": null,
+         "credits": 0,
+         "letter": "A+"
+        },
+        {
+         "code": null,
+         "letter": "A",
+         "subject": "Physical Education",
+         "description": null,
+         "points": 4,
+         "mark": 93,
+         "term": null,
+         "credits": 0.5
+        },
+        {
+         "letter": "A+",
+         "subject": "Programming 1: Python",
+         "code": null,
+         "term": null,
+         "description": null,
+         "mark": 99,
+         "credits": 0.5,
+         "points": 4
+        },
+        {
+         "code": null,
+         "letter": "A",
+         "credits": 1,
+         "points": 4,
+         "mark": 96,
+         "term": null,
+         "subject": "World History",
+         "description": null
+        }
+       ],
+       "term_credits": null,
+       "term_quality_points": null,
+       "cumulative_credits": null,
+       "cumulative_quality_points": null,
+       "cumulative_gpa": null
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 3.43,
+    "prompt_tokens": 1548,
+    "output_tokens": 844
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "69545acc66ec2472",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_135089",
+      "name": "submit_block",
+      "arguments": {
+       "rows": [
+        {
+         "mark": 90,
+         "points": 3.7,
+         "subject": "AP Physics 1",
+         "credits": 1,
+         "letter": "A-"
+        },
+        {
+         "mark": 98,
+         "points": 4,
+         "credits": 1,
+         "letter": "A+",
+         "subject": "Arabic A"
+        },
+        {
+         "letter": "A+",
+         "credits": 0.5,
+         "subject": "Computer Science Principles",
+         "points": 4,
+         "mark": 98
+        },
+        {
+         "letter": "A+",
+         "mark": 98,
+         "points": 4,
+         "credits": 0.5,
+         "subject": "Computer Science: Artificial Intelligence 2"
+        },
+        {
+         "subject": "English 11",
+         "mark": 91,
+         "credits": 1,
+         "points": 3.7,
+         "letter": "A-"
+        },
+        {
+         "points": 4,
+         "mark": 98,
+         "letter": "A+",
+         "subject": "Integrated Mathematics 3",
+         "credits": 1
+        },
+        {
+         "letter": "A+",
+         "points": 4,
+         "credits": 0.5,
+         "mark": 97,
+         "subject": "Islamic A"
+        },
+        {
+         "letter": "A+",
+         "points": 4,
+         "mark": 98,
+         "credits": 0,
+         "subject": "Moral Education"
+        },
+        {
+         "letter": "A+",
+         "mark": 100,
+         "points": 4,
+         "credits": 0.5,
+         "subject": "Physical Education"
+        },
+        {
+         "points": 4,
+         "letter": "A",
+         "mark": 96,
+         "subject": "Sociology 1",
+         "credits": 0.5
+        },
+        {
+         "points": 4,
+         "mark": 99,
+         "letter": "A+",
+         "subject": "AP Biology",
+         "credits": 1
+        },
+        {
+         "credits": 1,
+         "mark": 98,
+         "letter": "A+",
+         "subject": "AP Calculus AB",
+         "points": 4
+        },
+        {
+         "credits": 1,
+         "subject": "Arabic A",
+         "letter": "A+",
+         "mark": 99,
+         "points": 4
+        },
+        {
+         "subject": "Earth and Environmental Science1",
+         "mark": 95,
+         "credits": 0.5,
+         "points": 4,
+         "letter": "A"
+        },
+        {
+         "credits": 1,
+         "subject": "English 12",
+         "letter": "A",
+         "points": 4,
+         "mark": 95
+        },
+        {
+         "credits": 0.5,
+         "subject": "Islamic A",
+         "letter": "A+",
+         "mark": 100,
+         "points": 4
+        },
+        {
+         "mark": 100,
+         "points": 4,
+         "letter": "A+",
+         "subject": "Moral Education",
+         "credits": 0
+        },
+        {
+         "mark": 100,
+         "points": 4,
+         "subject": "Physical Education",
+         "credits": 0.5,
+         "letter": "A+"
+        },
+        {
+         "points": 4,
+         "mark": 99,
+         "subject": "Physics (Calculus-Based)",
+         "letter": "A+",
+         "credits": 0.5
+        },
+        {
+         "credits": 1,
+         "subject": "Psychology",
+         "letter": "A+",
+         "mark": 99,
+         "points": 4
+        }
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 3.33,
+    "prompt_tokens": 1548,
+    "output_tokens": 601
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "430a28fa549eb445",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_199623",
+      "name": "submit_block",
+      "arguments": {
+       "cumulative_credits": 27.5,
+       "rows": [],
+       "cumulative_gpa": 3.99
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 3.64,
+    "prompt_tokens": 1582,
+    "output_tokens": 32
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "7ced0117c5bb849c",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_166675",
+      "name": "submit_block",
+      "arguments": {
+       "term_quality_points": null,
+       "cumulative_gpa": null,
+       "cumulative_quality_points": null,
+       "rows": [],
+       "term": null,
+       "term_credits": null,
+       "term_gpa": null,
+       "cumulative_credits": null
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.73,
+    "prompt_tokens": 1549,
+    "output_tokens": 59
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "2b3a2d04ffc13c1a",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_141965",
+      "name": "read_block",
+      "arguments": {
+       "targets": [
+        "p2b1",
+        "p2b2",
+        "p2b3",
+        "p2b4",
+        "p2b5"
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.76,
+    "prompt_tokens": 2664,
+    "output_tokens": 47
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "53cc866c520021ec",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_233443",
+      "name": "submit_block",
+      "arguments": {
+       "rows": [
+        {
+         "letter": null,
+         "term": null,
+         "description": "AP Biology is an introductory college-level biology course, especially appropriate for students who wish to pursue an interest in the life sciences. It is a full-year course that is the equivalent of a two-semester",
+         "code": null,
+         "mark": null,
+         "subject": null,
+         "points": null,
+         "credits": null
+        }
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 2.03,
+    "prompt_tokens": 1557,
+    "output_tokens": 88
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "2ce1814671cc01b3",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_135925",
+      "name": "submit_block",
+      "arguments": {
+       "rows": [
+        {
+         "description": "college introductory biology course for biology majors. To be enrolled in this course, students should have completed high school courses in biology and chemistry and should have taken or be concurrently taking statistics. This course explores topics like evolution, energetics, information storage and transfer, and system interactions. The framework of this course outlines distinct skills, called science practices, that students should practice throughout the year-skills that will help them learn to think and act like biologists. It is required that 25 percent of the instructional time be used in hands-on laboratory work, focusing on inquiry-based investigations that provide students with opportunities for science practices to be applied.",
+         "points": null,
+         "credits": null,
+         "mark": null,
+         "letter": null,
+         "subject": "AP Biology",
+         "term": null,
+         "code": null
+        },
+        {
+         "description": "The topics covered in Advanced Placement Calculus include functions, graphs, limits, concept of derivative, derivative at a point, the derivative as a function, second derivatives, applications of the derivative, Riemann Sums, interpretations and properties of definite integrals, applications of integrals,",
+         "credits": null,
+         "mark": null,
+         "letter": null,
+         "code": null,
+         "points": null,
+         "term": null,
+         "subject": "AP Calculus AB"
+        }
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 3.34,
+    "prompt_tokens": 1572,
+    "output_tokens": 265
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "55bbdb5c3950fb8d",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_136408",
+      "name": "submit_block",
+      "arguments": {
+       "rows": [
+        {
+         "credits": null,
+         "code": null,
+         "term": null,
+         "description": "This course follows the curriculum of the Ministry of Education specific to private schools in the United Arab Emirates. The framework covers different subject skills in terms of continuity of literary knowledge, poetic and informational texts that explore the past in an effort to preserve the cultural heritage, in addition to listening skills, speaking, writing, and research. The course content is presented in innovative methods with the aim of developing analytical skills, as well as critical thinking and expression.",
+         "letter": null,
+         "subject": "Arabic A",
+         "mark": null,
+         "points": null
+        },
+        {
+         "mark": null,
+         "term": null,
+         "code": null,
+         "letter": null,
+         "subject": "English 12",
+         "points": null,
+         "description": "English IV is a college/career preparatory course that continues the development of reading and communication skills through the analysis of literary and informational texts. This course focuses on building reading, writing, speaking, and listening, and language skills.",
+         "credits": null
+        }
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 2.28,
+    "prompt_tokens": 1581,
+    "output_tokens": 220
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "f573f29b6957db18",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_191958",
+      "name": "submit_block",
+      "arguments": {
+       "term_gpa": null,
+       "term_quality_points": null,
+       "rows": [
+        {
+         "credits": null,
+         "term": null,
+         "description": "sustainable development. The curriculum included the following themes: The Holy Qur'an; Surat Al-Noor, Believe and greed: Extremism Values: Responsibility in Islam, Rules of Islam; (Separation between spouses, and the biography of the characters). As the lesson of the Prophet biography and seerah: The prophet and social life. The curriculum has been reinforced with the basic provisions of intonation, which are taught in an integrative constructivist manner, where students are taught the subject of recitation and intonation independently and given through a lesson every week. The curriculum is generally implemented through three lessons per week",
+         "code": null,
+         "mark": null,
+         "letter": null,
+         "points": null,
+         "subject": "Islamic A"
+        }
+       ],
+       "term": null,
+       "term_credits": null
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 3.14,
+    "prompt_tokens": 1582,
+    "output_tokens": 195
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "6c16a2b5239af021",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_213921",
+      "name": "submit_block",
+      "arguments": {
+       "cumulative_gpa": null,
+       "term": null,
+       "term_quality_points": null,
+       "term_credits": null,
+       "cumulative_credits": null,
+       "term_gpa": null,
+       "cumulative_quality_points": null,
+       "rows": []
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 2.07,
+    "prompt_tokens": 1587,
+    "output_tokens": 59
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "2b3a2d04ffc13c1a",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_134070",
+      "name": "run_checks",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.98,
+    "prompt_tokens": 3263,
+    "output_tokens": 10
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "2b3a2d04ffc13c1a",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_166940",
+      "name": "view_page",
+      "arguments": {
+       "page": 1
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.86,
+    "prompt_tokens": 4518,
+    "output_tokens": 14
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "2b3a2d04ffc13c1a",
+   "idx": 4,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_162885",
+      "name": "view_page",
+      "arguments": {
+       "page": 2
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 2.33,
+    "prompt_tokens": 5661,
+    "output_tokens": 14
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "2b3a2d04ffc13c1a",
+   "idx": 5,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_145149",
+      "name": "submit_courses",
+      "arguments": {
+       "name_seen": "Tariq Mansoor",
+       "skipped": [],
+       "major": null,
+       "institution_curriculum": "AP",
+       "note": "Complete high school transcript with courses synopsis page.",
+       "blocks_read": [
+        "p1b1",
+        "p1b2",
+        "p1b3",
+        "p1b4",
+        "p1b5",
+        "p2b1",
+        "p2b2",
+        "p2b3",
+        "p2b4",
+        "p2b5"
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 3.84,
+    "prompt_tokens": 6804,
+    "output_tokens": 126
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "327fb61c8037e42f",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_141217",
+      "name": "read_mapping",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.96,
+    "prompt_tokens": 1868,
+    "output_tokens": 10
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "327fb61c8037e42f",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_192303",
+      "name": "draft_request",
+      "arguments": {
+       "why": "A syllabus is required to verify course content and meet the mapping condition for PHYS 201.",
+       "to": "student",
+       "what": "AP Physics 1 course syllabus"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.05,
+    "prompt_tokens": 2157,
+    "output_tokens": 52
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "327fb61c8037e42f",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_163563",
+      "name": "set_row_state",
+      "arguments": {
+       "reason": "Awaiting the AP Physics 1 course syllabus from the student to satisfy mapping condition.",
+       "status": "Waiting on document"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.83,
+    "prompt_tokens": 2247,
+    "output_tokens": 42
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "327fb61c8037e42f",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_125347",
+      "name": "submit_result",
+      "arguments": {
+       "review_package": [
+        "Mapped to PHYS 201 (Introductory Physics I W/Lab) conditional on syllabus review.",
+        "Drafted a request to the student for the syllabus."
+       ],
+       "candidates": [],
+       "headline": "AP Physics 1 requires a syllabus from the student before the mapping condition can be satisfied.",
+       "missing_evidence": [
+        "course syllabus from the school"
+       ],
+       "needs": "WAITING_ON_DOCUMENT",
+       "questions_for_chair": [],
+       "gaps": [
+        "Missing course syllabus for AP Physics 1."
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.01,
+    "prompt_tokens": 1692,
+    "output_tokens": 123
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_189513",
+      "name": "list_rows",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.23,
+    "prompt_tokens": 1550,
+    "output_tokens": 10
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_178124",
+      "name": "submit_result",
+      "arguments": {
+       "missing_evidence": [],
+       "questions_for_chair": [],
+       "gaps": [],
+       "candidates": [],
+       "headline": "Reviewed all 3 courses for the BS in Computer Engineering application; 2 are successfully mapped and 1 is waiting on document with no active signals or contested slots.",
+       "review_package": [],
+       "needs": "NEEDS_YOU"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.84,
+    "prompt_tokens": 1852,
+    "output_tokens": 81
+   }
+  }
+ ]
+}

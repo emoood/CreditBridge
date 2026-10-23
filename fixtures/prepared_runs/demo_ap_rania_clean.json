@@ -2,10 +2,12 @@
  "version": 1,
  "name": "demo_ap_rania_clean",
  "case_number": "CB-2026-0104",
- "recorded_at": "2026-10-23T08:58:51.386348+00:00",
- "model": "qwen3.5:4b",
- "notes": "real run, timings {'time_to_table_s': 50.3, 'confirm_at_s': 50.3, 'time_to_first_result_s': 50.4, 'evaluation_done_s': 89.6, 'evaluation_job_s': 38.0, 'score_resume_s': 0.0, 'export_audit_clean_s': 6.1}",
- "label": "Prepared run, recorded 2026-10-23, qwen3.5:4b",
+ "recorded_at": "2026-10-23T20:37:48.005760+00:00",
+ "model": "gemini-3.5-flash-lite",
+ "notes": "real run, timings {'time_to_table_s': 10.9, 'confirm_at_s': 10.9, 'time_to_first_result_s': 12.2, 'evaluation_done_s': 28.7, 'evaluation_job_s': 16.0, 'score_resume_s': 0.8, 'export_audit_clean_s': 6.8}",
+ "data_version": "2ae235079ab95c34",
+ "reading_version": "intake_v3+c1+layout2",
+ "label": "Prepared run, recorded 2026-10-23, gemini-3.5-flash-lite",
  "source": {
   "filename": "transcript_a2_batch.pdf",
   "sha256": "d81fec7f4c56bbd155acc84ee78215aa22827ce0f855d9ca9ae9006807cf4f35"
@@ -39,6 +41,12 @@
    "code": "AP-ECON-MICRO",
    "qualification": "Advanced Placement"
   },
+  "ap computer science a": {
+   "id": "6dd9c060-16ce-529c-aa74-1db976eddcbb",
+   "name": "Computer Science A",
+   "code": "AP-CSA",
+   "qualification": "Advanced Placement"
+  },
   "ap statistics": {
    "id": "5d1d01ed-7172-59dc-9a3e-a0ab996fe68c",
    "name": "Statistics",
@@ -70,51 +78,85 @@
    "qualification": "Advanced Placement"
   }
  },
- "model_calls": 28,
+ "model_calls": 16,
  "model_log": [
   {
    "stage": "intake",
-   "runkey": "89cd03e7b1250700",
+   "runkey": "00d47be5b5adebe5",
    "idx": 0,
    "response": {
-    "content": "I'll start by listing the pages to understand the structure of this transcript and identify which blocks contain course information for the relevant years.",
+    "content": "",
     "tool_calls": [
      {
-      "id": "call_9pps3xgd",
-      "name": "list_pages",
-      "arguments": {}
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 0.68,
-    "prompt_tokens": 1903,
-    "output_tokens": 40
-   }
-  },
-  {
-   "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 1,
-   "response": {
-    "content": "I can see this is a single-page transcript with 4 blocks:\n- p1b1: Cover/header page (SYNTHETIC DEMO DATA)\n- p1b2: Course data for Fall 2025 (AP Psychology, AP Biology)\n- p1b3: Course data for Spring 2026 (AP Statistics, AP Chemistry)\n- p1b4: Grading scale legend\n\nI should skip the cover page (p1b1) and the grading scale (p1b4), but read the two course blocks (p1b2 and p1b3). Let me read these blocks now.",
-    "tool_calls": [
-     {
-      "id": "call_6i5kdefe",
+      "id": "call_213072",
       "name": "read_block",
       "arguments": {
        "targets": [
-        "p1b2",
-        "p1b3"
+        "p1b1",
+        "p1b2"
        ]
       }
      }
     ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 2.79,
-    "prompt_tokens": 2283,
-    "output_tokens": 175
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.86,
+    "prompt_tokens": 2251,
+    "output_tokens": 26
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "ce2c22848439ca36",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_141409",
+      "name": "submit_block",
+      "arguments": {
+       "term": "Fall 2025 (Yr 11)",
+       "rows": [
+        {
+         "term": "Fall 2025 (Yr 11)",
+         "credits": 1,
+         "subject": "AP Calculus AB",
+         "letter": "A"
+        },
+        {
+         "credits": 1,
+         "letter": "A",
+         "subject": "AP Psychology",
+         "term": "Fall 2025 (Yr 11)"
+        },
+        {
+         "letter": "A-",
+         "subject": "AP Biology",
+         "credits": 1,
+         "term": "Fall 2025 (Yr 11)"
+        },
+        {
+         "term": "Fall 2025 (Yr 11)",
+         "subject": "AP Microeconomics",
+         "credits": 0.5,
+         "letter": "A-"
+        },
+        {
+         "subject": "Moral Education",
+         "letter": "A",
+         "credits": 0.5,
+         "term": "Fall 2025 (Yr 11)"
+        }
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.46,
+    "prompt_tokens": 1593,
+    "output_tokens": 208
    }
   },
   {
@@ -125,705 +167,381 @@
     "content": "",
     "tool_calls": [
      {
-      "id": "call_yfm0icz5",
+      "id": "call_46465",
       "name": "submit_block",
       "arguments": {
-       "term": "Fall 2025 (Yr 11)",
-       "term_credits": 3,
-       "term_quality_points": 2.5,
-       "term_gpa": null,
-       "cumulative_credits": null,
-       "cumulative_quality_points": null,
-       "cumulative_gpa": null,
+       "term": "Spring 2026 (Yr 11)",
        "rows": [
         {
+         "subject": "AP Computer Science A",
+         "term": "Spring 2026 (Yr 11)",
          "credits": 1,
-         "description": null,
-         "letter": "A",
-         "points": 1,
-         "subject": "AP Psychology"
+         "letter": "A-"
         },
         {
+         "term": "Spring 2026 (Yr 11)",
          "credits": 1,
-         "description": null,
-         "letter": "A-",
-         "points": 1,
-         "subject": "AP Biology"
+         "subject": "AP Statistics",
+         "letter": "B+"
+        },
+        {
+         "letter": "B+",
+         "subject": "AP Chemistry",
+         "term": "Spring 2026 (Yr 11)",
+         "credits": 1
+        },
+        {
+         "subject": "AP Physics 1",
+         "term": "Spring 2026 (Yr 11)",
+         "credits": 1,
+         "letter": "B"
+        },
+        {
+         "term": "Spring 2026 (Yr 11)",
+         "subject": "AP Art History",
+         "letter": "B",
+         "credits": 0.5
         },
         {
          "credits": 0.5,
-         "description": null,
-         "letter": "A-",
-         "points": 0.5,
-         "subject": "AP Microeconomics"
-        },
-        {
-         "credits": 0.5,
-         "description": null,
          "letter": "A",
-         "points": 0.5,
-         "subject": "Moral Education"
+         "subject": "AP Human Geography",
+         "term": "Spring 2026 (Yr 11)"
         }
        ]
       }
      }
     ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 4.49,
-    "prompt_tokens": 1324,
-    "output_tokens": 280
-   }
-  },
-  {
-   "stage": "read",
-   "runkey": "69545acc66ec2472",
-   "idx": 0,
-   "response": {
-    "content": "```json\n[\n    {\n        \"subject\": \"AP Statistics\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 1.0,\n        \"points\": null,\n        \"mark\": \"B+\",\n        \"description\": null,\n        \"letter\": null,\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    },\n    {\n        \"subject\": \"AP Chemistry\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 1.0,\n        \"points\": null,\n        \"mark\": \"B+\",\n        \"description\": null,\n        \"letter\": null,\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    },\n    {\n        \"subject\": \"AP Physics 1\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 1.0,\n        \"points\": null,\n        \"mark\": \"B\",\n        \"description\": null,\n        \"letter\": null,\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    },\n    {\n        \"subject\": \"AP Art History\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 0.5,\n        \"points\": null,\n        \"mark\": \"B\",\n        \"description\": null,\n        \"letter\": null,\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    },\n    {\n        \"subject\": \"AP Human Geography\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 0.5,\n        \"points\": null,\n        \"mark\": \"A\",\n        \"description\": null,\n        \"letter\": null,\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    }\n]\n```",
-    "tool_calls": [],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 10.59,
-    "prompt_tokens": 1324,
-    "output_tokens": 657
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.65,
+    "prompt_tokens": 1548,
+    "output_tokens": 247
    }
   },
   {
    "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 2,
+   "runkey": "00d47be5b5adebe5",
+   "idx": 1,
    "response": {
-    "content": "The read_block results show:\n- p1b2 was successfully read with 4 course rows\n- p1b3 is marked as EMPTY (0 course rows) - this needs recovery\n- p1b1 and p1b4 are unread but I plan to skip them (cover page and grading scale)\n\nI need to recover the empty block p1b3. Let me first view the page to see what's actually there, then crop and read again.",
+    "content": "",
     "tool_calls": [
      {
-      "id": "call_zltyrl8y",
+      "id": "call_167941",
       "name": "view_page",
       "arguments": {
        "page": 1
       }
      }
     ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 1.98,
-    "prompt_tokens": 2584,
-    "output_tokens": 123
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.68,
+    "prompt_tokens": 2388,
+    "output_tokens": 14
    }
   },
   {
    "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 3,
-   "response": {
-    "content": "I can see the page clearly now. The block p1b3 appears to be empty in the read result, but I can see the actual content on the page - it shows Spring 2026 courses with grades and credits. Let me crop a region from block p1b3 to get a better view and then read it again.",
-    "tool_calls": [
-     {
-      "id": "call_vqkv2aon",
-      "name": "crop_region",
-      "arguments": {
-       "block": "p1b3",
-       "top": 0,
-       "bottom": 1,
-       "zoom": 2
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 2.22,
-    "prompt_tokens": 3572,
-    "output_tokens": 135
-   }
-  },
-  {
-   "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 4,
-   "response": {
-    "content": "Good, I've created a crop region for block p1b3 with zoom level 2. Now let me read this region to recover the empty block.",
-    "tool_calls": [
-     {
-      "id": "call_84w2i4o0",
-      "name": "read_block",
-      "arguments": {
-       "targets": [
-        "p1b3.r1"
-       ]
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 1.12,
-    "prompt_tokens": 3766,
-    "output_tokens": 65
-   }
-  },
-  {
-   "stage": "read",
-   "runkey": "1b6d4b6c127c88c2",
-   "idx": 0,
+   "runkey": "00d47be5b5adebe5",
+   "idx": 2,
    "response": {
     "content": "",
     "tool_calls": [
      {
-      "id": "call_igh2tgpo",
-      "name": "submit_block",
-      "arguments": {
-       "term": "Spring 2026 (Yr 11)",
-       "term_credits": 4,
-       "term_quality_points": 3.5,
-       "term_gpa": null,
-       "cumulative_credits": null,
-       "cumulative_quality_points": null,
-       "cumulative_gpa": null,
-       "rows": [
-        {
-         "credits": 1,
-         "description": null,
-         "letter": "B+",
-         "points": null,
-         "subject": "AP Statistics"
-        },
-        {
-         "credits": 1,
-         "description": null,
-         "letter": "B+",
-         "points": null,
-         "subject": "AP Chemistry"
-        },
-        {
-         "credits": 1,
-         "description": null,
-         "letter": "B",
-         "points": null,
-         "subject": "AP Physics 1"
-        },
-        {
-         "credits": 0.5,
-         "description": null,
-         "letter": "B",
-         "points": null,
-         "subject": "AP Art History"
-        },
-        {
-         "credits": 0.5,
-         "description": null,
-         "letter": "A",
-         "points": null,
-         "subject": "AP Human Geography"
-        }
-       ]
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 4.88,
-    "prompt_tokens": 2805,
-    "output_tokens": 300
-   }
-  },
-  {
-   "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 5,
-   "response": {
-    "content": "Now I have the data from both blocks. The read_block results show:\n- p1b2 was read successfully but has failures in the grading_scale check for points field\n- p1b3.r1 was read successfully with 5 course rows\n\nThe failures are all about point mismatches - the code is checking that the grade letters match the printed grading scale, but the values being stored don't match what's expected. Let me run the checks to see the full picture of what needs to be flagged.",
-    "tool_calls": [
-     {
-      "id": "call_mmu3mmnl",
+      "id": "call_203402",
       "name": "run_checks",
       "arguments": {}
      }
     ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 1.99,
-    "prompt_tokens": 4169,
-    "output_tokens": 119
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.41,
+    "prompt_tokens": 3531,
+    "output_tokens": 10
    }
   },
   {
    "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 6,
-   "response": {
-    "content": "I see the issue now. The code is flagging point mismatches where:\n- Grade A should equal 4.0 points but was stored as 1\n- Grade A- should equal 3.7 points but was stored as 1 or 0.5\n\nThis seems like a data entry error - the points values don't match the grade letters according to the grading scale. However, I need to understand what's happening here. The transcript shows grades (A, A-, B+, B) and credits (1.0, 0.5), but the \"points\" field has incorrect values.\n\nLet me check if there are any other issues. Looking at the data:\n- p1b2 has 4 rows with grade/credit data\n- p1b3 has 5 rows with grade/credit data\n\nThe failures are all in p1b2, row 0-3, field \"points\". The code says the points values don't match what they should be based on the grades.\n\nI need to flag these cells as check_failure questions since the code is rejecting them. Let me flag each failing cell with a specific question about the point mismatch.",
-    "tool_calls": [
-     {
-      "id": "call_mov8fwb7",
-      "name": "flag_cell",
-      "arguments": {
-       "block": "p1b2",
-       "row": 0,
-       "field": "points",
-       "question": "Grade A should yield 4.0 points but value stored is 1",
-       "kind": "check_failure"
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 5.53,
-    "prompt_tokens": 4781,
-    "output_tokens": 336
-   }
-  },
-  {
-   "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 7,
+   "runkey": "00d47be5b5adebe5",
+   "idx": 3,
    "response": {
     "content": "",
     "tool_calls": [
      {
-      "id": "call_pei2nyys",
-      "name": "flag_cell",
-      "arguments": {
-       "block": "p1b2",
-       "row": 1,
-       "field": "points",
-       "question": "Grade A- should yield 3.7 points but value stored is 1",
-       "kind": "check_failure"
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 2.2,
-    "prompt_tokens": 5145,
-    "output_tokens": 92
-   }
-  },
-  {
-   "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 8,
-   "response": {
-    "content": "",
-    "tool_calls": [
-     {
-      "id": "call_g9j80ght",
-      "name": "flag_cell",
-      "arguments": {
-       "block": "p1b2",
-       "row": 2,
-       "field": "points",
-       "question": "Grade A- should yield 3.7 points but value stored is 0.5",
-       "kind": "check_failure"
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 1.88,
-    "prompt_tokens": 5265,
-    "output_tokens": 94
-   }
-  },
-  {
-   "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 9,
-   "response": {
-    "content": "",
-    "tool_calls": [
-     {
-      "id": "call_6g1jlj4t",
-      "name": "flag_cell",
-      "arguments": {
-       "block": "p1b2",
-       "row": 3,
-       "field": "points",
-       "question": "Grade A should yield 4.0 points but value stored is 0.5",
-       "kind": "check_failure"
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 1.79,
-    "prompt_tokens": 5387,
-    "output_tokens": 93
-   }
-  },
-  {
-   "stage": "intake",
-   "runkey": "89cd03e7b1250700",
-   "idx": 10,
-   "response": {
-    "content": "I've flagged all 4 failing cells. Now I need to submit the final result. Let me review what I have:\n\n- Blocks read: p1b2 and p1b3 (the course data blocks)\n- Blocks skipped: p1b1 (cover page with \"SYNTHETIC DEMO DATA\") and p1b4 (grading scale legend)\n- Name seen: From view_page, I saw \"Rania Haddad\" in the header\n\nLet me submit the final result now.",
-    "tool_calls": [
-     {
-      "id": "call_kh0ia5uq",
+      "id": "call_157663",
       "name": "submit_courses",
       "arguments": {
+       "name_seen": "Rania Haddad",
        "blocks_read": [
-        "p1b2",
-        "p1b3"
+        "p1b1",
+        "p1b2"
        ],
+       "note": "Transcript successfully processed.",
+       "institution_curriculum": "AP",
+       "major": null,
        "skipped": [
         {
-         "block": "p1b1",
-         "reason": "Cover page with synthetic demo data, not course information"
-        },
-        {
-         "block": "p1b4",
-         "reason": "Grading scale legend, not course data"
+         "block": "p1b3",
+         "reason": "grading scale legend"
         }
-       ],
-       "name_seen": "Rania Haddad",
-       "note": "Four point values in p1b2 fail grading scale check - stored values don't match grade letters (A→4.0, A-→3.7)"
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 4.66,
-    "prompt_tokens": 5508,
-    "output_tokens": 268
-   }
-  },
-  {
-   "stage": "read",
-   "runkey": "ce2c22848439ca36",
-   "idx": 0,
-   "response": {
-    "content": "```json\n[\n    {\n        \"term\": \"Fall 2025 (Yr 11)\",\n        \"rows\": [\n            {\n                \"subject\": \"AP Calculus AB\",\n                \"grade\": \"A\",\n                \"credits\": 1.0,\n                \"term\": \"Fall 2025 (Yr 11)\"\n            }\n        ],\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    }\n]\n```",
-    "tool_calls": [],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 2.47,
-    "prompt_tokens": 1324,
-    "output_tokens": 152
-   }
-  },
-  {
-   "stage": "case",
-   "runkey": "98f2db1dd85c9470",
-   "idx": 0,
-   "response": {
-    "content": "",
-    "tool_calls": [
-     {
-      "id": "call_06exvt88",
-      "name": "read_mapping",
-      "arguments": {}
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 3.17,
-    "prompt_tokens": 1967,
-    "output_tokens": 13
-   }
-  },
-  {
-   "stage": "case",
-   "runkey": "98f2db1dd85c9470",
-   "idx": 1,
-   "response": {
-    "content": "This row is **Conditional** because a mapping exists but requires an AP exam score report (minimum score of 4) that is not on file. The student's transcript grade is B+, which does not meet the requirement, but the condition is purely about missing evidence, not a failed condition.\n\nI will draft a request for the exam score report and set the row state to \"Waiting on document\".",
-    "tool_calls": [
-     {
-      "id": "call_8sz9ggmb",
-      "name": "draft_request",
-      "arguments": {
-       "what": "AP exam score report",
-       "why": "The mapping requires an AP exam score of at least 4 to qualify for credit. The student's transcript grade (B+) does not meet this threshold, but the condition is based on the official exam score report which is missing from the file.",
-       "to": "student"
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 3.46,
-    "prompt_tokens": 2259,
-    "output_tokens": 183
-   }
-  },
-  {
-   "stage": "case",
-   "runkey": "98f2db1dd85c9470",
-   "idx": 2,
-   "response": {
-    "content": "",
-    "tool_calls": [
-     {
-      "id": "call_rredvg2z",
-      "name": "set_row_state",
-      "arguments": {
-       "status": "Waiting on document",
-       "reason": "Missing AP exam score report required by mapping condition (minimum score of 4)"
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 1.34,
-    "prompt_tokens": 2483,
-    "output_tokens": 54
-   }
-  },
-  {
-   "stage": "case",
-   "runkey": "98f2db1dd85c9470",
-   "idx": 3,
-   "response": {
-    "content": "",
-    "tool_calls": [
-     {
-      "id": "call_k2eg45tr",
-      "name": "submit_result",
-      "arguments": {
-       "headline": "AP Statistics row is Conditional; requires AP exam score report (minimum 4) to meet mapping condition.",
-       "needs": "WAITING_ON_DOCUMENT",
-       "missing_evidence": [
-        "AP exam score report"
-       ],
-       "gaps": [
-        "Student's transcript grade B+ does not meet the required minimum exam score of 4 for credit eligibility"
-       ],
-       "candidates": [],
-       "review_package": [
-        "Awaiting AP exam score report to evaluate mapping condition"
-       ],
-       "questions_for_chair": []
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 5.75,
-    "prompt_tokens": 2003,
-    "output_tokens": 164
-   }
-  },
-  {
-   "stage": "case",
-   "runkey": "6e18a07855e0cc2d",
-   "idx": 0,
-   "response": {
-    "content": "",
-    "tool_calls": [
-     {
-      "id": "call_n7hrfbs2",
-      "name": "read_mapping",
-      "arguments": {}
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 3.24,
-    "prompt_tokens": 1974,
-    "output_tokens": 13
-   }
-  },
-  {
-   "stage": "case",
-   "runkey": "6e18a07855e0cc2d",
-   "idx": 1,
-   "response": {
-    "content": "This row is **Conditional** with a missing syllabus. The mapping exists (AP-HUMAN-GEO → GEOG 101) but the school's courses synopsis has no entry for this course, so the syllabus is needed to confirm equivalence.\n\nI will draft a request for the syllabus and set the row state accordingly.",
-    "tool_calls": [
-     {
-      "id": "call_1zwmtjfv",
-      "name": "draft_request",
-      "arguments": {
-       "what": "course syllabus from the school",
-       "why": "The school's courses synopsis has no entry for this course; the syllabus is needed to confirm equivalence with GEOG 101.",
-       "to": "school"
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 2.95,
-    "prompt_tokens": 2250,
-    "output_tokens": 152
-   }
-  },
-  {
-   "stage": "case",
-   "runkey": "6e18a07855e0cc2d",
-   "idx": 2,
-   "response": {
-    "content": "",
-    "tool_calls": [
-     {
-      "id": "call_3xy9qf58",
-      "name": "set_row_state",
-      "arguments": {
-       "status": "Waiting on document",
-       "reason": "Syllabus required to confirm mapping to GEOG 101"
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 1.21,
-    "prompt_tokens": 2445,
-    "output_tokens": 52
-   }
-  },
-  {
-   "stage": "case",
-   "runkey": "6e18a07855e0cc2d",
-   "idx": 3,
-   "response": {
-    "content": "",
-    "tool_calls": [
-     {
-      "id": "call_e9iq9chk",
-      "name": "submit_result",
-      "arguments": {
-       "headline": "AP Human Geography (A) mapped to GEOG 101 but requires syllus for confirmation",
-       "needs": "WAITING_ON_DOCUMENT",
-       "missing_evidence": [
-        "course syllabus from the school"
-       ],
-       "gaps": [
-        "The school's courses synopsis has no entry for this course; the syllabus is needed to confirm equivalence with GEOG 101."
-       ],
-       "candidates": [
-        {
-         "aud_code": "GEOG 101",
-         "why": "Potential general elective, but requires syllus for confirmation"
-        }
-       ],
-       "review_package": [
-        "Syllabus required to confirm mapping to GEOG 101"
-       ],
-       "questions_for_chair": []
-      }
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 6.2,
-    "prompt_tokens": 1963,
-    "output_tokens": 205
-   }
-  },
-  {
-   "stage": "case_review",
-   "runkey": "350cdfafa535d978",
-   "idx": 0,
-   "response": {
-    "content": "",
-    "tool_calls": [
-     {
-      "id": "call_p0aa0t2z",
-      "name": "list_rows",
-      "arguments": {}
-     }
-    ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 2.52,
-    "prompt_tokens": 1547,
-    "output_tokens": 13
-   }
-  },
-  {
-   "stage": "case_review",
-   "runkey": "350cdfafa535d978",
-   "idx": 1,
-   "response": {
-    "content": "This is mode \"review_all\". I have the full list of rows. Two rows are \"Waiting on document\" (90413302 and 650b233c). None have signals like stale_mapping or near_miss_grade. The officer notes are not in this output, so I must rely on the tool data.\n\nSince no rows have unresolved signals requiring doubt-raising, and two are already \"Waiting on document\", I will submit the final result.",
-    "tool_calls": [
-     {
-      "id": "call_xzyu9p66",
-      "name": "submit_result",
-      "arguments": {
-       "headline": "Two AP courses remain pending documents; all other mappings are settled.",
-       "needs": "NEEDS_YOU",
-       "missing_evidence": [
-        "AP Statistics score report",
-        "AP Human Geography course transcript"
-       ],
-       "gaps": [
-        "Missing official transcripts for AP Statistics and AP Human Geography to confirm course equivalence."
-       ],
-       "candidates": [],
-       "review_package": [
-        "Awaiting student-submitted documents for AP Statistics and AP Human Geography before finalizing mappings."
-       ],
-       "questions_for_chair": [
-        "Confirm whether the student's submitted transcripts are sufficient to resolve the 'Waiting on document' status for these two courses."
        ]
       }
      }
     ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 5.87,
-    "prompt_tokens": 2307,
-    "output_tokens": 289
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 2.09,
+    "prompt_tokens": 3976,
+    "output_tokens": 81
    }
   },
   {
-   "stage": "audit",
-   "runkey": "98c6cf665bd9ae10",
+   "stage": "case",
+   "runkey": "98f2db1dd85c9470",
    "idx": 0,
    "response": {
-    "content": "I will begin by running the deterministic sheet checks to identify any failures in mapping records, credits, policy, unresolved-but-confirmed items, duplicates, and program-plan warnings.",
+    "content": "",
     "tool_calls": [
      {
-      "id": "call_oodoto77",
-      "name": "run_sheet_checks",
+      "id": "call_157788",
+      "name": "read_mapping",
       "arguments": {}
      }
     ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 2.35,
-    "prompt_tokens": 1050,
-    "output_tokens": 50
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.92,
+    "prompt_tokens": 1854,
+    "output_tokens": 10
    }
   },
   {
-   "stage": "audit",
-   "runkey": "98c6cf665bd9ae10",
+   "stage": "case",
+   "runkey": "98f2db1dd85c9470",
    "idx": 1,
    "response": {
-    "content": "The sheet checks passed with no failures or warnings. Now I'll check if there are any differences between the sheet and the officer's decisions.",
+    "content": "",
     "tool_calls": [
      {
-      "id": "call_qokuj7vq",
-      "name": "diff_sheet_vs_decisions",
+      "id": "call_189585",
+      "name": "draft_request",
+      "arguments": {
+       "to": "student",
+       "why": "Required to fulfill the condition for credit mapping to QUAN 201",
+       "what": "Official AP Statistics exam score report showing a score of 4 or higher"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.2,
+    "prompt_tokens": 2155,
+    "output_tokens": 55
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "98f2db1dd85c9470",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_212206",
+      "name": "set_row_state",
+      "arguments": {
+       "status": "Waiting on document",
+       "reason": "Waiting on official AP Statistics exam score report to satisfy condition for QUAN 201 mapping."
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.86,
+    "prompt_tokens": 2247,
+    "output_tokens": 45
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "98f2db1dd85c9470",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_186968",
+      "name": "submit_result",
+      "arguments": {
+       "missing_evidence": [
+        "Official AP exam score report"
+       ],
+       "needs": "WAITING_ON_DOCUMENT",
+       "review_package": [],
+       "headline": "The AP Statistics course is conditional on an exam score of 4 or higher, which is currently missing.",
+       "aud_code": "QUAN 201",
+       "candidates": [],
+       "questions_for_chair": [],
+       "gaps": [
+        "Missing official AP exam score report showing a score of at least 4."
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.88,
+    "prompt_tokens": 1695,
+    "output_tokens": 108
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "6e18a07855e0cc2d",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_184267",
+      "name": "read_mapping",
       "arguments": {}
      }
     ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 1.05,
-    "prompt_tokens": 1141,
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.56,
+    "prompt_tokens": 1864,
+    "output_tokens": 10
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "6e18a07855e0cc2d",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_198829",
+      "name": "draft_request",
+      "arguments": {
+       "why": "The mapping to GEOG 101 is conditional on receiving the course syllabus or AP exam score.",
+       "what": "Please provide the official AP Human Geography course syllabus or AP score report.",
+       "to": "student"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.15,
+    "prompt_tokens": 2168,
+    "output_tokens": 61
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "6e18a07855e0cc2d",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_216052",
+      "name": "set_row_state",
+      "arguments": {
+       "status": "Waiting on document",
+       "reason": "Waiting on course syllabus or AP score report to satisfy conditional mapping requirements for GEOG 101."
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.76,
+    "prompt_tokens": 2265,
     "output_tokens": 46
    }
   },
   {
-   "stage": "audit",
-   "runkey": "98c6cf665bd9ae10",
-   "idx": 2,
+   "stage": "case",
+   "runkey": "6e18a07855e0cc2d",
+   "idx": 3,
    "response": {
-    "content": "The sheet passes all checks with no failures or warnings, and there are no differences between the sheet and the officer's decisions. Since the sheet is clean and matches the officer's decisions, no fixes need to be proposed. I will now submit the final result.",
+    "content": "",
     "tool_calls": [
      {
-      "id": "call_fcks9vv4",
+      "id": "call_163221",
       "name": "submit_result",
       "arguments": {
-       "summary": "The transfer sheet passes all checks with no failures or warnings and matches the officer's decisions exactly."
+       "headline": "AP Human Geography is missing the required course syllabus/AP score report to fulfill the conditional mapping to GEOG 101.",
+       "questions_for_chair": [
+        "Does the provided grade of A suffice in lieu of an exam score if the syllabus is not available?"
+       ],
+       "review_package": [
+        "Conditional mapping: GEOG 101 (World Geography)",
+        "Status: Waiting on document"
+       ],
+       "missing_evidence": [
+        "course syllabus from the school"
+       ],
+       "candidates": [],
+       "gaps": [
+        "The course syllabus or AP score report is missing to verify AP Human Geography content for GEOG 101."
+       ],
+       "needs": "WAITING_ON_DOCUMENT"
       }
      }
     ],
-    "provider": "ollama:mac_dev",
-    "model": "qwen3.5:4b",
-    "duration_s": 1.9,
-    "prompt_tokens": 1215,
-    "output_tokens": 97
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.97,
+    "prompt_tokens": 1714,
+    "output_tokens": 153
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_201755",
+      "name": "list_rows",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.61,
+    "prompt_tokens": 1550,
+    "output_tokens": 10
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_110609",
+      "name": "propose_placement",
+      "arguments": {
+       "why": "AP Art History fits the Cultures, Traditions and Societies breadth requirement well.",
+       "slot": "BQ-CULT",
+       "row_id": "ca5259f8"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.8,
+    "prompt_tokens": 2687,
+    "output_tokens": 53
    }
   }
  ]

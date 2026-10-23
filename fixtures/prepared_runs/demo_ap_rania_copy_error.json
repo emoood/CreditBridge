@@ -1,0 +1,771 @@
+{
+ "version": 1,
+ "name": "demo_ap_rania_copy_error",
+ "case_number": "CB-2026-0104",
+ "recorded_at": "2026-10-23T20:40:03.927181+00:00",
+ "model": "gemini-3.5-flash-lite",
+ "notes": "real run, timings {'time_to_table_s': 10.9, 'confirm_at_s': 10.9, 'time_to_first_result_s': 12.2, 'evaluation_done_s': 25.7, 'evaluation_job_s': 13.4, 'score_resume_s': 0.9, 'export_audit_clean_s': 2.8, 'export_audit_planted_s': 6.9}",
+ "data_version": "2ae235079ab95c34",
+ "reading_version": "intake_v3+c1+layout2",
+ "label": "Prepared run, recorded 2026-10-23, gemini-3.5-flash-lite",
+ "source": {
+  "filename": "transcript_a2_batch.pdf",
+  "sha256": "d81fec7f4c56bbd155acc84ee78215aa22827ce0f855d9ca9ae9006807cf4f35"
+ },
+ "planted": {
+  "misread": false,
+  "copy_error": true
+ },
+ "links": {
+  "ap calculus ab": {
+   "id": "84a7b662-4658-5497-8ce9-358041b05fb1",
+   "name": "Calculus AB",
+   "code": "AP-CALC-AB",
+   "qualification": "Advanced Placement"
+  },
+  "ap psychology": {
+   "id": "cce3210b-8b8e-5f5d-ab2b-f9eaa002ada4",
+   "name": "Psychology",
+   "code": "AP-PSYC",
+   "qualification": "Advanced Placement"
+  },
+  "ap biology": {
+   "id": "11eda15a-9da6-54c2-a391-679b2dddeb97",
+   "name": "Biology",
+   "code": "AP-BIO",
+   "qualification": "Advanced Placement"
+  },
+  "ap microeconomics": {
+   "id": "95c27aea-d53b-50d9-9f58-6c461384529b",
+   "name": "Microeconomics",
+   "code": "AP-ECON-MICRO",
+   "qualification": "Advanced Placement"
+  },
+  "ap computer science a": {
+   "id": "6dd9c060-16ce-529c-aa74-1db976eddcbb",
+   "name": "Computer Science A",
+   "code": "AP-CSA",
+   "qualification": "Advanced Placement"
+  },
+  "ap statistics": {
+   "id": "5d1d01ed-7172-59dc-9a3e-a0ab996fe68c",
+   "name": "Statistics",
+   "code": "AP-STAT",
+   "qualification": "Advanced Placement"
+  },
+  "ap chemistry": {
+   "id": "1a562a42-9855-59c5-8811-a36343d9c2e7",
+   "name": "Chemistry",
+   "code": "AP-CHEM",
+   "qualification": "Advanced Placement"
+  },
+  "ap physics 1": {
+   "id": "01c8a6f3-ccdd-5b0a-ae57-5c70c0f32949",
+   "name": "Physics 1: Algebra-Based",
+   "code": "AP-PHYS-1",
+   "qualification": "Advanced Placement"
+  },
+  "ap art history": {
+   "id": "8aa54074-37a0-56b6-9b6e-0462009b0ae5",
+   "name": "Art History",
+   "code": "AP-ART-HIST",
+   "qualification": "Advanced Placement"
+  },
+  "ap human geography": {
+   "id": "57e68298-b286-547a-ac57-b6b2e17e7e9f",
+   "name": "Human Geography",
+   "code": "AP-HUMAN-GEO",
+   "qualification": "Advanced Placement"
+  }
+ },
+ "model_calls": 25,
+ "model_log": [
+  {
+   "stage": "intake",
+   "runkey": "00d47be5b5adebe5",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_280784",
+      "name": "read_block",
+      "arguments": {
+       "targets": [
+        "p1b1",
+        "p1b2",
+        "p1b3"
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.88,
+    "prompt_tokens": 2251,
+    "output_tokens": 33
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "ce2c22848439ca36",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_196130",
+      "name": "submit_block",
+      "arguments": {
+       "term": "Fall 2025 (Yr 11)",
+       "rows": [
+        {
+         "credits": 1,
+         "letter": "A",
+         "subject": "AP Calculus AB",
+         "term": "Fall 2025 (Yr 11)"
+        },
+        {
+         "term": "Fall 2025 (Yr 11)",
+         "subject": "AP Psychology",
+         "letter": "A",
+         "credits": 1
+        },
+        {
+         "term": "Fall 2025 (Yr 11)",
+         "credits": 1,
+         "letter": "A-",
+         "subject": "AP Biology"
+        },
+        {
+         "subject": "AP Microeconomics",
+         "letter": "A-",
+         "term": "Fall 2025 (Yr 11)",
+         "credits": 0.5
+        },
+        {
+         "credits": 0.5,
+         "letter": "A",
+         "subject": "Moral Education",
+         "term": "Fall 2025 (Yr 11)"
+        }
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.42,
+    "prompt_tokens": 1593,
+    "output_tokens": 208
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "967135592d412ab7",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_144535",
+      "name": "submit_block",
+      "arguments": {
+       "term": "Spring 2026 (Yr 11)",
+       "rows": [
+        {
+         "letter": "A-",
+         "term": "Spring 2026 (Yr 11)",
+         "subject": "AP Computer Science A",
+         "credits": 1
+        },
+        {
+         "letter": "B+",
+         "credits": 1,
+         "subject": "AP Statistics",
+         "term": "Spring 2026 (Yr 11)"
+        },
+        {
+         "credits": 1,
+         "subject": "AP Chemistry",
+         "letter": "B+",
+         "term": "Spring 2026 (Yr 11)"
+        },
+        {
+         "term": "Spring 2026 (Yr 11)",
+         "subject": "AP Physics 1",
+         "letter": "B",
+         "credits": 1
+        },
+        {
+         "credits": 0.5,
+         "term": "Spring 2026 (Yr 11)",
+         "subject": "AP Art History",
+         "letter": "B"
+        },
+        {
+         "credits": 0.5,
+         "term": "Spring 2026 (Yr 11)",
+         "subject": "AP Human Geography",
+         "letter": "A"
+        }
+       ]
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.43,
+    "prompt_tokens": 1548,
+    "output_tokens": 247
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "69545acc66ec2472",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_164908",
+      "name": "submit_block",
+      "arguments": {
+       "term_gpa": null,
+       "rows": [],
+       "term_credits": null,
+       "term_quality_points": null,
+       "term": null,
+       "cumulative_gpa": null,
+       "cumulative_quality_points": null,
+       "cumulative_credits": null
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 2.32,
+    "prompt_tokens": 1506,
+    "output_tokens": 59
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "00d47be5b5adebe5",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_195432",
+      "name": "run_checks",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.74,
+    "prompt_tokens": 2431,
+    "output_tokens": 10
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "00d47be5b5adebe5",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_190623",
+      "name": "view_page",
+      "arguments": {
+       "page": 1
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.67,
+    "prompt_tokens": 2871,
+    "output_tokens": 14
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "00d47be5b5adebe5",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_140397",
+      "name": "submit_courses",
+      "arguments": {
+       "blocks_read": [
+        "p1b1",
+        "p1b2",
+        "p1b3"
+       ],
+       "institution_curriculum": "AP",
+       "major": null,
+       "note": "Transcript contains Fall 2025 and Spring 2026 academic terms for AP curriculum.",
+       "name_seen": "Rania Haddad",
+       "skipped": []
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.5,
+    "prompt_tokens": 4014,
+    "output_tokens": 88
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "98f2db1dd85c9470",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_146720",
+      "name": "read_mapping",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.13,
+    "prompt_tokens": 1854,
+    "output_tokens": 10
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "98f2db1dd85c9470",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_253744",
+      "name": "draft_request",
+      "arguments": {
+       "why": "An AP exam score of at least 4 is required to map AP Statistics to QUAN 201.",
+       "what": "Official AP exam score report showing the score for AP Statistics",
+       "to": "student"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.08,
+    "prompt_tokens": 2155,
+    "output_tokens": 60
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "98f2db1dd85c9470",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_211937",
+      "name": "set_row_state",
+      "arguments": {
+       "status": "Waiting on document",
+       "reason": "Waiting on official AP exam score report to verify minimum score requirement of 4."
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.86,
+    "prompt_tokens": 2253,
+    "output_tokens": 41
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "98f2db1dd85c9470",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_247756",
+      "name": "submit_result",
+      "arguments": {
+       "questions_for_chair": [],
+       "gaps": [
+        "AP exam score report is missing; minimum score of 4 required for QUAN 201 mapping."
+       ],
+       "needs": "WAITING_ON_DOCUMENT",
+       "candidates": [],
+       "missing_evidence": [
+        "AP exam score report"
+       ],
+       "review_package": [
+        "Mapping: QUAN 201 (3 credits) via AP Statistics",
+        "Condition: Minimum AP exam score of 4"
+       ],
+       "headline": "AP Statistics requires an official exam score report showing at least a 4 to map to QUAN 201."
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.87,
+    "prompt_tokens": 1697,
+    "output_tokens": 133
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "6e18a07855e0cc2d",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_154374",
+      "name": "read_mapping",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.69,
+    "prompt_tokens": 1864,
+    "output_tokens": 10
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "6e18a07855e0cc2d",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_109125",
+      "name": "draft_request",
+      "arguments": {
+       "why": "The school's course synopsis has no entry for this course, so the syllabus is required to verify the learning outcomes for GEOG 101 transfer credit.",
+       "to": "student",
+       "what": "AP Human Geography course syllabus"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.89,
+    "prompt_tokens": 2168,
+    "output_tokens": 64
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "6e18a07855e0cc2d",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_200656",
+      "name": "set_row_state",
+      "arguments": {
+       "status": "Waiting on document",
+       "reason": "Missing course syllabus; drafted request for student to provide syllabus."
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.87,
+    "prompt_tokens": 2269,
+    "output_tokens": 37
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "6e18a07855e0cc2d",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_192490",
+      "name": "submit_result",
+      "arguments": {
+       "review_package": [],
+       "gaps": [
+        "Course syllabus is missing from the school synopsis"
+       ],
+       "aud_code": "GEOG 101",
+       "needs": "WAITING_ON_DOCUMENT",
+       "missing_evidence": [
+        "course syllabus from the school"
+       ],
+       "headline": "AP Human Geography requires the course syllabus to verify transfer credit for GEOG 101.",
+       "questions_for_chair": [],
+       "candidates": []
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 1.01,
+    "prompt_tokens": 1709,
+    "output_tokens": 99
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_208478",
+      "name": "list_rows",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.51,
+    "prompt_tokens": 1550,
+    "output_tokens": 10
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_190299",
+      "name": "propose_placement",
+      "arguments": {
+       "slot": "BQ-CULT",
+       "why": "AP Art History fits best in Cultures, Traditions and Societies.",
+       "row_id": "ca5259f8"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.83,
+    "prompt_tokens": 2687,
+    "output_tokens": 51
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_208606",
+      "name": "propose_placement",
+      "arguments": {
+       "why": "AP Chemistry fits best in Science and the Nature of Reality.",
+       "row_id": "5e1d51c2",
+       "slot": "BQ-SCIE"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.8,
+    "prompt_tokens": 2768,
+    "output_tokens": 52
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_227268",
+      "name": "submit_result",
+      "arguments": {
+       "headline": "The application has 8 mapped courses and 2 waiting on document. Slot placements for competing courses have been successfully proposed.",
+       "missing_evidence": [],
+       "gaps": [],
+       "needs": "NEEDS_YOU",
+       "candidates": [],
+       "review_package": [],
+       "questions_for_chair": []
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.96,
+    "prompt_tokens": 2850,
+    "output_tokens": 72
+   }
+  },
+  {
+   "stage": "audit",
+   "runkey": "0dce47f0a6ee6fa7",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_150348",
+      "name": "run_sheet_checks",
+      "arguments": {}
+     },
+     {
+      "id": "call_150349",
+      "name": "diff_sheet_vs_decisions",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.84,
+    "prompt_tokens": 811,
+    "output_tokens": 27
+   }
+  },
+  {
+   "stage": "audit",
+   "runkey": "0dce47f0a6ee6fa7",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_260720",
+      "name": "submit_result",
+      "arguments": {
+       "summary": "The transfer sheet passed all deterministic checks and matches all officer decisions."
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.65,
+    "prompt_tokens": 896,
+    "output_tokens": 28
+   }
+  },
+  {
+   "stage": "audit",
+   "runkey": "d03f3fa375943f0b",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_191478",
+      "name": "run_sheet_checks",
+      "arguments": {}
+     },
+     {
+      "id": "call_191479",
+      "name": "diff_sheet_vs_decisions",
+      "arguments": {}
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.81,
+    "prompt_tokens": 812,
+    "output_tokens": 27
+   }
+  },
+  {
+   "stage": "audit",
+   "runkey": "d03f3fa375943f0b",
+   "idx": 1,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_157824",
+      "name": "read_mapping",
+      "arguments": {
+       "row_id": "6444d5a2"
+      }
+     },
+     {
+      "id": "call_157825",
+      "name": "read_transcript_row",
+      "arguments": {
+       "row_id": "6444d5a2"
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 2.29,
+    "prompt_tokens": 1061,
+    "output_tokens": 52
+   }
+  },
+  {
+   "stage": "audit",
+   "runkey": "d03f3fa375943f0b",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_105772",
+      "name": "propose_fix",
+      "arguments": {
+       "aud_code": "MATH 200",
+       "row_id": "6444d5a2",
+       "why": "Aligns sheet course code with the officer's confirmed decision (MATH 200) for AP Calculus AB."
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.73,
+    "prompt_tokens": 1800,
+    "output_tokens": 67
+   }
+  },
+  {
+   "stage": "audit",
+   "runkey": "d03f3fa375943f0b",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_127480",
+      "name": "submit_result",
+      "arguments": {
+       "summary": "Proposed fix to align the sheet course code with the officer's decision for row 6444d5a2."
+      }
+     }
+    ],
+    "provider": "gemini:gemini-3.5-flash-lite",
+    "model": "gemini-3.5-flash-lite",
+    "duration_s": 0.85,
+    "prompt_tokens": 1900,
+    "output_tokens": 41
+   }
+  }
+ ]
+}

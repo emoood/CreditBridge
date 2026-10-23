@@ -82,14 +82,23 @@ How it works: a prepared run is a finished real run saved at the model boundary 
 
 | Prepared run (`fixtures/prepared_runs/`) | Student, file | Variant | Shows |
 |---|---|---|---|
-| `demo_ap_rania_clean` | Rania Haddad, `transcript_a2_batch.pdf`, case CB-2026-0104 | clean (`a2`) | The batch case: eleven AP courses over two terms read by the Intake agent, mapping lookup, a conditional row waiting for an exam score, Case agent trace tagged *recorded*. **Out of date until Friend 2 re-records it** (recorded before versions were tracked and before the new block layout). |
-| `demo_ap_rania_copy_error` | same file | copy error (`a2c`) | The same case with the Demo switch that changes one confirmed AUD code after the officer's decision: the sheet check fails and the Auditor explains the exact difference. Not recorded yet. |
-| `demo_ap_rania_misread` | same file | misread (`a2m`) | The same case with one value (AP Chemistry's letter) replaced by a wrong one before the checks run; Intake must re-read it. Recorded only if the repair is genuine. Not recorded yet. |
+| `demo_ap_rania_clean` | Rania Haddad, `transcript_a2_batch.pdf`, case CB-2026-0104 | clean (`a2`) | The batch case: eleven AP courses over two terms read by the Intake agent, mapping lookup, a conditional row waiting for an exam score, Case agent trace tagged *recorded*. Recorded and current. |
+| `demo_ap_rania_copy_error` | same file | copy error (`a2c`) | The same case with the Demo switch that changes one confirmed AUD code after the officer's decision: the sheet check fails and the Auditor explains the exact difference. Recorded and current. |
+| `demo_ap_rania_misread` | same file | misread (`a2m`) | The same case with one value (AP Chemistry's letter) replaced by a wrong one before the checks run; Intake must re-read it. Recorded only if the repair is genuine. Unrecorded (repair condition did not trigger). |
+| `demo_ap_tariq_clean` | Tariq Mansoor, `transcript_anonymized_user.pdf`, case CB-2026-0201 | clean | Full 4-year school transcript (41 courses) with Grades 9-12 and Page 2 synopsis. Recorded and current. |
 | `demo_ap_daniel_clean` | Daniel Ferreira, `transcript_b_intake.pdf` / `.png`, case CB-2026-0102 | clean (`b`) | Image-only scan with a smudged mark (AP Chemistry printed 85): the check fails and the Intake recheck has work. Not recorded yet. |
 | `demo_ap_sofia_copy_error` | Sofia Lindqvist, `transcript_c_copy_error.pdf`, case CB-2026-0103 | copy error (`c`) | Ordinary transcript; the Auditor catch after *Demo: plant a copy error*. Not recorded yet. |
 | `demo_ap_rami_clean`, `demo_ap_rami_misread` | Rami Test-Student, `transcript_d_demo2.pdf`, case CB-2026-0105 | clean, misread (`d`, `dp`) | Second demo student. Not recorded yet. |
 
 Make a prepared run: with the backend in demo mode, run the real model once through `python scripts/overnight_runs.py a2|a2c|a2m|b|c|d|dp`. It saves the run under the name above only when the run is clean by the script's criteria.
+
+### Demo cases: what you will see and what it proves
+
+| File / Run | What you will see | What it proves |
+|---|---|---|
+| `transcript_a2_batch.pdf` (`demo_ap_rania_clean`) | Eleven AP courses across two terms, fast multi-block vision OCR (10.9s to table), AP Statistics conditional on exam score (resumed to Mapped upon entering score 5 without model re-run), AP Human Geography waiting on syllabus request. | Proves whole-term block intake speed, conditional exam score resumption without model calls, and syllabus request drafting. |
+| `transcript_a2_batch.pdf` (`demo_ap_rania_copy_error`) | Planted copy error alters confirmed AUD equivalent code. Auditor flags the exact difference and proposes the original equivalent. | Proves pre-export audit catch of post-decision modifications. |
+| `transcript_anonymized_user.pdf` (`demo_ap_tariq_clean`) | Full 4-year school transcript (41 courses) with Grades 9-12 and Page 2 synopsis. School-specific courses (Arabic, Islamic, Moral Ed, PE) identified as not evaluated; AP Biology and Calculus AB mapped; AP Physics 1 requests syllabus. | Proves large multi-year transcript handling, school-specific course classification, and synopsis page processing. |
 
 **Presenter script (order: D first, then C for the Auditor catch)**: *prepared runs exist for A2 only so far; C and D are in the plan below once they are recorded.*
 1. Switch to Replay (Alt+D). Say: "The model's side is pre-recorded so we are not waiting on it; everything else is live."
