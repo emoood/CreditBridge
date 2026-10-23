@@ -47,7 +47,7 @@ def letter_for_row(row: dict[str, Any], scale: dict[str, Any] | None = None) -> 
     if mark is None:
         return None, "no grade"
     s = scale or load_scale()
-    return expected_for_mark(float(mark), s)[0], "numeric mark converted with the " + ("printed" if scale and scale.get("source") == "printed" else "default (assumed)") + " grading scale"
+    return expected_for_mark(float(mark), s)[0], "numeric mark converted with the " + ("printed" if scale and scale.get("source") in ("printed", "configured") else "default (assumed)") + " grading scale"
 
 
 def expected_for_mark(mark: float, scale: dict[str, Any]) -> tuple[str, float]:

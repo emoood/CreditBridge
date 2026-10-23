@@ -46,7 +46,8 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         db.commit()
         reset = not job.summary.get("resumed")
         path = app.document["path"]
-        scale = gc.load_scale()
+        scale_name = ((app.extraction or {}).get("student_record") or {}).get("grade_scale")  # a configured per-school scale (policies/school_grade_scales.yaml), else the default
+        scale = gc.load_scale(scale_name)
         store.audit(db, app.id, "system", "reading_started", job.id, resumed=not reset)
 
         # ---- stage render / parse
@@ -54,6 +55,7 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         db.commit()
         digital = path.lower().endswith(".pdf") and await asyncio.to_thread(_has_text_layer, path)
         intake_info: dict[str, Any] = {}
+        synopsis_found: dict[str, str] = {}
         blocks_meta: list[dict[str, Any]] = []
         merged: dict[str, Any]
         plant_cfg: dict[str, Any] | None = None
@@ -67,22 +69,26 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
                          "credits": float(r.credits) if r.credits is not None else None, "term": r.term, "page": r.page,
                          "flags": [], "uncertain": r.uncertain_fields} for r in res.rows]
                 store.finish_unit(db, u, "DONE", {"rows": rows, "flags": res.warnings, "totals": {}, "reread": False, "scale": res.scale})
-            merged = gc_merge([u.result])
+            merged = gc_merge([u.result], scale)
             merged["printed_scale"] = (u.result or {}).get("scale")
             method = "digital_pdf"
         else:
             method = "vision"
             pages = await asyncio.to_thread(vr.render_pages, path, s.vision_dpi)
-            spans = [(pi + 1, bi + 1, sp) for pi, img in enumerate(pages) for bi, sp in enumerate(vr.split_blocks(img, s.vision_max_block_px))]
-            keys = [f"p{p}b{b}" for p, b, _ in spans]
+            blocks_layout: list[tuple[int, str, tuple[int, int], tuple[int, int] | None, tuple]] = []  # page, key, vertical span, horizontal range, reading order
+            for pi, img in enumerate(pages):
+                for n, (sp, xr, (group, ci)) in enumerate(vr.layout(img, s.vision_max_block_px), 1):  # side-by-side tables become separate blocks, column by column
+                    blocks_layout.append((pi + 1, f"p{pi + 1}b{n}", sp, xr, (pi + 1, group, ci, sp[0])))
+            blocks_layout.sort(key=lambda b: b[4])
+            keys = [k for _, k, *_ in blocks_layout]
             units = store.plan_units(db, job, "read", keys, reset)
             record = (app.extraction or {}).get("student_record") or {}
             plant_cfg = (app.extraction or {}).get("planted_misread")
             ictx = IntakeContext(R.repo, R.retriever, "intake", "", app_id=app.id, provider=usage.MeteredProvider(provider, app.id, ""), path=path, scale=scale,
-                                 spans={f"p{p}b{b}": (p, sp) for p, b, sp in spans}, plant=plant_cfg, record_name=record.get("name"),
+                                 spans={k: (p, sp) for p, k, sp, _x, _o in blocks_layout}, xr={k: x for _p, k, _sp, x, _o in blocks_layout if x}, order={k: o for _p, k, _sp, _x, o in blocks_layout}, plant=plant_cfg, record_name=record.get("name"),
                                  recovery_left=max(0, s.intake_recovery_rounds - job.summary.get("recovery_used", 0)))
             ictx.imgs[s.vision_dpi] = pages
-            ictx.lines = {f"p{p}b{b}": vr.count_text_lines(pages[p - 1], sp) for p, b, sp in spans}
+            ictx.lines = {k: vr.count_text_lines(pages[p - 1], sp) for p, k, sp, _x, _o in blocks_layout}
             ictx.text = await asyncio.to_thread(cc.text_rows, path, app.id) if digital else None  # the text layer is only a cross-check on what vision reads
             for u in units:
                 if u.status == "DONE" and u.result:  # resumed job: finished blocks are not read again
@@ -106,7 +112,9 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
             job.summary = {**job.summary, "recovery_used": job.summary.get("recovery_used", 0) + ictx.recovery_used, "intake_changes": ictx.changes}
             db.commit()
             done = [u.result for u in store.units_of(db, job.id) if u.stage == "read" and u.status == "DONE"]
-            merged = gc_merge(done)
+            merged = gc_merge(done, scale)
+            synopsis = {(r.get("subject") or "").strip(): r["description"].strip() for res in done for r in res.get("rows", []) if r.get("description") and r.get("subject")}
+            synopsis_found = synopsis
             intake_info = {"agent": s.intake_agent, "recovery_used": ictx.recovery_used, "changes": ictx.changes, "skipped": ictx.skipped, "read_by_code": ictx.by_code,
                            "name_check": ictx.name_check, "text_layer_crosscheck": ictx.text is not None, "agent_questions": ictx.questions}
             if ictx.name_check.get("status") == "mismatch":
@@ -146,8 +154,8 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         store.set_json(app, "rows", rows)
         store.set_json(app, "extracted_rows", rows)
         failed = [b for b in blocks_meta if b["status"] != "DONE"]
-        store.set_json(app, "extraction", {"student_id": (app.extraction or {}).get("student_id", ""), "student_record": (app.extraction or {}).get("student_record"), "planted_misread": ({**plant_cfg, "applied": planted_log} if plant_cfg else None), "method": method, "blocks": blocks_meta, "failed_blocks": len(failed), "intake": intake_info, "flags": merged["flags"] + cur_flags,
-                                           "cumulative": merged["cumulative"], "scale": merged["scale"], "grading_scale": merged.get("printed_scale") or gc.scale_from_text(merged.get("dropped_text", "")), "unrecognized": unrecognized,
+        store.set_json(app, "extraction", {"student_id": (app.extraction or {}).get("student_id", ""), "student_record": (app.extraction or {}).get("student_record"), "planted_misread": ({**plant_cfg, "applied": planted_log} if plant_cfg else None), "method": method, "blocks": blocks_meta, "failed_blocks": len(failed), "intake": intake_info, "synopsis": synopsis_found, "flags": merged["flags"] + cur_flags,
+                                           "cumulative": merged["cumulative"], "scale": merged["scale"], "grading_scale": merged.get("printed_scale") or gc.scale_from_text(merged.get("dropped_text", "")) or ({**scale, "source": "configured"} if scale_name else None), "unrecognized": unrecognized,
                                            "dropped_non_course_rows": merged.get("dropped_rows", 0),
                                            "rows_found": len(rows)})
         app.status = "EXTRACTION_REVIEW_REQUIRED"
@@ -157,8 +165,8 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
         store.audit(db, app.id, "system", "extraction_review_required", job.id, rows=len(rows), failed_blocks=len(failed), unrecognized=unrecognized)
 
 
-def gc_merge(results: list[dict[str, Any]]) -> dict[str, Any]:
-    return vr.merge_checked([r for r in results if r], gc.load_scale())
+def gc_merge(results: list[dict[str, Any]], scale: dict[str, Any]) -> dict[str, Any]:
+    return vr.merge_checked([r for r in results if r], scale)
 
 
 def _has_text_layer(path: str) -> bool:
@@ -256,7 +264,8 @@ def _lookup_rows(db, app: Application, rows: list[dict[str, Any]]) -> dict[str, 
     for r in rows:
         old = mp.get_state(db, app.id, r["id"])
         verdict = mp.decide_row(r, maps.get((r.get("subject") or {}).get("code")), (old.facts if old else {}) or {}, bool(old and old.included_override), R.repo,
-                                school_specific=is_school_specific(r.get("title") or ""), scale=(app.extraction or {}).get("grading_scale"))
+                                school_specific=is_school_specific(r.get("title") or ""), scale=(app.extraction or {}).get("grading_scale"),
+                                synopsis=(app.extraction or {}).get("synopsis") or None)
         waiting = old and old.status == mp.WAITING and any(q["status"] in ("DRAFT", "SENT") for q in (old.requests or []))
         if waiting and verdict["status"] in mp.WORKABLE:  # still waiting on the same document: keep the pause
             verdict = {**verdict, "status": mp.WAITING, "reason": old.reason}
@@ -295,6 +304,9 @@ async def _work_unit(db, job: Job, app: Application, row: dict[str, Any], u, pro
         outcomes: list[dict[str, Any]] = []
         if (state["status"] in mp.WORKABLE or mode == "review_package") and row.get("subject"):
             outcomes = await asyncio.to_thread(curriculum.outcomes, row["subject"]["id"])
+        syn = mp.synopsis_for(row, (app.extraction or {}).get("synopsis"))
+        if syn:  # the school's own synopsis page is the syllabus excerpt for this course
+            outcomes = [{"text": syn, "page": 2, "kind": "synopsis"}]
         title = row.get("title") or (row["subject"]["name"] if row.get("subject") else "") or "Untitled subject"
         R.repo.add_source(u.unit_key, title, str(row.get("credits") or ""), row.get("grade") or "", row.get("term") or "", row.get("title_ar") or "", outcomes, app.id)
         agent = None

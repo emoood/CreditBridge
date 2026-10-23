@@ -174,3 +174,19 @@ async def test_the_review_pass_writes_a_summary_and_logs_its_tool_calls(case_env
     assert summary["text"].startswith("Two rows are mapped") and summary["by"] == "case_agent"
     act = (await case_env.client.get(f"/api/v1/applications/{app_id}/activity")).json()
     assert act["usage"]["by_stage"]["case_review"]["calls"] >= 1
+
+
+# ---- a school synopsis page is the syllabus; a course missing from it needs its syllabus
+def test_a_course_missing_from_the_schools_synopsis_waits_for_its_syllabus_and_a_document_satisfies_it():
+    from backend.app.db.models import CourseMapping
+    syn = {"AP Statistics": "Covers exploring data and probability."}
+    m = CourseMapping(id=1, qualification="Advanced Placement", subject_code="AP-STAT", subject_name="", aud_code="STA201", aud_credits=3, version="t1", status="ACTIVE")
+    from backend.app.services.demo_repo import DemoRepo
+    repo = DemoRepo()
+    row = lambda t: {"title": t, "grade": "A", "subject": {"code": "AP-STAT", "qualification": "Advanced Placement"}, "included": True}
+    have = mp.decide_row(row("AP Statistics"), m, {}, False, repo, synopsis=syn)
+    miss = mp.decide_row(row("AP Chemistry"), m, {}, False, repo, synopsis=syn)
+    sent = mp.decide_row(row("AP Chemistry"), m, {"syllabus": True}, False, repo, synopsis=syn)
+    none = mp.decide_row(row("AP Chemistry"), m, {}, False, repo, synopsis=None)
+    assert have["status"] == "Mapped" and sent["status"] == "Mapped" and none["status"] == "Mapped"   # no synopsis page, no such rule
+    assert miss["status"] == "Conditional" and miss["condition_result"]["missing"][0]["field"] == "syllabus"

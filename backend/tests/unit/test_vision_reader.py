@@ -47,3 +47,29 @@ def test_split_blocks_never_returns_more_than_max_height_and_skips_blank_pages()
             img.putpixel((x, y), (0, 0, 0))
     spans = vr.split_blocks(img, 560)
     assert len(spans) >= 3 and all(b - a <= 560 for a, b in spans) and spans[0][0] < 120
+
+
+def test_a_reply_that_is_a_list_of_terms_with_letter_marks_is_normalised_not_dropped():
+    from backend.app.services.vision_reader import BlockReading, normalize_reading
+    reply = [{"term": "Fall", "rows": [{"subject": "AP Biology", "mark": "A-", "credits": "1.0"}], "term_credits": None},
+             {"term": "Spring", "rows": [{"subject": "AP Statistics", "mark": "85", "credits": 1.0}], "term_credits": 3.0}]
+    b = BlockReading.model_validate(normalize_reading(reply))
+    assert [r.subject for r in b.rows] == ["AP Biology", "AP Statistics"] and b.rows[0].mark is None and b.rows[0].letter == "A-" and b.rows[1].mark == 85 and b.term_credits == 3.0
+
+
+def test_side_by_side_tables_become_separate_blocks_and_a_one_column_page_is_untouched():
+    from PIL import Image, ImageDraw
+
+    from backend.app.services import vision_reader as vr
+    img = Image.new("RGB", (1600, 1200), "white")
+    d = ImageDraw.Draw(img)
+    d.rectangle([60, 40, 1540, 50], fill="black")                      # a full-width title
+    for y in range(160, 900, 14):
+        d.rectangle([60, y, 760, y + 8], fill="black")
+        d.rectangle([840, y, 1540, y + 8], fill="black")              # two tables with a gutter between them
+    d.rectangle([60, 1000, 1540, 1010], fill="black")
+    lay = vr.layout(img, 560)
+    assert len({x for _sp, x, _o in lay if x}) == 2 and any(x is None for _sp, x, _o in lay)   # a left and a right table, plus the full-width title and footer
+    one = Image.new("RGB", (1600, 800), "white")
+    ImageDraw.Draw(one).rectangle([60, 100, 1540, 700], fill="black")
+    assert all(x is None for _sp, x, _o in vr.layout(one, 560))

@@ -18,3 +18,8 @@ programs:
     allowed_electives: [MATH 201, MATH 243]
     general_electives: [ECON 201, ECON 202, GEOG 101, ARTS 200, SPAN 201, FREN 201]
     free_elective_credits: 9
+  BSc Mechanical Engineering:
+    required: [MATH 210, MATH 220, MATH 231, PHYS 201, PHYS 202, CHEM 201, ENGG 140, ENGG 200]
+    allowed_electives: [MATH 230, MATH 243, ENGG 210, BIOL 201]
+    general_electives: [ECON 201, ECON 202, PSYC 201, ARTS 200, GEOG 101, SPAN 201, FREN 201]
+    free_elective_credits: 6

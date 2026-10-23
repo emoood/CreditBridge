@@ -126,8 +126,16 @@ def policy_fails(grade: str | None, aud_code: str, repo) -> list[str]:
     return [f"{r.rule_id}: {r.reason}" for r in pr.evaluate_course(pr.Policy.load(), facts) if r.rule_id in ENFORCED and r.status == pr.FAIL]
 
 
+def synopsis_for(row: dict[str, Any], synopsis: dict[str, str] | None) -> str | None:
+    """The synopsis-page description for this course (matched on the title, case and punctuation ignored), or None."""
+    norm = lambda t: "".join(ch for ch in (t or "").lower() if ch.isalnum())
+    me = norm(row.get("title"))
+    return next((d for t, d in (synopsis or {}).items() if me and (norm(t) == me or norm(t) in me or me in norm(t))), None)
+
+
 def decide_row(row: dict[str, Any], mapping: CourseMapping | None, facts: dict[str, Any], override: bool, repo,
-               curriculum: str | None = None, school_specific: bool = False, scale: dict[str, Any] | None = None) -> dict[str, Any]:
+               curriculum: str | None = None, school_specific: bool = False, scale: dict[str, Any] | None = None,
+               synopsis: dict[str, str] | None = None) -> dict[str, Any]:
     """The code verdict for one row. Never calls a model."""
     out: dict[str, Any] = {"status": NOT_EVAL, "kind": "", "reason": "", "can_include": False, "mapping": None, "condition_result": None}
     if not row.get("included", True):
@@ -148,6 +156,10 @@ def decide_row(row: dict[str, Any], mapping: CourseMapping | None, facts: dict[s
         return {**out, "status": CONDITIONAL, "kind": "condition_unmet", "reason": cond["reason"]}
     if cond["status"] == MISSING:
         return {**out, "status": CONDITIONAL, "kind": "condition_missing", "reason": cond["reason"]}
+    if synopsis and not synopsis_for(row, synopsis) and not facts.get("syllabus"):  # the school sent a synopsis page: a course missing from it needs its syllabus
+        miss = {"status": MISSING, "reason": "The school's courses synopsis has no entry for this course; its syllabus is needed.",
+                "missing": [{"field": "syllabus", "evidence": "course syllabus from the school"}]}
+        return {**out, "condition_result": miss, "status": CONDITIONAL, "kind": "condition_missing", "reason": miss["reason"]}
     fails = policy_fails(row.get("grade"), mapping.aud_code, repo)
     if fails:
         return {**out, "status": CONDITIONAL, "kind": "rule_blocked", "reason": "Blocked by policy: " + "; ".join(fails)}

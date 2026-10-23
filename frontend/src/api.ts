@@ -55,7 +55,7 @@ export type Row = { id: string; code: string; title: string; title_ar: string; c
 export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; program: string; institution: string; courses: number; status: string; decided: number; catalog: string;
   created_at: string; student_id?: string; student_record?: StudentRecord | null; confirmed?: boolean; reading_job_id?: string | null; evaluation_job_id?: string | null; job_id?: string; rows?: Row[]; document?: { filename: string; page_count: number; sha256: string; ext: string; size: number } | null; corrections?: unknown[];
   extraction?: { method: string; blocks?: { key: string; status: string; reread?: boolean; flags?: number | null; error?: string }[]; failed_blocks?: number; flags?: string[]; unrecognized?: number; rows_found?: number;
-    planted_misread?: { subject: string; wrong: number; applied?: { subject: string; from: number; to: number }[] } | null;
+    planted_misread?: { subject: string; wrong: number | string; field?: string; applied?: { subject: string; field?: string; from: number | string; to: number | string }[] } | null;
     intake?: { agent: boolean; recovery_used: number; changes: { block: string; row: string; field: string; from: unknown; to: unknown }[]; skipped: Record<string, string>; read_by_code: string[]; text_layer_crosscheck: boolean; agent_questions: number;
       name_check?: { status: 'match' | 'mismatch' | 'unchecked'; source?: string; seen?: string | null; why?: string } };
     case_summary?: { text: string; by: string; ok?: boolean } };

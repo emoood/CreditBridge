@@ -19,7 +19,7 @@ PROMPT = (
     "You read ONE block of a school transcript image. Copy EXACTLY what is printed; never guess, round or infer. "
     "Include EVERY subject row in the block, even unusual or non-standard subjects; never skip a row. Use null for anything unreadable or absent. Subject names are copied as printed. Marks are numbers; letters are the "
     "printed letter grade; points are the printed grade points; credits are printed credits. If the block shows term or "
-    "cumulative totals (credits, quality points, GPA), copy them. Do NOT transcribe student names, ID numbers, dates of "
+    "cumulative totals (credits, quality points, GPA), copy them. If the block is a courses synopsis (a course name with a description paragraph and no grade), give each course as a row with the description copied into description. Do NOT transcribe student names, ID numbers, dates of "
     "birth or any other personal details. Call submit_block exactly once.")
 
 
@@ -32,6 +32,7 @@ class VisionRow(BaseModel):
     points: float | None = None
     credits: float | None = None
     term: str | None = None
+    description: str | None = None  # only for a course-synopsis row (a course name with a description paragraph)
 
 
 class BlockReading(BaseModel):
@@ -91,10 +92,70 @@ def count_text_lines(img: Image.Image, span: tuple[int, int]) -> int:
     return int(((on[1:] & ~on[:-1]).sum()) + (1 if on.size and on[0] else 0))
 
 
-def crop_png_b64(img: Image.Image, span: tuple[int, int], scale: float = 1.0) -> str:
+def two_column_zone(img: Image.Image, min_gap: int = 30, min_zone: int = 300) -> tuple[int, int, tuple[int, int], tuple[int, int]] | None:
+    """Where two tables are printed side by side: (top, bottom, left range, right range) or None. Found as the tallest run of rows in which one vertical
+    gutter stays empty while there is ink on both sides of it (full-width bands above and below break the run)."""
+    g = np.asarray(img.convert("L")) < 200
+    H, W = g.shape
+    ink_rows = g.any(axis=1)
+    if ink_rows.sum() < min_zone:
+        return None
+    cnt = g[ink_rows].sum(axis=0)
+    lo, hi = int(W * 0.25), int(W * 0.75)
+    free = cnt[lo:hi] <= 0.2 * ink_rows.sum()  # ink in at most a fifth of the page's ink rows: only the full-width bands above and below cross this column
+    cands, run_start = [], None
+    for i, f in enumerate([*free, False]):
+        if f and run_start is None:
+            run_start = i
+        elif not f and run_start is not None:
+            if i - run_start >= min_gap:
+                cands.append((run_start, i))
+            run_start = None
+    for c0, c1 in sorted(cands, key=lambda c: c[0] - c[1]):
+        gx0, gx1 = lo + c0, lo + c1
+        m = max(0, (gx1 - gx0 - 12) // 2)  # only the middle of the gutter must be empty: table borders may brush its edges
+        blocked = g[:, gx0 + m:gx1 - m].any(axis=1)
+        y = 0
+        while y < H:
+            if blocked[y]:
+                y += 1
+                continue
+            y0 = y
+            while y < H and not blocked[y]:
+                y += 1
+            zone = g[y0:y]
+            rows_ink = zone.any(axis=1).sum()
+            if y - y0 >= min_zone and rows_ink >= 150 and zone[:, :gx0].any(axis=1).sum() >= 0.3 * rows_ink and zone[:, gx1:].any(axis=1).sum() >= 0.3 * rows_ink:
+                cols = np.where(zone.any(axis=0))[0]
+                if gx0 - int(cols[0]) < 0.3 * W or int(cols[-1]) - gx1 < 0.3 * W:
+                    continue  # a gutter inside one table (between its columns), not between two tables
+                return y0, y, (max(0, int(cols[0]) - 8), gx0 + 4), (gx1 - 4, min(W, int(cols[-1]) + 9))
+    return None
+
+
+def layout(img: Image.Image, max_h: int) -> list[tuple[tuple[int, int], tuple[int, int] | None, tuple[int, int]]]:
+    """The blocks of one page as (vertical span, horizontal range or None, (group, column)): text above a two-column zone, the left column of the zone
+    top to bottom, its right column, then the text below. A page with no side-by-side tables is the plain top-to-bottom split."""
+    z = two_column_zone(img)
+    if z is None:
+        return [(sp, None, (1, 0)) for sp in split_blocks(img, max_h)]
+    top, bottom, left, right = z
+    out: list[tuple[tuple[int, int], tuple[int, int] | None, tuple[int, int]]] = []
+    for sp in split_blocks(img.crop((0, 0, img.width, top)), max_h):
+        out.append((sp, None, (1, 0)))
+    for ci, xr in enumerate((left, right)):
+        for a, b in split_blocks(img.crop((xr[0], top, xr[1], bottom)), max_h):
+            out.append(((top + a, top + b), xr, (2, ci)))
+    for a, b in split_blocks(img.crop((0, bottom, img.width, img.height)), max_h):
+        out.append(((bottom + a, bottom + b), None, (3, 0)))
+    return out
+
+
+def crop_png_b64(img: Image.Image, span: tuple[int, int], scale: float = 1.0, xr: tuple[int, int] | None = None) -> str:
     a, b = int(span[0] * scale), int(span[1] * scale)
+    x0, x1 = (int(xr[0] * scale), int(xr[1] * scale)) if xr else (0, img.width)
     buf = io.BytesIO()
-    img.crop((0, a, img.width, min(img.height, b))).save(buf, "PNG")
+    img.crop((x0, a, min(img.width, x1), min(img.height, b))).save(buf, "PNG")
     return base64.b64encode(buf.getvalue()).decode()
 
 
@@ -106,19 +167,49 @@ async def read_block(provider: LLMProvider, image_b64: str, unit: str, hint: str
     call = next((c for c in resp.tool_calls if c.name == SUBMIT), None)
     try:
         if call:
-            return BlockReading.model_validate(call.arguments)
-        s, e = resp.content.index("{"), resp.content.rindex("}") + 1  # some runtimes put the JSON in content
-        return BlockReading.model_validate(json.loads(resp.content[s:e]))
+            return BlockReading.model_validate(normalize_reading(call.arguments))
+        text = resp.content
+        a = min((i for i in (text.find("["), text.find("{")) if i >= 0), default=-1)
+        if a < 0:
+            raise ValueError("no JSON in the reply")
+        obj = json.loads(text[a:text.rindex("]" if text[a] == "[" else "}") + 1])  # some runtimes put the JSON in content
+        return BlockReading.model_validate(normalize_reading(obj))
     except (ValueError, ValidationError) as e:
         raise VisionError("invalid_output") from e
 
 
+def normalize_reading(obj: Any) -> Any:
+    """Tolerate the shapes a small model really produces, without inventing anything: a list of term objects (their rows are joined; totals are kept only when exactly one
+    term has them), and a non-numeric "mark" such as "A" (that is a letter grade, so it moves to the letter column)."""
+    if isinstance(obj, list):
+        terms = [t for t in obj if isinstance(t, dict)]
+        with_tot = [t for t in terms if any(t.get(k) is not None for k in ("term_credits", "term_quality_points", "term_gpa"))]
+        merged: dict[str, Any] = {"rows": [r for t in terms for r in (t.get("rows") or [])]}
+        if len(with_tot) == 1:
+            merged.update({k: v for k, v in with_tot[0].items() if k != "rows"})
+        obj = merged
+    if isinstance(obj, dict):
+        rows = []
+        for r in obj.get("rows") or []:
+            if isinstance(r, dict) and isinstance(r.get("mark"), str):
+                try:
+                    r = {**r, "mark": float(r["mark"])}
+                except ValueError:
+                    r = {**r, "mark": None, "letter": r.get("letter") or r["mark"]}
+            rows.append(r)
+        obj = {**obj, "rows": rows}
+    return obj
+
+
 def plant_misread(reading: BlockReading, cfg: dict[str, Any]) -> dict[str, Any] | None:
-    """PLANTED FOR DEMO: replace one correctly read mark with a wrong one BEFORE the extraction checks run. Returns what was changed, or None."""
+    """PLANTED FOR DEMO: replace one correctly read value (a mark, a letter or credits, as configured) with a wrong one BEFORE the extraction checks run.
+    Returns what was changed, or None."""
+    f = cfg.get("field", "mark")
     for r in reading.rows:
-        if cfg["subject"].lower() in (r.subject or "").lower() and r.mark is not None:
-            rec = {"subject": r.subject, "field": "mark", "from": r.mark, "to": float(cfg["wrong"])}
-            r.mark = float(cfg["wrong"])
+        if cfg["subject"].lower() in (r.subject or "").lower() and getattr(r, f, None) is not None:
+            wrong = str(cfg["wrong"]) if f == "letter" else float(cfg["wrong"])
+            rec = {"subject": r.subject, "field": f, "from": getattr(r, f), "to": wrong}
+            setattr(r, f, wrong)
             return rec
     return None
 

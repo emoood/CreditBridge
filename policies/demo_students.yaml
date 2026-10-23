@@ -5,3 +5,4 @@ students:
   CB-2026-0102: {name: Daniel Ferreira, student_id: SYN-1002, email: daniel.ferreira@example.invalid, phone: "+971 50 000 0102", program: BSc Computer Engineering, term: Fall 2026, curriculum: Advanced Placement}
   CB-2026-0103: {name: Sofia Lindqvist, student_id: SYN-1003, email: sofia.lindqvist@example.invalid, phone: "+971 50 000 0103", program: BSc Psychology, term: Fall 2026, curriculum: Advanced Placement}
   CB-2026-0104: {name: Rania Haddad, student_id: SYN-1004, email: rania.haddad@example.invalid, phone: "+971 50 000 0104", program: BBA Business Administration, term: Fall 2026, curriculum: Advanced Placement}
+  CB-2026-0105: {name: Rami Test-Student, student_id: DVIS-SYN-0457, email: rami.test-student@example.invalid, phone: "+971 50 000 0105", program: BSc Mechanical Engineering, term: Fall 2026, curriculum: Advanced Placement, grade_scale: demo_valley}

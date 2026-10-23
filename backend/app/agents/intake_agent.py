@@ -59,6 +59,8 @@ class IntakeContext(ToolContext):
     spans: dict[str, tuple[int, tuple[int, int]]] = field(default_factory=dict)  # block key -> (page number, vertical span at the base dpi)
     blocks: dict[str, dict[str, Any]] = field(default_factory=dict)  # block key -> stored reading (only blocks read so far)
     skipped: dict[str, str] = field(default_factory=dict)
+    xr: dict[str, tuple[int, int]] = field(default_factory=dict)  # block key -> horizontal range, for tables printed side by side (absent = the whole width)
+    order: dict[str, tuple] = field(default_factory=dict)  # block key -> reading order (a column's blocks follow each other, top to bottom)
     regions: dict[str, Region] = field(default_factory=dict)
     text: dict[int, list[dict[str, Any]]] | None = None  # the text layer's course rows per page: a cross-check only
     recovery_left: int = 2
@@ -80,12 +82,15 @@ class IntakeContext(ToolContext):
             self.imgs[dpi] = vr.render_pages(self.path, dpi)
         return self.imgs[dpi][page - 1]
 
+    def okey(self, k: str) -> tuple:
+        return self.order.get(k) or (self.spans[k][0], 0, 0, self.spans[k][1][0])
+
     def ordered(self) -> dict[str, dict[str, Any]]:
-        """Read blocks in page order (term totals compare a block with the rows of earlier blocks, so the order must be the page's, not the read order)."""
-        return {k: self.blocks[k] for k in sorted(self.blocks, key=lambda k: self.spans[k]) if k in self.blocks}
+        """Read blocks in reading order (term totals compare a block with the rows of earlier blocks of the SAME table, so the order must be the page's, not the read order)."""
+        return {k: self.blocks[k] for k in sorted(self.blocks, key=self.okey) if k in self.blocks}
 
     def unread(self) -> list[str]:
-        return [k for k in sorted(self.spans, key=lambda k: self.spans[k]) if k not in self.blocks and k not in self.skipped]
+        return [k for k in sorted(self.spans, key=self.okey) if k not in self.blocks and k not in self.skipped]
 
 
 # ------------------------------------------------------------------------------------------------------- code checks
@@ -122,20 +127,23 @@ def refresh(b: dict[str, Any], scale: dict[str, Any], prior: list[dict[str, Any]
 
 
 def ensure_planted(ctx: IntakeContext) -> None:
-    """PLANTED FOR DEMO. Replaces ONE mark that really exists (the configured subject if it was read, else the first row with a mark) with a wrong value,
-    in a first reading only, before the checks are first shown. A re-read in recovery is never planted."""
+    """PLANTED FOR DEMO. Replaces ONE value that really exists (a mark, letter or credits, as configured; the configured subject if it was read, else the first row that
+    has such a value) with a wrong one, in a first reading only, before the checks are first shown. A re-read in recovery is never planted."""
     if not ctx.plant or ctx.planted or ctx.unread():
         return
-    cands = [(k, i, r) for k, b in ctx.ordered().items() if not b.get("failed") and not b.get("reread") for i, r in enumerate(b.get("rows", [])) if r.get("mark") is not None and not xc.is_non_course(r)]
+    f = ctx.plant.get("field", "mark")
+    cands = [(k, i, r) for k, b in ctx.ordered().items() if not b.get("failed") and not b.get("reread") for i, r in enumerate(b.get("rows", []))
+             if r.get(f) is not None and r.get("mark") is not None and not xc.is_non_course(r)]
     pick = next((c for c in cands if ctx.plant["subject"].lower() in (c[2].get("subject") or "").lower()), None) or (cands[0] if cands else None)
     if pick is None:
         return
     k, _i, r = pick
-    rec = {"block": k, "subject": r.get("subject"), "field": "mark", "from": r["mark"], "to": float(ctx.plant["wrong"])}
-    r["mark"] = float(ctx.plant["wrong"])
+    wrong = str(ctx.plant["wrong"]) if f == "letter" else float(ctx.plant["wrong"])
+    rec = {"block": k, "subject": r.get("subject"), "field": f, "from": r[f], "to": wrong}
+    r[f] = wrong
     refresh(ctx.blocks[k], ctx.scale, xc.prior_rows(ctx.ordered(), k))
     ctx.planted.append(rec)
-    trace(ctx.app_id, "", "code", "planted_for_demo", {**rec, "note": "PLANTED FOR DEMO: one correctly read mark was replaced with a wrong value before the extraction checks ran"})
+    trace(ctx.app_id, "", "code", "planted_for_demo", {**rec, "note": "PLANTED FOR DEMO: one correctly read value was replaced with a wrong one before the extraction checks ran"})
 
 
 def compact_failures(fs: list[dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
@@ -159,7 +167,7 @@ async def read_once(ctx: IntakeContext, key: str, span: tuple[int, int], dpi: in
     page = ctx.spans[key][0]
     base = get_settings().vision_dpi
     img = await asyncio.to_thread(ctx.page_img, page, dpi)
-    b64 = vr.crop_png_b64(img, span, dpi / base)
+    b64 = vr.crop_png_b64(img, span, dpi / base, ctx.xr.get(key))
     reading = await vr.read_block(ctx.provider, b64, key, hint=hint)
     checked = vr.check_block(reading, ctx.scale)
     checked["page"], checked["reread"] = page, False
@@ -249,7 +257,7 @@ class ListPages(AgentTool):
             import pymupdf
             doc = pymupdf.open(ctx.path)
         dpi = get_settings().vision_dpi
-        for key in sorted(ctx.spans, key=lambda k: ctx.spans[k]):
+        for key in sorted(ctx.spans, key=ctx.okey):
             pg, (a, b) = ctx.spans[key]
             item: dict[str, Any] = {"key": key, "height_px": b - a, "text_lines": ctx.lines.get(key, 0), "status": status_of(ctx, key)}
             if doc is not None:
@@ -284,7 +292,8 @@ class ViewPage(AgentTool):
             if args.block not in ctx.spans:
                 raise ToolError(f"Unknown block '{args.block}'.")
             _pg, (a, b) = ctx.spans[args.block]
-            img = img.crop((0, a, img.width, min(img.height, b)))
+            x0, x1 = ctx.xr.get(args.block, (0, img.width))
+            img = img.crop((x0, a, min(img.width, x1), min(img.height, b)))
         img = img.copy()
         img.thumbnail((1100, 1100))
         buf = io.BytesIO()

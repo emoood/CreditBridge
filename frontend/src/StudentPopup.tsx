@@ -123,7 +123,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
 
       {built.notEvaluated.length > 0 && <details className="noteval" open={notEvalOpen} onToggle={e => setNotEvalOpen((e.target as HTMLDetailsElement).open)}>
         <summary>{notEvalOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Not evaluated ({built.notEvaluated.length})</summary>
-        <ul>{built.notEvaluated.map(i => <li key={i.key + i.rowId}><span><strong>{i.title}</strong> <span className="muted">· {i.reason}</span></span>
+        <ul>{[...built.notEvaluated.filter(i => i.state?.kind !== 'school_specific'), ...built.notEvaluated.filter(i => i.state?.kind === 'school_specific')].map(i => <li key={i.key + i.rowId}><span><strong>{i.title}</strong> <span className="muted">· {i.state?.kind === 'school_specific' ? 'School-specific: not mapped' : i.reason}</span></span>
           {i.canInclude ? <button className="link-btn" disabled={busy} onClick={() => i.state ? run(() => api.include(appId, i.rowId, role)) : setInclude(i.rowId, true)}>Include</button> : <span className="muted">cannot be mapped</span>}</li>)}</ul></details>}
     </div>}
 

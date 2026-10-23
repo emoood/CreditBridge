@@ -7,7 +7,7 @@
 mappings:
   - {subject_code: AP-CALC-AB, subject_name: Calculus AB, aud_code: MATH 210, condition: {type: min_exam_score, value: 4, evidence: AP exam score report}}   # CONDITIONAL
   - {subject_code: AP-CSA, subject_name: Computer Science A, aud_code: ENGG 140, status: STALE, version: dummy-2025-09, note: Written against the 2025-26 catalog; needs re-confirming.}   # STALE
-  - {subject_code: AP-CALC-BC, subject_name: Calculus BC, aud_code: MATH 210}
+  - {subject_code: AP-CALC-BC, subject_name: Calculus BC, aud_code: MATH 210, condition: {type: min_exam_score, value: 4, evidence: AP exam score report}}   # CONDITIONAL
   - {subject_code: AP-STAT, subject_name: Statistics, aud_code: QUAN 201}
   - {subject_code: AP-PSYC, subject_name: Psychology, aud_code: PSYC 201, condition: {type: min_grade, value: B}}
   - {subject_code: AP-BIO, subject_name: Biology, aud_code: BIOL 201}
@@ -20,3 +20,4 @@ mappings:
   - {subject_code: AP-HUMAN-GEO, subject_name: Human Geography, aud_code: GEOG 101}
   - {subject_code: AP-SPAN-LANG, subject_name: Spanish Language, aud_code: SPAN 201}
   - {subject_code: AP-FREN-LANG, subject_name: French Language, aud_code: FREN 201}
+  - {subject_code: AP-ENG-LANG, subject_name: English Language and Composition, aud_code: ENGL 101}   # English never transfers at AUD: blocked by policy

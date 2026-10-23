@@ -80,6 +80,8 @@ async def add_evidence(app_id: str, row_id: str, facts: str = Form("{}"), note: 
         app, st = _need_row(db, app_id, row_id)
         if not new and not doc and not note.strip():
             raise HTTPException(422, "Provide a note, a fact or a document")
+        if doc and any(r["status"] in ("DRAFT", "SENT") and "syllabus" in (r.get("what") or "").lower() for r in (st.requests or [])):
+            new = {**new, "syllabus": True}  # the officer attached the syllabus the open request asked for
         notes = [*((st.facts or {}).get("_notes", [])), *([{"at": store.now().isoformat(), "by": x_actor or "officer", "text": note.strip()[:600], "document": bool(doc)}] if note.strip() else [])]
         reqs = [{**r, "status": "RECEIVED", **({"document": {"filename": doc["filename"], "sha256": doc["sha256"]}} if doc else {})} if r["status"] in ("DRAFT", "SENT") else r
                 for r in (st.requests or [])]
