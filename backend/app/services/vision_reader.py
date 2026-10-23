@@ -234,6 +234,10 @@ def move_credits_from_points(d: dict[str, Any], scale: dict[str, Any]) -> None:
         exp = gc.points_for_letter(letter, scale)
         if exp is not None and abs(pts - exp) > gc.TOL_POINTS:
             d["credits"], d["points"], d["normalized"] = pts, None, ["points column read as credits"]
+    elif d.get("credits") is not None and pts is not None and letter and d.get("mark") is None and abs(pts - d["credits"]) < 1e-9:  # the same number twice: the credits copied into points
+        exp = gc.points_for_letter(letter, scale)
+        if exp is not None and abs(pts - exp) > gc.TOL_POINTS:
+            d["points"], d["normalized"] = None, ["points copied from the credits column"]
 
 
 def check_block(b: BlockReading, scale: dict[str, Any]) -> dict[str, Any]:
