@@ -1,0 +1,1085 @@
+{
+ "steps": {
+  "time_to_table_s": 86.4,
+  "confirm_at_s": 86.4,
+  "time_to_first_result_s": 86.6,
+  "evaluation_done_s": 131.8,
+  "evaluation_job_s": 44.4,
+  "calc_resume_s": 0.1,
+  "export_audit_s": 4.1
+ },
+ "problems": [],
+ "app_id": "APP-F11E33E1",
+ "reading": {
+  "status": "DONE",
+  "stage_secs": {
+   "read": 0.0,
+   "curriculum": 0.0
+  },
+  "total_s": 85.6,
+  "summary": {
+   "recovery_used": 1,
+   "intake_changes": [
+    {
+     "block": "p1b3",
+     "row": "(block)",
+     "field": "block",
+     "from": "unreadable",
+     "to": "5 rows read"
+    }
+   ]
+  }
+ },
+ "extraction": {
+  "student_id": "SYN-1004",
+  "student_record": {
+   "case_number": "CB-2026-0104",
+   "name": "Rania Haddad",
+   "student_id": "SYN-1004",
+   "email": "rania.haddad@example.invalid",
+   "phone": "+971 50 000 0104",
+   "program": "BBA Business Administration",
+   "term": "Fall 2026",
+   "curriculum": "Advanced Placement"
+  },
+  "planted_misread": null,
+  "method": "vision",
+  "failed_blocks": 0,
+  "intake": {
+   "agent": true,
+   "recovery_used": 1,
+   "changes": [
+    {
+     "block": "p1b3",
+     "row": "(block)",
+     "field": "block",
+     "from": "unreadable",
+     "to": "5 rows read"
+    }
+   ],
+   "skipped": {
+    "p1b4": "grading scale legend"
+   },
+   "read_by_code": [
+    "p1b1"
+   ],
+   "name_check": {
+    "status": "match",
+    "source": "vision (agent)",
+    "seen": null
+   },
+   "text_layer_crosscheck": true,
+   "agent_questions": 4
+  },
+  "synopsis": {},
+  "flags": [
+   "AP Psychology: points_mismatch(letter A -> 4.0, printed 1)",
+   "AP Biology: points_mismatch(letter A- -> 3.7, printed 1)",
+   "AP Microeconomics: points_mismatch(letter A- -> 3.7, printed 0.5)",
+   "Moral Education: points_mismatch(letter A -> 4.0, printed 0.5)"
+  ],
+  "cumulative": {},
+  "scale": "Synthetic US-style 4.0 scale (demo assumption, unverified)",
+  "grading_scale": null,
+  "unrecognized": 1,
+  "dropped_non_course_rows": 0,
+  "rows_found": 11,
+  "blocks": [
+   {
+    "key": "p1b1",
+    "status": "DONE",
+    "reread": false,
+    "flags": 0,
+    "error": ""
+   },
+   {
+    "key": "p1b2",
+    "status": "DONE",
+    "reread": false,
+    "flags": 4,
+    "error": ""
+   },
+   {
+    "key": "p1b3",
+    "status": "DONE",
+    "reread": true,
+    "flags": 0,
+    "error": ""
+   },
+   {
+    "key": "p1b4",
+    "status": "DONE",
+    "reread": false,
+    "flags": 0,
+    "error": ""
+   }
+  ]
+ },
+ "rows": [
+  {
+   "title": "AP Calculus AB",
+   "mark": null,
+   "grade": "A",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-CALC-AB"
+  },
+  {
+   "title": "AP Psychology",
+   "mark": null,
+   "grade": "A",
+   "points": 1.0,
+   "credits": "",
+   "flags": [
+    "points_mismatch(letter A -> 4.0, printed 1)"
+   ],
+   "questions": [
+    {
+     "field": "points",
+     "question": "points value 1 does not match letter grade A which should equal 4.0 per grading scale",
+     "source": "code_check"
+    }
+   ],
+   "subject": "AP-PSYC"
+  },
+  {
+   "title": "AP Biology",
+   "mark": null,
+   "grade": "A-",
+   "points": 1.0,
+   "credits": "",
+   "flags": [
+    "points_mismatch(letter A- -> 3.7, printed 1)"
+   ],
+   "questions": [
+    {
+     "field": "points",
+     "question": "points value 1 does not match letter grade A- which should equal 3.7 per grading scale",
+     "source": "code_check"
+    }
+   ],
+   "subject": "AP-BIO"
+  },
+  {
+   "title": "AP Microeconomics",
+   "mark": null,
+   "grade": "A-",
+   "points": 0.5,
+   "credits": "",
+   "flags": [
+    "points_mismatch(letter A- -> 3.7, printed 0.5)"
+   ],
+   "questions": [
+    {
+     "field": "points",
+     "question": "points value 0.5 does not match letter grade A- which should equal 3.7 per grading scale",
+     "source": "code_check"
+    }
+   ],
+   "subject": "AP-ECON-MICRO"
+  },
+  {
+   "title": "Moral Education",
+   "mark": null,
+   "grade": "A",
+   "points": 0.5,
+   "credits": "",
+   "flags": [
+    "points_mismatch(letter A -> 4.0, printed 0.5)"
+   ],
+   "questions": [
+    {
+     "field": "points",
+     "question": "points value 0.5 does not match letter grade A which should equal 4.0 per grading scale",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "AP Computer Science A",
+   "mark": null,
+   "grade": "A-",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-CSA"
+  },
+  {
+   "title": "AP Statistics",
+   "mark": null,
+   "grade": "B+",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-STAT"
+  },
+  {
+   "title": "AP Chemistry",
+   "mark": null,
+   "grade": "B+",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-CHEM"
+  },
+  {
+   "title": "AP Physics 1",
+   "mark": null,
+   "grade": "B",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-PHYS-1"
+  },
+  {
+   "title": "AP Art History",
+   "mark": null,
+   "grade": "B",
+   "points": null,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-ART-HIST"
+  },
+  {
+   "title": "AP Human Geography",
+   "mark": null,
+   "grade": "A",
+   "points": null,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-HUMAN-GEO"
+  }
+ ],
+ "states_after_evaluation": {
+  "AP Microeconomics": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to ECON 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Psychology": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to PSYC 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "Moral Education": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "AP Biology": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to BIOL 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Statistics": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to QUAN 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Physics 1": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to PHYS 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Chemistry": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to CHEM 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Art History": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to ARTS 200 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Human Geography": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to GEOG 101 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Calculus AB": {
+   "status": "Waiting on document",
+   "kind": "condition_missing",
+   "reason": "AP exam score report needed to satisfy mapping condition (score \u2265 4)",
+   "finding": "AP Calculus AB mapped to MATH 210 but requires AP exam score \u2265 4; waiting for score report",
+   "requests": [
+    "AP exam score report"
+   ]
+  },
+  "AP Computer Science A": {
+   "status": "Conditional",
+   "kind": "stale",
+   "reason": "Stale mapping (version dummy-2025-09) needs re-confirming against current catalog; course not on student's BBA plan",
+   "finding": "AP Computer Science A (A-) maps to ENGG 140 but the mapping is stale and the course is not on the student's BBA Business Administration plan",
+   "requests": []
+  }
+ },
+ "calc_before": {
+  "status": "Waiting on document",
+  "kind": "condition_missing",
+  "reason": "AP exam score report needed to satisfy mapping condition (score \u2265 4)",
+  "finding": "AP Calculus AB mapped to MATH 210 but requires AP exam score \u2265 4; waiting for score report",
+  "requests": [
+   "AP exam score report"
+  ]
+ },
+ "calc_after": {
+  "status": "Mapped",
+  "kind": "mapped",
+  "reason": "Mapped to MATH 210 (mapping dummy-2026-10)",
+  "finding": null,
+  "requests": [
+   "AP exam score report"
+  ]
+ },
+ "confirm_mapped": {
+  "confirmed": 8
+ },
+ "states_final": {
+  "AP Microeconomics": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to ECON 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Psychology": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to PSYC 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "Moral Education": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "AP Biology": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to BIOL 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Statistics": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to QUAN 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Physics 1": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to PHYS 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Chemistry": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to CHEM 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Art History": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to ARTS 200 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Human Geography": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to GEOG 101 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Computer Science A": {
+   "status": "Conditional",
+   "kind": "stale",
+   "reason": "Stale mapping (version dummy-2025-09) needs re-confirming against current catalog; course not on student's BBA plan",
+   "finding": "AP Computer Science A (A-) maps to ENGG 140 but the mapping is stale and the course is not on the student's BBA Business Administration plan",
+   "requests": []
+  },
+  "AP Calculus AB": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to MATH 210 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": [
+    "AP exam score report"
+   ]
+  }
+ },
+ "export_audit": {
+  "clean": true,
+  "summary": "The sheet passes every check and matches the recorded decisions.",
+  "warnings": [],
+  "differences": [],
+  "proposals": [],
+  "flags": [],
+  "agent_comment": "The transfer sheet passes all checks with no failures or warnings and matches the officer's decisions exactly."
+ },
+ "sheet_ok": true,
+ "usage": {
+  "tool_calls": 23,
+  "tool_seconds": 30.5,
+  "recorded_calls": 0,
+  "recorded_seconds": 0,
+  "live_calls": 32,
+  "calls": 32,
+  "seconds": 127.5,
+  "prompt_tokens": 104915,
+  "output_tokens": 5174,
+  "cost_usd": 0.0,
+  "models": [
+   "qwen3.5:4b"
+  ],
+  "by_stage": {
+   "intake": {
+    "calls": 14,
+    "seconds": 47.88,
+    "prompt_tokens": 67614,
+    "output_tokens": 2042
+   },
+   "read": {
+    "calls": 4,
+    "seconds": 33.85,
+    "prompt_tokens": 6777,
+    "output_tokens": 1390
+   },
+   "case": {
+    "calls": 7,
+    "seconds": 25.58,
+    "prompt_tokens": 15987,
+    "output_tokens": 837
+   },
+   "case_review": {
+    "calls": 4,
+    "seconds": 16.56,
+    "prompt_tokens": 11122,
+    "output_tokens": 713
+   },
+   "audit": {
+    "calls": 3,
+    "seconds": 3.61,
+    "prompt_tokens": 3415,
+    "output_tokens": 192
+   },
+   "tool:intake_agent": {
+    "calls": 13,
+    "seconds": 30.37,
+    "prompt_tokens": 0,
+    "output_tokens": 0
+   },
+   "tool:case_agent": {
+    "calls": 8,
+    "seconds": 0.03,
+    "prompt_tokens": 0,
+    "output_tokens": 0
+   },
+   "tool:auditor_agent": {
+    "calls": 2,
+    "seconds": 0.04,
+    "prompt_tokens": 0,
+    "output_tokens": 0
+   }
+  }
+ },
+ "trace": [
+  {
+   "at": "2026-10-23T05:48:39.245439+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "list_pages",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"text_layer\": true, \"pages\": [{\"page\": 1, \"blocks\": [{\"key\": \"p1b1\", \"height_px\": 308, \"text_lines\": 8, \"status\": \"unread\", \"preview\": \"EXAMPLE INTERNATIONAL SCHOOL / Official Academic Transcript - SYNTHETIC DEMO DATA, not a r\"}, {\"key\": \"p1b2\", \"height_px\": 311, \"text_lines\": ",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:02.437273+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p1b2",
+     "p1b3"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p1b2\", \"status\": \"read\", \"course_rows\": 5, \"text_lines_in_block\": 10, \"accepted_changes\": []}, {\"target\": \"p1b3\", \"status\": \"empty\", \"course_rows\": 0, \"text_lines_in_block\": 5, \"accepted_changes\": []}], \"recovery_rounds_left\": 2, \"unread_blocks\": [\"p1b1\"",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:04.876142+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "view_page",
+   "args": {
+    "page": 1
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"shown\": \"page 1\", \"views_left\": 2}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:09.945551+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "view_page",
+   "args": {
+    "page": 1,
+    "block": "p1b2"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"shown\": \"page 1, block p1b2\", \"views_left\": 1}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:12.437842+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "view_page",
+   "args": {
+    "page": 1,
+    "block": "p1b3"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"shown\": \"page 1, block p1b3\", \"views_left\": 0}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:14.939828+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "run_checks",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"failures\": [{\"check\": \"grading_scale\", \"block\": \"p1b2\", \"row\": 0, \"field\": \"points\", \"subject\": \"AP Psychology\", \"detail\": \"points_mismatch(letter A -> 4.0, printed 1)\"}, {\"check\": \"grading_scale\", \"block\": \"p1b2\", \"row\": 1, \"field\": \"points\", \"subject\": \"AP Biology\", \"detail\"",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:19.152411+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "crop_region",
+   "args": {
+    "block": "p1b3",
+    "top": 0,
+    "bottom": 1,
+    "zoom": 2
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"region\": \"p1b3.r1\", \"covers\": \"0% to 100% of p1b3\", \"zoom\": 2.0}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:31.162386+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p1b3.r1"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p1b3.r1\", \"status\": \"read\", \"course_rows\": 5, \"text_lines_in_block\": 5, \"accepted_changes\": [\"(block): block unreadable -> 5 rows read\"]}], \"recovery_rounds_left\": 1, \"unread_blocks\": [\"p1b1\", \"p1b4\"], \"failures_now\": [{\"check\": \"grading_scale\", \"block\":",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:35.807399+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "run_checks",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"failures\": [{\"check\": \"grading_scale\", \"block\": \"p1b2\", \"row\": 0, \"field\": \"points\", \"subject\": \"AP Psychology\", \"detail\": \"points_mismatch(letter A -> 4.0, printed 1)\"}, {\"check\": \"grading_scale\", \"block\": \"p1b2\", \"row\": 1, \"field\": \"points\", \"subject\": \"AP Biology\", \"detail\"",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:41.945162+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "flag_cell",
+   "args": {
+    "block": "p1b2",
+    "row": 0,
+    "field": "points",
+    "question": "points value 1 does not match letter grade A which should equal 4.0 per grading scale",
+    "kind": "check_failure"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"flagged\": true}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:44.408581+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "flag_cell",
+   "args": {
+    "block": "p1b2",
+    "row": 1,
+    "field": "points",
+    "question": "points value 1 does not match letter grade A- which should equal 3.7 per grading scale",
+    "kind": "check_failure"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"flagged\": true}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:46.329845+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "flag_cell",
+   "args": {
+    "block": "p1b2",
+    "row": 2,
+    "field": "points",
+    "question": "points value 0.5 does not match letter grade A- which should equal 3.7 per grading scale",
+    "kind": "check_failure"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"flagged\": true}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:48.523282+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "flag_cell",
+   "args": {
+    "block": "p1b2",
+    "row": 3,
+    "field": "points",
+    "question": "points value 0.5 does not match letter grade A which should equal 4.0 per grading scale",
+    "kind": "check_failure"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"flagged\": true}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:53.686320+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "skip_refused",
+   "args": {
+    "block": "p1b1",
+    "reason": "cover page header",
+    "note": "the text layer shows a course row in this block"
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:49:57.416484+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "intake_summary",
+   "args": {
+    "changes": 1,
+    "agent_questions": 4,
+    "code_questions": 0,
+    "recovery_used": 1,
+    "read_by_code": [
+     "p1b1"
+    ],
+    "skipped": [
+     "p1b4"
+    ]
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:01.732656+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "lookup",
+   "args": {
+    "rows": 11,
+    "Mapped": 8,
+    "Conditional": 2,
+    "No mapping": 0,
+    "Waiting on document": 0,
+    "Not evaluated": 1
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:06.388979+00:00",
+   "row_id": "6444d5a2",
+   "actor": "case_agent",
+   "name": "read_mapping",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"row_status\": \"Conditional\", \"kind\": \"condition_missing\", \"reason\": \"Needs an exam score of at least 4; none is on file.\", \"mapping\": {\"id\": 21, \"subject_code\": \"AP-CALC-AB\", \"aud_code\": \"MATH 210\", \"aud_credits\": 3, \"condition\": {\"type\": \"min_exam_score\", \"value\": 4, \"evidence",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:10.184054+00:00",
+   "row_id": "6444d5a2",
+   "actor": "case_agent",
+   "name": "draft_request",
+   "args": {
+    "what": "AP exam score report",
+    "why": "The mapping requires an AP exam score of at least 4 to satisfy the condition for MATH 210; none is on file.",
+    "to": "student"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"request_id\": \"3b996f94\", \"status\": \"DRAFT\"}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:11.465219+00:00",
+   "row_id": "6444d5a2",
+   "actor": "case_agent",
+   "name": "set_row_state",
+   "args": {
+    "status": "Waiting on document",
+    "reason": "AP exam score report needed to satisfy mapping condition (score \u2265 4)"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"status\": \"Waiting on document\"}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:22.240061+00:00",
+   "row_id": "2ab4a262",
+   "actor": "case_agent",
+   "name": "read_mapping",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"row_status\": \"Conditional\", \"kind\": \"stale\", \"reason\": \"The mapping to ENGG 140 is stale (version dummy-2025-09) and needs confirming\", \"mapping\": {\"id\": 22, \"subject_code\": \"AP-CSA\", \"aud_code\": \"ENGG 140\", \"aud_credits\": 3, \"condition\": null, \"version\": \"dummy-2025-09\", \"sta",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:25.547469+00:00",
+   "row_id": "2ab4a262",
+   "actor": "case_agent",
+   "name": "set_row_state",
+   "args": {
+    "status": "Conditional",
+    "reason": "Stale mapping (version dummy-2025-09) needs re-confirming against current catalog; course not on student's BBA plan"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"status\": \"Conditional\"}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:32.301355+00:00",
+   "row_id": "",
+   "actor": "case_agent",
+   "name": "list_rows",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"truncated\": true, \"preview\": \"{\\\"program\\\": \\\"BBA Business Administration\\\", \\\"entry_term\\\": \\\"Fall 2026\\\", \\\"free_elective_credits_left\\\": -9, \\\"rows\\\": [{\\\"row_id\\\": \\\"6444d5a2\\\", \\\"title\\\": \\\"AP Calculus AB\\\", \\\"grade\\\": \\\"A\\\", \\\"status\\\": \\\"Waiting on document\\\", \\\"aud_cod",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:39.854662+00:00",
+   "row_id": "6444d5a2",
+   "actor": "case_agent",
+   "name": "raise_doubt",
+   "args": {
+    "row_id": "6444d5a2",
+    "kind": "program_mismatch",
+    "reason": "MATH 210 is classed 'Not applicable' for BBA Business Administration per code classification"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"recorded\": true, \"verified_by_code\": true}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:41.956776+00:00",
+   "row_id": "2ab4a262",
+   "actor": "case_agent",
+   "name": "raise_doubt",
+   "args": {
+    "row_id": "2ab4a262",
+    "kind": "stale_mapping",
+    "reason": "mapping version dummy-2025-09 is older than the newest in the table (dummy-2026-10)"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"recorded\": true, \"verified_by_code\": true}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:47.048695+00:00",
+   "row_id": "6444d5a2",
+   "actor": "code",
+   "name": "note_or_evidence_received",
+   "args": {
+    "facts": [
+     "exam_score"
+    ],
+    "document": false,
+    "note": false
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:47.059124+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "lookup",
+   "args": {
+    "rows": 1,
+    "Mapped": 1,
+    "Conditional": 0,
+    "No mapping": 0,
+    "Waiting on document": 0,
+    "Not evaluated": 0
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:48.156878+00:00",
+   "row_id": "",
+   "actor": "auditor_agent",
+   "name": "run_sheet_checks",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"ok\": true, \"checks\": [], \"warnings\": [], \"lines\": 10}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:50:49.099460+00:00",
+   "row_id": "",
+   "actor": "auditor_agent",
+   "name": "diff_sheet_vs_decisions",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"differences\": []}}",
+   "recorded": false
+  }
+ ],
+ "tool_calls": [
+  [
+   "intake_agent",
+   "list_pages",
+   true
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "view_page",
+   true
+  ],
+  [
+   "intake_agent",
+   "view_page",
+   true
+  ],
+  [
+   "intake_agent",
+   "view_page",
+   true
+  ],
+  [
+   "intake_agent",
+   "run_checks",
+   true
+  ],
+  [
+   "intake_agent",
+   "crop_region",
+   true
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "run_checks",
+   true
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   true
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   true
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   true
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   true
+  ],
+  [
+   "case_agent",
+   "read_mapping",
+   true
+  ],
+  [
+   "case_agent",
+   "draft_request",
+   true
+  ],
+  [
+   "case_agent",
+   "set_row_state",
+   true
+  ],
+  [
+   "case_agent",
+   "read_mapping",
+   true
+  ],
+  [
+   "case_agent",
+   "set_row_state",
+   true
+  ],
+  [
+   "case_agent",
+   "list_rows",
+   true
+  ],
+  [
+   "case_agent",
+   "raise_doubt",
+   true
+  ],
+  [
+   "case_agent",
+   "raise_doubt",
+   true
+  ],
+  [
+   "auditor_agent",
+   "run_sheet_checks",
+   true
+  ],
+  [
+   "auditor_agent",
+   "diff_sheet_vs_decisions",
+   true
+  ]
+ ],
+ "refused_tool_calls": [],
+ "calls_per_stage": {
+  "intake": {
+   "calls": 14,
+   "seconds": 47.88,
+   "prompt_tokens": 67614,
+   "output_tokens": 2042,
+   "sec_per_call": 3.42
+  },
+  "read": {
+   "calls": 4,
+   "seconds": 33.85,
+   "prompt_tokens": 6777,
+   "output_tokens": 1390,
+   "sec_per_call": 8.46
+  },
+  "case": {
+   "calls": 7,
+   "seconds": 25.58,
+   "prompt_tokens": 15987,
+   "output_tokens": 837,
+   "sec_per_call": 3.65
+  },
+  "case_review": {
+   "calls": 4,
+   "seconds": 16.56,
+   "prompt_tokens": 11122,
+   "output_tokens": 713,
+   "sec_per_call": 4.14
+  },
+  "audit": {
+   "calls": 3,
+   "seconds": 3.61,
+   "prompt_tokens": 3415,
+   "output_tokens": 192,
+   "sec_per_call": 1.2
+  },
+  "tool:intake_agent": {
+   "calls": 13,
+   "seconds": 30.37,
+   "prompt_tokens": 0,
+   "output_tokens": 0,
+   "sec_per_call": 2.34
+  },
+  "tool:case_agent": {
+   "calls": 8,
+   "seconds": 0.03,
+   "prompt_tokens": 0,
+   "output_tokens": 0,
+   "sec_per_call": 0.0
+  },
+  "tool:auditor_agent": {
+   "calls": 2,
+   "seconds": 0.04,
+   "prompt_tokens": 0,
+   "output_tokens": 0,
+   "sec_per_call": 0.02
+  }
+ },
+ "total_model_calls": 32,
+ "mean_sec_per_call": 3.98,
+ "clean": true,
+ "total_wall_s": 136.0,
+ "recording": {
+  "name": "demo_a2_agents",
+  "http": 200
+ }
+}

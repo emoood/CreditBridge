@@ -1,0 +1,444 @@
+{
+ "steps": {
+  "time_to_table_s": 2.0,
+  "confirm_at_s": 2.0,
+  "time_to_first_result_s": 2.2,
+  "evaluation_done_s": 2.2,
+  "evaluation_job_s": 0.1,
+  "auditor_s": 14.1
+ },
+ "problems": [],
+ "app_id": "APP-F3A43C7D",
+ "reading": {
+  "status": "DONE",
+  "stage_secs": {
+   "parse": 0.0,
+   "curriculum": 0.0
+  },
+  "total_s": 0.0,
+  "summary": {}
+ },
+ "extraction": {
+  "student_id": "SYN-1003",
+  "planted_misread": null,
+  "method": "digital_pdf",
+  "failed_blocks": 0,
+  "flags": [],
+  "cumulative": {},
+  "scale": "Synthetic US-style 4.0 scale (demo assumption, unverified)",
+  "grading_scale": {
+   "label": "Grading scale printed on the transcript",
+   "source": "printed",
+   "bands": [
+    [
+     93,
+     "A",
+     4.0
+    ],
+    [
+     90,
+     "A-",
+     3.7
+    ],
+    [
+     87,
+     "B+",
+     3.3
+    ],
+    [
+     83,
+     "B",
+     3.0
+    ],
+    [
+     80,
+     "B-",
+     2.7
+    ],
+    [
+     77,
+     "C+",
+     2.3
+    ],
+    [
+     73,
+     "C",
+     2.0
+    ]
+   ]
+  },
+  "unrecognized": 0,
+  "dropped_non_course_rows": 0,
+  "rows_found": 9,
+  "blocks": []
+ },
+ "rows": [
+  {
+   "title": "AP Statistics",
+   "mark": null,
+   "grade": "B+",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-STAT"
+  },
+  {
+   "title": "AP Psychology",
+   "mark": null,
+   "grade": "A-",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-PSYC"
+  },
+  {
+   "title": "AP Biology",
+   "mark": null,
+   "grade": "B+",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-BIO"
+  },
+  {
+   "title": "AP Chemistry",
+   "mark": null,
+   "grade": "A-",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-CHEM"
+  },
+  {
+   "title": "AP Physics 1",
+   "mark": null,
+   "grade": "B",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-PHYS-1"
+  },
+  {
+   "title": "AP Physics 2",
+   "mark": null,
+   "grade": "B+",
+   "points": null,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-PHYS-2"
+  },
+  {
+   "title": "AP Microeconomics",
+   "mark": null,
+   "grade": "A",
+   "points": null,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-ECON-MICRO"
+  },
+  {
+   "title": "AP Macroeconomics",
+   "mark": null,
+   "grade": "A-",
+   "points": null,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-ECON-MACRO"
+  },
+  {
+   "title": "AP Human Geography",
+   "mark": null,
+   "grade": "B+",
+   "points": null,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-HUMAN-GEO"
+  }
+ ],
+ "states_after_evaluation": {
+  "AP Statistics": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to QUAN 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Psychology": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to PSYC 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Biology": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to BIOL 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Chemistry": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to CHEM 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Physics 1": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to PHYS 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Physics 2": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to PHYS 202 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Microeconomics": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to ECON 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Macroeconomics": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to ECON 202 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Human Geography": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to GEOG 101 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  }
+ },
+ "confirm_mapped": {
+  "confirmed": 9
+ },
+ "sheet_before": true,
+ "planted": {
+  "planted": {
+   "row_id": "36f722c3",
+   "source_course": "AP Statistics",
+   "from": "QUAN 201",
+   "to": "ACCG 201",
+   "label": "planted for demo"
+  }
+ },
+ "sheet_checks_after_plant": [
+  {
+   "row_id": "36f722c3",
+   "source_course": "AP Statistics",
+   "check": "matches_mapping",
+   "message": "Sheet says ACCG 201 but the mapping record says QUAN 201 [planted for demo]"
+  }
+ ],
+ "audit": {
+  "status": "OK",
+  "summary": "Changed row 36f722c3's AUD course from ACCG 201 to QUAN 201 and credits from 1 to 3 to match the confirmed mapping record, resolving the sheet-mapping discrepancy.",
+  "explanations": [
+   {
+    "row_id": "36f722c3",
+    "explanation": "The sheet incorrectly listed ACCG 201 while the officer-confirmed mapping record specified QUAN 201 with 3 credits; the correction aligns the sheet with the official mapping."
+   }
+  ],
+  "proposals": [
+   {
+    "row_id": "36f722c3",
+    "source_course": "AP Statistics",
+    "why": "Sheet ACCG 201 conflicts with confirmed mapping record QUAN 201; officer action was CONFIRM for QUAN 201.",
+    "from": {
+     "aud_code": "ACCG 201",
+     "credits": 3
+    },
+    "to": {
+     "aud_code": "QUAN 201",
+     "credits": 3
+    },
+    "touches_confirmed": true,
+    "id": "36f722c3"
+   }
+  ],
+  "checks_before": [
+   {
+    "row_id": "36f722c3",
+    "source_course": "AP Statistics",
+    "check": "matches_mapping",
+    "message": "Sheet says ACCG 201 but the mapping record says QUAN 201 [planted for demo]"
+   }
+  ],
+  "checks_after": [],
+  "passes_after": true,
+  "applied": [],
+  "prompt_version": "auditor_v1"
+ },
+ "usage": {
+  "calls": 4,
+  "seconds": 13.1,
+  "prompt_tokens": 7370,
+  "output_tokens": 605,
+  "cost_usd": 0.0,
+  "models": [
+   "qwen3.5:4b"
+  ],
+  "by_stage": {
+   "audit": {
+    "calls": 4,
+    "seconds": 13.13,
+    "prompt_tokens": 7370,
+    "output_tokens": 605
+   }
+  }
+ },
+ "trace": [
+  {
+   "at": "2026-10-22T21:35:10.410022+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "lookup",
+   "args": {
+    "rows": 9,
+    "Mapped": 9,
+    "Conditional": 0,
+    "No mapping": 0,
+    "Waiting on document": 0,
+    "Not evaluated": 0
+   },
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "at": "2026-10-22T21:35:10.518808+00:00",
+   "row_id": "36f722c3",
+   "actor": "code",
+   "name": "planted_for_demo",
+   "args": {
+    "from": "QUAN 201",
+    "to": "ACCG 201",
+    "note": "PLANTED FOR DEMO: one confirmed AUD equivalent changed in the output stage"
+   },
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "at": "2026-10-22T21:35:15.305165+00:00",
+   "row_id": "36f722c3",
+   "actor": "auditor_agent",
+   "name": "read_transcript_row",
+   "args": {
+    "row_id": "36f722c3"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"title\": \"AP Statistics\", \"grade\": \"B+\", \"mark\": null, \"credits\": \"1\", \"term\": \"Fall 2025 (Yr 12)\", \"subject\": {\"id\": \"5d1d01ed-7172-59dc-9a3e-a0ab996fe68c\", \"name\": \"Statistics\", \"code\": \"AP-STAT\", \"qualification\": \"Advanced Placement\"}}}"
+  },
+  {
+   "at": "2026-10-22T21:35:15.320160+00:00",
+   "row_id": "36f722c3",
+   "actor": "auditor_agent",
+   "name": "read_mapping_record",
+   "args": {
+    "row_id": "36f722c3"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"state\": \"Mapped\", \"kind\": \"mapped\", \"mapping_snapshot\": {\"id\": 9, \"subject_code\": \"AP-STAT\", \"aud_code\": \"QUAN 201\", \"aud_credits\": 3, \"condition\": null, \"version\": \"dummy-2026-10\", \"status\": \"ACTIVE\", \"note\": \"\"}, \"live_mapping\": {\"id\": 9, \"subject_code\": \"AP-STAT\", \"aud_code"
+  },
+  {
+   "at": "2026-10-22T21:35:15.333764+00:00",
+   "row_id": "36f722c3",
+   "actor": "auditor_agent",
+   "name": "read_policy_result",
+   "args": {
+    "row_id": "36f722c3"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"aud_code\": \"ACCG 201\", \"policy_failures\": []}}"
+  },
+  {
+   "at": "2026-10-22T21:35:19.539518+00:00",
+   "row_id": "36f722c3",
+   "actor": "auditor_agent",
+   "name": "propose_correction",
+   "args": {
+    "row_id": "36f722c3",
+    "aud_code": "QUAN 201",
+    "credits": 3,
+    "why": "Sheet ACCG 201 conflicts with confirmed mapping record QUAN 201; officer action was CONFIRM for QUAN 201."
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"recorded\": true}}"
+  },
+  {
+   "at": "2026-10-22T21:35:20.480564+00:00",
+   "row_id": "",
+   "actor": "auditor_agent",
+   "name": "rerun_checks",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"ok\": true, \"still_failing\": []}}"
+  }
+ ],
+ "tool_calls": [
+  [
+   "auditor_agent",
+   "read_transcript_row",
+   true
+  ],
+  [
+   "auditor_agent",
+   "read_mapping_record",
+   true
+  ],
+  [
+   "auditor_agent",
+   "read_policy_result",
+   true
+  ],
+  [
+   "auditor_agent",
+   "propose_correction",
+   true
+  ],
+  [
+   "auditor_agent",
+   "rerun_checks",
+   true
+  ]
+ ],
+ "refused_tool_calls": [],
+ "calls_per_stage": {
+  "audit": {
+   "calls": 4,
+   "seconds": 13.13,
+   "prompt_tokens": 7370,
+   "output_tokens": 605,
+   "sec_per_call": 3.28
+  }
+ },
+ "total_model_calls": 4,
+ "mean_sec_per_call": 3.27,
+ "detected_through_normal_checks": true,
+ "auditor_proposal_fixes_it": true,
+ "clean": true,
+ "total_wall_s": 16.4,
+ "recording": {
+  "name": "demo_c_copy_error",
+  "http": 200
+ }
+}

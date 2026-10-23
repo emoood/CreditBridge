@@ -1,0 +1,1989 @@
+{
+ "steps": {
+  "time_to_table_s": 227.6,
+  "confirm_at_s": 227.7,
+  "time_to_first_result_s": 227.8,
+  "evaluation_done_s": 271.5,
+  "evaluation_job_s": 43.0
+ },
+ "problems": [
+  "1 refused tool call(s): [('case_agent', 'set_classification')]"
+ ],
+ "app_id": "APP-6737C968",
+ "reading": {
+  "status": "DONE",
+  "stage_secs": {
+   "read": 0.0,
+   "curriculum": 0.0
+  },
+  "total_s": 226.0,
+  "summary": {
+   "recovery_used": 2,
+   "intake_changes": []
+  }
+ },
+ "extraction": {
+  "student_id": "DVIS-SYN-0457",
+  "demo": null,
+  "student_record": {
+   "case_number": "CB-2026-0105",
+   "name": "Rami Test-Student",
+   "student_id": "DVIS-SYN-0457",
+   "email": "rami.test-student@example.invalid",
+   "phone": "+971 50 000 0105",
+   "program": "BSc Mechanical Engineering",
+   "term": "Fall 2026",
+   "curriculum": "Advanced Placement",
+   "grade_scale": "demo_valley"
+  },
+  "planted_misread": null,
+  "method": "vision",
+  "failed_blocks": 5,
+  "intake": {
+   "agent": true,
+   "recovery_used": 2,
+   "changes": [],
+   "skipped": {},
+   "read_by_code": [],
+   "name_check": {
+    "status": "mismatch",
+    "source": "vision (agent)",
+    "seen": "None"
+   },
+   "text_layer_crosscheck": false,
+   "agent_questions": 0
+  },
+  "synopsis": {
+   "Chemistry": "AP Chemistry",
+   "Arabic": "Arabic A",
+   "Computer Science": "AP Computer Science A",
+   "English": "English 11",
+   "Mathematics": "Pre-Calculus",
+   "AP Statistics": "Covers exploring data, planning studies, probability and random variables, sampling distributions, confidence intervals and hypothesis tests for means and proportions, and regression.",
+   "AP Calculus BC": "Covers limits, derivatives and integrals, with additional work on parametric and polar functions, sequences and series, and techniques of integration beyond the AB scope.",
+   "Arabic A": "Arabic A",
+   "AP English Language": "Develops skills in rhetorical analysis and argument. Students read nonfiction prose from several periods and write analytical, argumentative, and synthesis essays.",
+   "Environmental Science": "Environmental Science",
+   "Student Name": "Rami Test-Student",
+   "Student ID": "DVIS-SYN-0457",
+   "Date of Birth": "14/03/2007",
+   "Date of Issue": "Nationality",
+   "AP Computer Science A": "An introductory university-level programming course taught in Java. Topics include objects and classes, control flow, arrays and lists, recursion, searching and sorting, and basic program design and testing.",
+   "AP Psychology": "An introduction to the scientific study of behaviour and mental processes, including research methods, biological bases, learning, cognition, development, personality, and social psychology."
+  },
+  "flags": [
+   "?: subject_unreadable",
+   "?: subject_unreadable",
+   "?: subject_unreadable",
+   "?: subject_unreadable",
+   "?: subject_unreadable",
+   "term_credits_mismatch(computed 7, printed 0.5)",
+   "term_credits_mismatch(computed 9.5, printed 4)",
+   "term_points_mismatch(computed 27.00, printed 12.7)",
+   "term_gpa_mismatch(computed 2.84, printed 3.125)",
+   "term_credits_mismatch(computed 4.5, printed 28)",
+   "term_gpa_mismatch(computed 3.38, printed 3.24)",
+   "cumulative_credits_mismatch(computed 21, printed 28)",
+   "cumulative_points_mismatch(computed 65.15, printed 22.95)",
+   "cumulative_gpa_mismatch(computed 3.10, printed 3.24)",
+   "The name on the transcript does not match the student record"
+  ],
+  "cumulative": {
+   "cumulative_credits": 28.0,
+   "cumulative_quality_points": 22.95,
+   "cumulative_gpa": 3.24
+  },
+  "scale": "Grading scale of Demo Valley International School (as printed)",
+  "grading_scale": {
+   "label": "Grading scale of Demo Valley International School (as printed)",
+   "bands": [
+    [
+     97,
+     "A+",
+     4.0
+    ],
+    [
+     93,
+     "A",
+     4.0
+    ],
+    [
+     90,
+     "A-",
+     3.7
+    ],
+    [
+     87,
+     "B+",
+     3.3
+    ],
+    [
+     83,
+     "B",
+     3.0
+    ],
+    [
+     80,
+     "B-",
+     2.7
+    ],
+    [
+     77,
+     "C+",
+     2.3
+    ],
+    [
+     73,
+     "C",
+     2.0
+    ],
+    [
+     70,
+     "C-",
+     1.7
+    ],
+    [
+     67,
+     "D+",
+     1.3
+    ],
+    [
+     65,
+     "D",
+     1.0
+    ],
+    [
+     60,
+     "D-",
+     0.5
+    ],
+    [
+     0,
+     "F",
+     0.0
+    ]
+   ],
+   "source": "configured"
+  },
+  "unrecognized": 23,
+  "dropped_non_course_rows": 19,
+  "rows_found": 26,
+  "blocks": [
+   {
+    "key": "p1b1",
+    "status": "FAILED_RETRYABLE",
+    "reread": false,
+    "flags": null,
+    "error": "invalid_output"
+   },
+   {
+    "key": "p1b2",
+    "status": "DONE",
+    "reread": false,
+    "flags": 0,
+    "error": ""
+   },
+   {
+    "key": "p1b3",
+    "status": "DONE",
+    "reread": false,
+    "flags": 0,
+    "error": ""
+   },
+   {
+    "key": "p1b4",
+    "status": "DONE",
+    "reread": false,
+    "flags": 0,
+    "error": ""
+   },
+   {
+    "key": "p1b5",
+    "status": "FAILED_RETRYABLE",
+    "reread": false,
+    "flags": null,
+    "error": "invalid_output"
+   },
+   {
+    "key": "p1b6",
+    "status": "DONE",
+    "reread": false,
+    "flags": 5,
+    "error": ""
+   },
+   {
+    "key": "p1b7",
+    "status": "FAILED_RETRYABLE",
+    "reread": false,
+    "flags": null,
+    "error": "invalid_output"
+   },
+   {
+    "key": "p1b8",
+    "status": "DONE",
+    "reread": false,
+    "flags": 0,
+    "error": ""
+   },
+   {
+    "key": "p1b9",
+    "status": "FAILED_RETRYABLE",
+    "reread": false,
+    "flags": null,
+    "error": "invalid_output"
+   },
+   {
+    "key": "p1b10",
+    "status": "DONE",
+    "reread": false,
+    "flags": 9,
+    "error": ""
+   },
+   {
+    "key": "p1b11",
+    "status": "DONE",
+    "reread": false,
+    "flags": 0,
+    "error": ""
+   },
+   {
+    "key": "p2b1",
+    "status": "DONE",
+    "reread": false,
+    "flags": 5,
+    "error": ""
+   },
+   {
+    "key": "p2b2",
+    "status": "DONE",
+    "reread": false,
+    "flags": 5,
+    "error": ""
+   },
+   {
+    "key": "p2b3",
+    "status": "FAILED_RETRYABLE",
+    "reread": false,
+    "flags": null,
+    "error": "invalid_output"
+   }
+  ]
+ },
+ "rows": [
+  {
+   "title": "Arabic A",
+   "mark": 84.0,
+   "grade": "B",
+   "points": 3.0,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'Arabic A' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Biology",
+   "mark": 88.0,
+   "grade": "B+",
+   "points": 3.3,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'Biology' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "English 9",
+   "mark": 86.0,
+   "grade": "B",
+   "points": 3.0,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'English 9' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "World Geography",
+   "mark": 91.0,
+   "grade": "A-",
+   "points": 3.7,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'World Geography' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "ICT Fundamentals",
+   "mark": 95.0,
+   "grade": "A",
+   "points": 4.0,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'ICT Fundamentals' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Algebra I",
+   "mark": 79.0,
+   "grade": "C+",
+   "points": 2.3,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'Algebra I' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Islamic Education",
+   "mark": 90.0,
+   "grade": "A-",
+   "points": 3.7,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'Islamic Education' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Moral Education",
+   "mark": 92.0,
+   "grade": "A-",
+   "points": 3.7,
+   "credits": "0",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'Moral Education' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Physical Education",
+   "mark": 97.0,
+   "grade": "A+",
+   "points": 4.0,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'Physical Education' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Social Studies",
+   "mark": 89.0,
+   "grade": "B+",
+   "points": 3.3,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'Social Studies' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Art & Design",
+   "mark": 94.0,
+   "grade": "A",
+   "points": 4.0,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 0.5 but the rows add up to 7. Check the credits of 'Art & Design' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Chemistry",
+   "mark": 78.0,
+   "grade": "C+",
+   "points": 2.3,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'Chemistry' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'Chemistry' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Arabic",
+   "mark": 85.0,
+   "grade": "B",
+   "points": 3.0,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'Arabic' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'Arabic' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Computer Science",
+   "mark": 91.0,
+   "grade": "A-",
+   "points": 3.7,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'Computer Science' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'Computer Science' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "English",
+   "mark": 87.0,
+   "grade": "B+",
+   "points": 3.3,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'English' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'English' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "Mathematics",
+   "mark": 74.0,
+   "grade": "C",
+   "points": 2.0,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'Mathematics' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'Mathematics' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "",
+   "mark": 82.0,
+   "grade": "B-",
+   "points": 2.7,
+   "credits": "1",
+   "flags": [
+    "subject_unreadable"
+   ],
+   "questions": [
+    {
+     "field": "title",
+     "question": "Check the title of 'this row' against the scan: subject_unreadable",
+     "source": "code_check"
+    },
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "",
+   "mark": 76.0,
+   "grade": "C",
+   "points": 2.0,
+   "credits": "1",
+   "flags": [
+    "subject_unreadable"
+   ],
+   "questions": [
+    {
+     "field": "title",
+     "question": "Check the title of 'this row' against the scan: subject_unreadable",
+     "source": "code_check"
+    },
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "",
+   "mark": 93.0,
+   "grade": "A",
+   "points": 4.0,
+   "credits": "0.5",
+   "flags": [
+    "subject_unreadable"
+   ],
+   "questions": [
+    {
+     "field": "title",
+     "question": "Check the title of 'this row' against the scan: subject_unreadable",
+     "source": "code_check"
+    },
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "",
+   "mark": 88.0,
+   "grade": "B+",
+   "points": 3.3,
+   "credits": "1",
+   "flags": [
+    "subject_unreadable"
+   ],
+   "questions": [
+    {
+     "field": "title",
+     "question": "Check the title of 'this row' against the scan: subject_unreadable",
+     "source": "code_check"
+    },
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "",
+   "mark": 81.0,
+   "grade": "B-",
+   "points": 2.7,
+   "credits": "1",
+   "flags": [
+    "subject_unreadable"
+   ],
+   "questions": [
+    {
+     "field": "title",
+     "question": "Check the title of 'this row' against the scan: subject_unreadable",
+     "source": "code_check"
+    },
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 4 but the rows add up to 9.5. Check the credits of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term grade-point total is 12.7 but the rows add up to 27.00. Check the points of 'this row' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "AP Statistics",
+   "mark": 92.0,
+   "grade": "A-",
+   "points": 3.7,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 28 but the rows add up to 4.5. Check the credits of 'AP Statistics' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term GPA total is 3.24 but the rows add up to 3.38. Check the points of 'AP Statistics' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": "AP-STAT"
+  },
+  {
+   "title": "AP Calculus BC",
+   "mark": 83.0,
+   "grade": "B",
+   "points": 3.0,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 28 but the rows add up to 4.5. Check the credits of 'AP Calculus BC' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term GPA total is 3.24 but the rows add up to 3.38. Check the points of 'AP Calculus BC' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": "AP-CALC-BC"
+  },
+  {
+   "title": "Arabic A",
+   "mark": 88.0,
+   "grade": "B+",
+   "points": 3.3,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 28 but the rows add up to 4.5. Check the credits of 'Arabic A' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term GPA total is 3.24 but the rows add up to 3.38. Check the points of 'Arabic A' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  },
+  {
+   "title": "AP English Language",
+   "mark": 90.0,
+   "grade": "A-",
+   "points": 3.7,
+   "credits": "1",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 28 but the rows add up to 4.5. Check the credits of 'AP English Language' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term GPA total is 3.24 but the rows add up to 3.38. Check the points of 'AP English Language' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": "AP-ENG-LANG"
+  },
+  {
+   "title": "Environmental Science",
+   "mark": 86.0,
+   "grade": "B",
+   "points": 3.0,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [
+    {
+     "field": "credits",
+     "question": "The printed term credit total is 28 but the rows add up to 4.5. Check the credits of 'Environmental Science' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    },
+    {
+     "field": "points",
+     "question": "The printed term GPA total is 3.24 but the rows add up to 3.38. Check the points of 'Environmental Science' against the scan, or whether a row is missing.",
+     "source": "code_check"
+    }
+   ],
+   "subject": null
+  }
+ ],
+ "usage": {
+  "tool_calls": 24,
+  "tool_seconds": 143.4,
+  "recorded_calls": 0,
+  "recorded_seconds": 0,
+  "live_calls": 50,
+  "calls": 50,
+  "seconds": 264.2,
+  "prompt_tokens": 137268,
+  "output_tokens": 11302,
+  "cost_usd": 0.0,
+  "models": [
+   "qwen3.5:4b"
+  ],
+  "by_stage": {
+   "intake": {
+    "calls": 16,
+    "seconds": 68.6,
+    "prompt_tokens": 73982,
+    "output_tokens": 2463
+   },
+   "read": {
+    "calls": 20,
+    "seconds": 140.21,
+    "prompt_tokens": 33708,
+    "output_tokens": 6738
+   },
+   "intake_synthesis": {
+    "calls": 1,
+    "seconds": 9.78,
+    "prompt_tokens": 3766,
+    "output_tokens": 315
+   },
+   "case": {
+    "calls": 7,
+    "seconds": 23.4,
+    "prompt_tokens": 15818,
+    "output_tokens": 757
+   },
+   "case_review": {
+    "calls": 3,
+    "seconds": 17.3,
+    "prompt_tokens": 6593,
+    "output_tokens": 838
+   },
+   "audit": {
+    "calls": 3,
+    "seconds": 4.92,
+    "prompt_tokens": 3401,
+    "output_tokens": 191
+   },
+   "tool:intake_agent": {
+    "calls": 14,
+    "seconds": 143.27,
+    "prompt_tokens": 0,
+    "output_tokens": 0
+   },
+   "tool:case_agent": {
+    "calls": 8,
+    "seconds": 0.05,
+    "prompt_tokens": 0,
+    "output_tokens": 0
+   },
+   "tool:auditor_agent": {
+    "calls": 2,
+    "seconds": 0.03,
+    "prompt_tokens": 0,
+    "output_tokens": 0
+   }
+  }
+ },
+ "trace": [
+  {
+   "at": "2026-10-23T05:54:38.694061+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "list_pages",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"text_layer\": false, \"pages\": [{\"page\": 1, \"blocks\": [{\"key\": \"p1b1\", \"height_px\": 280, \"text_lines\": 4, \"status\": \"unread\"}, {\"key\": \"p1b2\", \"height_px\": 308, \"text_lines\": 8, \"status\": \"unread\"}, {\"key\": \"p1b3\", \"height_px\": 325, \"text_lines\": 10, \"status\": \"unread\"}, {\"key\":",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:55:24.305869+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p1b1",
+     "p1b2",
+     "p1b3",
+     "p1b4",
+     "p1b5",
+     "p1b6"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p1b1\", \"error\": \"The vision read failed (invalid_output).\"}, {\"target\": \"p1b2\", \"status\": \"read\", \"course_rows\": 4, \"text_lines_in_block\": 8, \"accepted_changes\": []}, {\"target\": \"p1b3\", \"status\": \"read\", \"course_rows\": 7, \"text_lines_in_block\": 10, \"acce",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:56:09.513005+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p1b7",
+     "p1b8",
+     "p1b9",
+     "p1b10",
+     "p1b11",
+     "p2b1"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p1b7\", \"error\": \"The vision read failed (invalid_output).\"}, {\"target\": \"p1b8\", \"status\": \"read\", \"course_rows\": 5, \"text_lines_in_block\": 8, \"accepted_changes\": []}, {\"target\": \"p1b9\", \"error\": \"The vision read failed (invalid_output).\"}, {\"target\": \"p1",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:56:23.323587+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p2b2",
+     "p2b3"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p2b2\", \"status\": \"read\", \"course_rows\": 0, \"text_lines_in_block\": 7, \"accepted_changes\": []}, {\"target\": \"p2b3\", \"error\": \"The vision read failed (invalid_output).\"}], \"recovery_rounds_left\": 2, \"unread_blocks\": [], \"failures_now\": [{\"check\": \"block_unre",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:56:29.204795+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "crop_region",
+   "args": {
+    "block": "p1b1",
+    "top": 0,
+    "bottom": 1,
+    "zoom": 2
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"region\": \"p1b1.r1\", \"covers\": \"0% to 100% of p1b1\", \"zoom\": 2.0}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:56:30.982906+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "crop_region",
+   "args": {
+    "block": "p1b5",
+    "top": 0,
+    "bottom": 1,
+    "zoom": 2
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"region\": \"p1b5.r1\", \"covers\": \"0% to 100% of p1b5\", \"zoom\": 2.0}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:56:32.378988+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "crop_region",
+   "args": {
+    "block": "p2b3",
+    "top": 0,
+    "bottom": 1,
+    "zoom": 2
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"region\": \"p2b3.r1\", \"covers\": \"0% to 100% of p2b3\", \"zoom\": 2.0}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:57:07.203720+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p1b1.r1",
+     "p1b5.r1",
+     "p2b3.r1"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p1b1.r1\", \"error\": \"The vision read failed (invalid_output).\"}, {\"target\": \"p1b5.r1\", \"error\": \"The vision read failed (invalid_output).\"}, {\"target\": \"p2b3.r1\", \"status\": \"failed\", \"course_rows\": 0, \"text_lines_in_block\": 1, \"accepted_changes\": []}], \"r",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:57:10.165073+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "crop_region",
+   "args": {
+    "block": "p1b1",
+    "top": 0,
+    "bottom": 1,
+    "zoom": 3
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"region\": \"p1b1.r2\", \"covers\": \"0% to 100% of p1b1\", \"zoom\": 3.0}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:57:11.898919+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "crop_region",
+   "args": {
+    "block": "p1b5",
+    "top": 0,
+    "bottom": 1,
+    "zoom": 3
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"region\": \"p1b5.r2\", \"covers\": \"0% to 100% of p1b5\", \"zoom\": 3.0}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:57:13.184679+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "crop_region",
+   "args": {
+    "block": "p2b3",
+    "top": 0,
+    "bottom": 1,
+    "zoom": 3
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"region\": \"p2b3.r2\", \"covers\": \"0% to 100% of p2b3\", \"zoom\": 3.0}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:57:28.090708+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p1b1.r2",
+     "p1b5.r2",
+     "p2b3.r2"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p1b1.r2\", \"error\": \"The vision read failed (invalid_output).\"}, {\"target\": \"p1b5.r2\", \"error\": \"The vision read failed (invalid_output).\"}, {\"target\": \"p2b3.r2\", \"status\": \"failed\", \"course_rows\": 0, \"text_lines_in_block\": 1, \"accepted_changes\": []}], \"r",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:57:30.924667+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "view_page",
+   "args": {
+    "page": 1
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"shown\": \"page 1\", \"views_left\": 2}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:57:37.027112+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "view_page",
+   "args": {
+    "page": 2
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"shown\": \"page 2\", \"views_left\": 1}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:16.167581+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "intake_summary",
+   "args": {
+    "changes": 0,
+    "agent_questions": 0,
+    "code_questions": 46,
+    "recovery_used": 2,
+    "read_by_code": [],
+    "skipped": []
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:21.395300+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "lookup",
+   "args": {
+    "rows": 26,
+    "Mapped": 1,
+    "Conditional": 2,
+    "No mapping": 0,
+    "Waiting on document": 0,
+    "Not evaluated": 23
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:25.965692+00:00",
+   "row_id": "8bc47971",
+   "actor": "case_agent",
+   "name": "read_mapping",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"row_status\": \"Conditional\", \"kind\": \"condition_missing\", \"reason\": \"Needs an exam score of at least 4; none is on file.\", \"mapping\": {\"id\": 23, \"subject_code\": \"AP-CALC-BC\", \"aud_code\": \"MATH 210\", \"aud_credits\": 3, \"condition\": {\"type\": \"min_exam_score\", \"value\": 4, \"evidence",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:28.863292+00:00",
+   "row_id": "8bc47971",
+   "actor": "case_agent",
+   "name": "draft_request",
+   "args": {
+    "what": "AP exam score report",
+    "why": "The mapping requires an AP exam score of at least 4 to confirm credit for MATH 210; current transcript grade B does not meet this threshold.",
+    "to": "student"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"request_id\": \"57ceff85\", \"status\": \"DRAFT\"}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:30.397496+00:00",
+   "row_id": "8bc47971",
+   "actor": "case_agent",
+   "name": "set_row_state",
+   "args": {
+    "status": "Waiting on document",
+    "reason": "AP exam score report required; current transcript grade B does not meet minimum score of 4 for MATH 210 mapping."
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"status\": \"Waiting on document\"}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:40.809455+00:00",
+   "row_id": "d67f950b",
+   "actor": "case_agent",
+   "name": "read_mapping",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"row_status\": \"Conditional\", \"kind\": \"rule_blocked\", \"reason\": \"Blocked by policy: AUD_NON_TRANSFERABLE_AREA: ENGL courses never take transfer credit.\", \"mapping\": {\"id\": 36, \"subject_code\": \"AP-ENG-LANG\", \"aud_code\": \"ENGL 101\", \"aud_credits\": 3, \"condition\": null, \"version\": ",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:43.906547+00:00",
+   "row_id": "d67f950b",
+   "actor": "case_agent",
+   "name": "set_row_state",
+   "args": {
+    "status": "Conditional",
+    "reason": "Policy blocks ENGL courses from transfer credit; program class is Not applicable for BSc Mechanical Engineering plan."
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"status\": \"Conditional\"}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:49.867553+00:00",
+   "row_id": "",
+   "actor": "case_agent",
+   "name": "list_rows",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"program\": \"BSc Mechanical Engineering\", \"entry_term\": \"Fall 2026\", \"free_elective_credits_left\": 6, \"rows\": [{\"row_id\": \"421bcced\", \"title\": \"AP Statistics\", \"grade\": \"A-\", \"status\": \"Mapped\", \"aud_code\": \"QUAN 201\", \"mapping_version\": \"dummy-2026-10\", \"program_class\": \"Not ap",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:57.640723+00:00",
+   "row_id": "421bcced",
+   "actor": "case_agent",
+   "name": "set_classification",
+   "args": {
+    "row_id": "421bcced",
+    "why": "AP Statistics fits within Mechanical Engineering's free-elective allowance as a quantitative course not required for core program."
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"classification\": \"General elective suggestion\"}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:58:57.646156+00:00",
+   "row_id": "d67f950b",
+   "actor": "case_agent",
+   "name": "set_classification",
+   "args": {
+    "row_id": "d67f950b",
+    "why": "AP English Language fits within Mechanical Engineering's free-elective allowance as a humanities course not required for core program."
+   },
+   "ok": false,
+   "detail": "ENGL 101: courses in this area never transfer.",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:59:05.192082+00:00",
+   "row_id": "8bc47971",
+   "actor": "code",
+   "name": "note_or_evidence_received",
+   "args": {
+    "facts": [
+     "exam_score"
+    ],
+    "document": false,
+    "note": false
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:59:05.206365+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "lookup",
+   "args": {
+    "rows": 1,
+    "Mapped": 1,
+    "Conditional": 0,
+    "No mapping": 0,
+    "Waiting on document": 0,
+    "Not evaluated": 0
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:59:07.645459+00:00",
+   "row_id": "",
+   "actor": "auditor_agent",
+   "name": "run_sheet_checks",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"ok\": true, \"checks\": [], \"warnings\": [], \"lines\": 3}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:59:08.540061+00:00",
+   "row_id": "",
+   "actor": "auditor_agent",
+   "name": "diff_sheet_vs_decisions",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"differences\": []}}",
+   "recorded": false
+  }
+ ],
+ "tool_calls": [
+  [
+   "intake_agent",
+   "list_pages",
+   true
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "crop_region",
+   true
+  ],
+  [
+   "intake_agent",
+   "crop_region",
+   true
+  ],
+  [
+   "intake_agent",
+   "crop_region",
+   true
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "crop_region",
+   true
+  ],
+  [
+   "intake_agent",
+   "crop_region",
+   true
+  ],
+  [
+   "intake_agent",
+   "crop_region",
+   true
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "view_page",
+   true
+  ],
+  [
+   "intake_agent",
+   "view_page",
+   true
+  ],
+  [
+   "case_agent",
+   "read_mapping",
+   true
+  ],
+  [
+   "case_agent",
+   "draft_request",
+   true
+  ],
+  [
+   "case_agent",
+   "set_row_state",
+   true
+  ],
+  [
+   "case_agent",
+   "read_mapping",
+   true
+  ],
+  [
+   "case_agent",
+   "set_row_state",
+   true
+  ],
+  [
+   "case_agent",
+   "list_rows",
+   true
+  ],
+  [
+   "case_agent",
+   "set_classification",
+   true
+  ],
+  [
+   "case_agent",
+   "set_classification",
+   false
+  ],
+  [
+   "auditor_agent",
+   "run_sheet_checks",
+   true
+  ],
+  [
+   "auditor_agent",
+   "diff_sheet_vs_decisions",
+   true
+  ]
+ ],
+ "refused_tool_calls": [
+  [
+   "case_agent",
+   "set_classification",
+   "ENGL 101: courses in this area never transfer."
+  ]
+ ],
+ "calls_per_stage": {
+  "intake": {
+   "calls": 16,
+   "seconds": 68.6,
+   "prompt_tokens": 73982,
+   "output_tokens": 2463,
+   "sec_per_call": 4.29
+  },
+  "read": {
+   "calls": 20,
+   "seconds": 140.21,
+   "prompt_tokens": 33708,
+   "output_tokens": 6738,
+   "sec_per_call": 7.01
+  },
+  "intake_synthesis": {
+   "calls": 1,
+   "seconds": 9.78,
+   "prompt_tokens": 3766,
+   "output_tokens": 315,
+   "sec_per_call": 9.78
+  },
+  "case": {
+   "calls": 7,
+   "seconds": 23.4,
+   "prompt_tokens": 15818,
+   "output_tokens": 757,
+   "sec_per_call": 3.34
+  },
+  "case_review": {
+   "calls": 3,
+   "seconds": 17.3,
+   "prompt_tokens": 6593,
+   "output_tokens": 838,
+   "sec_per_call": 5.77
+  },
+  "audit": {
+   "calls": 3,
+   "seconds": 4.92,
+   "prompt_tokens": 3401,
+   "output_tokens": 191,
+   "sec_per_call": 1.64
+  },
+  "tool:intake_agent": {
+   "calls": 14,
+   "seconds": 143.27,
+   "prompt_tokens": 0,
+   "output_tokens": 0,
+   "sec_per_call": 10.23
+  },
+  "tool:case_agent": {
+   "calls": 8,
+   "seconds": 0.05,
+   "prompt_tokens": 0,
+   "output_tokens": 0,
+   "sec_per_call": 0.01
+  },
+  "tool:auditor_agent": {
+   "calls": 2,
+   "seconds": 0.03,
+   "prompt_tokens": 0,
+   "output_tokens": 0,
+   "sec_per_call": 0.01
+  }
+ },
+ "total_model_calls": 50,
+ "mean_sec_per_call": 5.28,
+ "synopsis": {
+  "Chemistry": "AP Chemistry",
+  "Arabic": "Arabic A",
+  "Computer Science": "AP Computer Science A",
+  "English": "English 11",
+  "Mathematics": "Pre-Calculus",
+  "AP Statistics": "Covers exploring data, planning studies, probability and random variables, sampling distributions, confidence intervals and hypothesis tests for means and proportions, and regression.",
+  "AP Calculus BC": "Covers limits, derivatives and integrals, with additional work on parametric and polar functions, sequences and series, and techniques of integration beyond the AB scope.",
+  "Arabic A": "Arabic A",
+  "AP English Language": "Develops skills in rhetorical analysis and argument. Students read nonfiction prose from several periods and write analytical, argumentative, and synthesis essays.",
+  "Environmental Science": "Environmental Science",
+  "Student Name": "Rami Test-Student",
+  "Student ID": "DVIS-SYN-0457",
+  "Date of Birth": "14/03/2007",
+  "Date of Issue": "Nationality",
+  "AP Computer Science A": "An introductory university-level programming course taught in Java. Topics include objects and classes, control flow, arrays and lists, recursion, searching and sorting, and basic program design and testing.",
+  "AP Psychology": "An introduction to the scientific study of behaviour and mental processes, including research methods, biological bases, learning, cognition, development, personality, and social psychology."
+ },
+ "planted_applied": [],
+ "states_after_evaluation": {
+  "Arabic A": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Environmental Science": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "AP English Language": {
+   "status": "Conditional",
+   "kind": "rule_blocked",
+   "reason": "Policy blocks ENGL courses from transfer credit; program class is Not applicable for BSc Mechanical Engineering plan.",
+   "finding": "AP English Language is blocked by policy: ENGL courses never take transfer credit and the course is not on the Mechanical Engineering plan.",
+   "requests": []
+  },
+  "Chemistry": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Arabic": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Biology": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "English 9": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "World Geography": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "ICT Fundamentals": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Algebra I": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Islamic Education": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Moral Education": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Physical Education": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Social Studies": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Art & Design": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Computer Science": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "English": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Mathematics": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "AP Statistics": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to QUAN 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Calculus BC": {
+   "status": "Waiting on document",
+   "kind": "condition_missing",
+   "reason": "AP exam score report required; current transcript grade B does not meet minimum score of 4 for MATH 210 mapping.",
+   "finding": "AP Calculus BC row is Conditional; requires AP exam score report to confirm MATH 210 credit.",
+   "requests": [
+    "AP exam score report"
+   ]
+  }
+ },
+ "calc_after": {
+  "status": "Mapped",
+  "kind": "mapped",
+  "reason": "Mapped to MATH 210 (mapping dummy-2026-10)",
+  "finding": null,
+  "requests": [
+   "AP exam score report"
+  ]
+ },
+ "confirm_mapped": {
+  "confirmed": 2
+ },
+ "export_audit": {
+  "clean": true,
+  "summary": "The sheet passes every check and matches the recorded decisions.",
+  "warnings": [],
+  "differences": [],
+  "proposals": [],
+  "flags": []
+ },
+ "states_final": {
+  "Arabic A": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Environmental Science": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "AP English Language": {
+   "status": "Conditional",
+   "kind": "rule_blocked",
+   "reason": "Policy blocks ENGL courses from transfer credit; program class is Not applicable for BSc Mechanical Engineering plan.",
+   "finding": "AP English Language is blocked by policy: ENGL courses never take transfer credit and the course is not on the Mechanical Engineering plan.",
+   "requests": []
+  },
+  "Chemistry": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Arabic": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Biology": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "English 9": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "World Geography": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "ICT Fundamentals": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Algebra I": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Islamic Education": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Moral Education": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Physical Education": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Social Studies": {
+   "status": "Not evaluated",
+   "kind": "school_specific",
+   "reason": "School-specific subject: no university equivalent, so it is not mapped",
+   "finding": null,
+   "requests": []
+  },
+  "Art & Design": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Computer Science": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "English": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "Mathematics": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "": {
+   "status": "Not evaluated",
+   "kind": "not_relevant",
+   "reason": "Not in curriculum: no matching subject in the curriculum database",
+   "finding": null,
+   "requests": []
+  },
+  "AP Statistics": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to QUAN 201 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": []
+  },
+  "AP Calculus BC": {
+   "status": "Mapped",
+   "kind": "mapped",
+   "reason": "Mapped to MATH 210 (mapping dummy-2026-10)",
+   "finding": null,
+   "requests": [
+    "AP exam score report"
+   ]
+  }
+ },
+ "rows_final": [
+  {
+   "title": "Arabic A",
+   "grade": "B",
+   "mark": 84.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "Biology",
+   "grade": "B+",
+   "mark": 88.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "English 9",
+   "grade": "B",
+   "mark": 86.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "World Geography",
+   "grade": "A-",
+   "mark": 91.0,
+   "credits": "0.5",
+   "term": ""
+  },
+  {
+   "title": "ICT Fundamentals",
+   "grade": "A",
+   "mark": 95.0,
+   "credits": "0.5",
+   "term": ""
+  },
+  {
+   "title": "Algebra I",
+   "grade": "C+",
+   "mark": 79.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "Islamic Education",
+   "grade": "A-",
+   "mark": 90.0,
+   "credits": "0.5",
+   "term": ""
+  },
+  {
+   "title": "Moral Education",
+   "grade": "A-",
+   "mark": 92.0,
+   "credits": "0",
+   "term": ""
+  },
+  {
+   "title": "Physical Education",
+   "grade": "A+",
+   "mark": 97.0,
+   "credits": "0.5",
+   "term": ""
+  },
+  {
+   "title": "Social Studies",
+   "grade": "B+",
+   "mark": 89.0,
+   "credits": "0.5",
+   "term": ""
+  },
+  {
+   "title": "Art & Design",
+   "grade": "A",
+   "mark": 94.0,
+   "credits": "0.5",
+   "term": ""
+  },
+  {
+   "title": "Chemistry",
+   "grade": "C+",
+   "mark": 78.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "Arabic",
+   "grade": "B",
+   "mark": 85.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "Computer Science",
+   "grade": "A-",
+   "mark": 91.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "English",
+   "grade": "B+",
+   "mark": 87.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "Mathematics",
+   "grade": "C",
+   "mark": 74.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "",
+   "grade": "B-",
+   "mark": 82.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "",
+   "grade": "C",
+   "mark": 76.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "",
+   "grade": "A",
+   "mark": 93.0,
+   "credits": "0.5",
+   "term": ""
+  },
+  {
+   "title": "",
+   "grade": "B+",
+   "mark": 88.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "",
+   "grade": "B-",
+   "mark": 81.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "AP Statistics",
+   "grade": "A-",
+   "mark": 92.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "AP Calculus BC",
+   "grade": "B",
+   "mark": 83.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "Arabic A",
+   "grade": "B+",
+   "mark": 88.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "AP English Language",
+   "grade": "A-",
+   "mark": 90.0,
+   "credits": "1",
+   "term": ""
+  },
+  {
+   "title": "Environmental Science",
+   "grade": "B",
+   "mark": 86.0,
+   "credits": "0.5",
+   "term": ""
+  }
+ ],
+ "clean": false,
+ "total_wall_s": 277.7,
+ "recording": null
+}

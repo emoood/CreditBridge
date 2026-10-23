@@ -1,0 +1,628 @@
+{
+ "steps": {
+  "time_to_table_s": 120.7
+ },
+ "problems": [
+  "4 refused tool call(s): [('intake_agent', 'view_page'), ('intake_agent', 'flag_cell'), ('intake_agent', 'flag_cell'), ('intake_agent', 'flag_cell')]",
+  "no genuine repair: the planted wrong mark was not replaced by a re-read value that passes its check, so B is not recorded"
+ ],
+ "app_id": "APP-5E562205",
+ "reading": {
+  "status": "DONE",
+  "stage_secs": {
+   "read": 0.0,
+   "curriculum": 0.0
+  },
+  "total_s": 119.8,
+  "summary": {
+   "recovery_used": 2,
+   "intake_changes": [
+    {
+     "block": "p1b2",
+     "row": "(block)",
+     "field": "block",
+     "from": "unreadable",
+     "to": "6 rows read"
+    }
+   ]
+  }
+ },
+ "extraction": {
+  "student_id": "SYN-1002",
+  "demo": null,
+  "student_record": {
+   "case_number": "CB-2026-0102",
+   "name": "Daniel Ferreira",
+   "student_id": "SYN-1002",
+   "email": "daniel.ferreira@example.invalid",
+   "phone": "+971 50 000 0102",
+   "program": "BSc Computer Engineering",
+   "term": "Fall 2026",
+   "curriculum": "Advanced Placement"
+  },
+  "planted_misread": {
+   "subject": "AP Chemistry",
+   "field": "mark",
+   "wrong": 65,
+   "applied": [
+    {
+     "block": "p1b3",
+     "subject": "AP Statistics",
+     "field": "mark",
+     "from": 96.0,
+     "to": 65.0
+    }
+   ]
+  },
+  "method": "vision",
+  "failed_blocks": 1,
+  "intake": {
+   "agent": true,
+   "recovery_used": 2,
+   "changes": [
+    {
+     "block": "p1b2",
+     "row": "(block)",
+     "field": "block",
+     "from": "unreadable",
+     "to": "6 rows read"
+    }
+   ],
+   "skipped": {},
+   "read_by_code": [],
+   "name_check": {
+    "status": "match",
+    "source": "vision (agent)",
+    "seen": null
+   },
+   "text_layer_crosscheck": false,
+   "agent_questions": 2
+  },
+  "synopsis": {},
+  "flags": [
+   "AP Statistics: letter_mismatch(mark 65 -> D, printed A)",
+   "term_credits_mismatch(computed 1.5, printed 7.5)"
+  ],
+  "cumulative": {
+   "cumulative_credits": 7.5,
+   "cumulative_quality_points": 26.85,
+   "cumulative_gpa": 3.58
+  },
+  "scale": "Synthetic US-style 4.0 scale (demo assumption, unverified)",
+  "grading_scale": null,
+  "unrecognized": 0,
+  "dropped_non_course_rows": 5,
+  "rows_found": 8,
+  "blocks": [
+   {
+    "key": "p1b1",
+    "status": "DONE",
+    "reread": false,
+    "flags": 5,
+    "error": ""
+   },
+   {
+    "key": "p1b2",
+    "status": "DONE",
+    "reread": true,
+    "flags": 0,
+    "error": ""
+   },
+   {
+    "key": "p1b3",
+    "status": "DONE",
+    "reread": false,
+    "flags": 2,
+    "error": ""
+   },
+   {
+    "key": "p1b4",
+    "status": "FAILED_RETRYABLE",
+    "reread": false,
+    "flags": null,
+    "error": "empty_reading"
+   }
+  ]
+ },
+ "rows": [
+  {
+   "title": "AP Calculus BC",
+   "mark": 92.0,
+   "grade": "A-",
+   "points": 3.7,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-CALC-BC"
+  },
+  {
+   "title": "AP Physics 2",
+   "mark": 88.0,
+   "grade": "B+",
+   "points": 3.3,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-PHYS-2"
+  },
+  {
+   "title": "AP Chemistry",
+   "mark": 85.0,
+   "grade": "B",
+   "points": 3.0,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-CHEM"
+  },
+  {
+   "title": "AP Macroeconomics",
+   "mark": 91.0,
+   "grade": "A-",
+   "points": 3.7,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-ECON-MACRO"
+  },
+  {
+   "title": "AP Spanish Language",
+   "mark": 94.0,
+   "grade": "A",
+   "points": 4.0,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-SPAN-LANG"
+  },
+  {
+   "title": "AP Biology",
+   "mark": 89.0,
+   "grade": "B+",
+   "points": 3.3,
+   "credits": "1",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-BIO"
+  },
+  {
+   "title": "AP Statistics",
+   "mark": 65.0,
+   "grade": "A",
+   "points": null,
+   "credits": "1",
+   "flags": [
+    "letter_mismatch(mark 65 -> D, printed A)"
+   ],
+   "questions": [
+    {
+     "field": "grade",
+     "question": "The code computed mark 65 giving D, but the printed grade is A for AP Statistics with mark 96. Number not confirmed: 96",
+     "source": "code_check"
+    },
+    {
+     "field": "credits",
+     "question": "(Intake agent's observation, not verified by code) The code computed 1.5 credits, but the printed term total is 7.5 (sum of all course credits: 1+1+1+1+1+1+1+0.5=7.5). Number not confirmed: 7.5",
+     "source": "agent_unverified"
+    }
+   ],
+   "subject": "AP-STAT"
+  },
+  {
+   "title": "AP Human Geography",
+   "mark": 90.0,
+   "grade": "A-",
+   "points": null,
+   "credits": "0.5",
+   "flags": [],
+   "questions": [],
+   "subject": "AP-HUMAN-GEO"
+  }
+ ],
+ "usage": {
+  "tool_calls": 14,
+  "tool_seconds": 41.8,
+  "recorded_calls": 0,
+  "recorded_seconds": 0,
+  "live_calls": 23,
+  "calls": 23,
+  "seconds": 115.5,
+  "prompt_tokens": 96549,
+  "output_tokens": 4572,
+  "cost_usd": 0.0,
+  "models": [
+   "qwen3.5:4b"
+  ],
+  "by_stage": {
+   "intake": {
+    "calls": 16,
+    "seconds": 74.17,
+    "prompt_tokens": 82271,
+    "output_tokens": 3068
+   },
+   "read": {
+    "calls": 7,
+    "seconds": 41.29,
+    "prompt_tokens": 14278,
+    "output_tokens": 1504
+   },
+   "tool:intake_agent": {
+    "calls": 14,
+    "seconds": 41.82,
+    "prompt_tokens": 0,
+    "output_tokens": 0
+   }
+  }
+ },
+ "trace": [
+  {
+   "at": "2026-10-23T05:51:19.193490+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "list_pages",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"text_layer\": false, \"pages\": [{\"page\": 1, \"blocks\": [{\"key\": \"p1b1\", \"height_px\": 326, \"text_lines\": 5, \"status\": \"unread\"}, {\"key\": \"p1b2\", \"height_px\": 319, \"text_lines\": 9, \"status\": \"unread\"}, {\"key\": \"p1b3\", \"height_px\": 308, \"text_lines\": 5, \"status\": \"unread\"}, {\"key\": ",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:51:45.555932+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "planted_for_demo",
+   "args": {
+    "block": "p1b3",
+    "subject": "AP Statistics",
+    "field": "mark",
+    "from": 96.0,
+    "to": 65.0,
+    "note": "PLANTED FOR DEMO: one correctly read value was replaced with a wrong one before the extraction checks ran"
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:51:45.557003+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p1b1",
+     "p1b2",
+     "p1b3",
+     "p1b4"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p1b1\", \"status\": \"read\", \"course_rows\": 0, \"text_lines_in_block\": 5, \"accepted_changes\": []}, {\"target\": \"p1b2\", \"status\": \"empty\", \"course_rows\": 0, \"text_lines_in_block\": 9, \"accepted_changes\": []}, {\"target\": \"p1b3\", \"status\": \"read\", \"course_rows\": 2",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:51:48.259409+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "run_checks",
+   "args": {},
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"failures\": [{\"check\": \"block_unreadable\", \"block\": \"p1b2\", \"row\": null, \"field\": \"block\", \"subject\": null, \"detail\": \"the block could not be read (empty_reading)\"}, {\"check\": \"grading_scale\", \"block\": \"p1b3\", \"row\": 0, \"field\": \"grade\", \"subject\": \"AP Statistics\", \"detail\": \"l",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:51:51.494222+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "view_page",
+   "args": {
+    "page": 1
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"shown\": \"page 1\", \"views_left\": 2}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:51:59.109505+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "view_page",
+   "args": {
+    "page": 1,
+    "block": "p1b3"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"shown\": \"page 1, block p1b3\", \"views_left\": 1}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:52:04.316680+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "view_page",
+   "args": {
+    "page": 1,
+    "block": "p1b2"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"shown\": \"page 1, block p1b2\", \"views_left\": 0}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:52:07.145018+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "view_page",
+   "args": {
+    "page": 1,
+    "block": "p1b4"
+   },
+   "ok": false,
+   "detail": "The page views for this transcript are used up.",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:52:29.058808+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p1b2",
+     "p1b4"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p1b2\", \"status\": \"read\", \"course_rows\": 6, \"text_lines_in_block\": 9, \"accepted_changes\": [\"(block): block unreadable -> 6 rows read\"]}, {\"target\": \"p1b4\", \"status\": \"empty\", \"course_rows\": 0, \"text_lines_in_block\": 3, \"accepted_changes\": []}], \"recovery_",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:52:32.414575+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "read_block",
+   "args": {
+    "targets": [
+     "p1b4"
+    ]
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"results\": [{\"target\": \"p1b4\", \"status\": \"empty\", \"course_rows\": 0, \"text_lines_in_block\": 3, \"accepted_changes\": []}], \"recovery_rounds_left\": 0, \"unread_blocks\": [], \"failures_now\": [{\"check\": \"grading_scale\", \"block\": \"p1b3\", \"row\": 0, \"field\": \"grade\", \"subject\": \"AP Statis",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:52:41.938986+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "flag_cell",
+   "args": {
+    "block": "p1b3",
+    "row": 0,
+    "field": "grade",
+    "question": "The code computed mark 65 giving D, but the printed grade is A for AP Statistics with mark 96. Number not confirmed: 96",
+    "kind": "check_failure"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"flagged\": true}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:52:45.454594+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "flag_cell",
+   "args": {
+    "block": "p1b3",
+    "row": 0,
+    "field": "term total",
+    "question": "The code computed 1.5 credits, but the printed term total is 7.5 (sum of all course credits: 1+1+1+1+1+1+1+0.5=7.5). Number not confirmed: 7.5",
+    "kind": "check_failure"
+   },
+   "ok": false,
+   "detail": "That cell does not fail a check. Failing cells in p1b3: row 0 grade. Use another kind for something you noticed yourself.",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:52:48.922987+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "flag_cell",
+   "args": {
+    "block": "p1b3",
+    "row": 0,
+    "field": "term total",
+    "question": "The code computed 1.5 credits, but the printed term total is 7.5 (sum of all course credits: 1+1+1+1+1+1+1+0.5=7.5). Number not confirmed: 7.5",
+    "kind": "other"
+   },
+   "ok": true,
+   "detail": "{\"ok\": true, \"data\": {\"flagged\": true, \"verified_by_code\": false}}",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:52:51.692454+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "flag_cell",
+   "args": {
+    "block": "p1b4",
+    "row": null,
+    "field": "block",
+    "question": "Block p1b4 could not be read and is empty. Number not confirmed: N/A",
+    "kind": "check_failure"
+   },
+   "ok": false,
+   "detail": "Invalid arguments: row: Input should be a valid integer",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:52:54.331637+00:00",
+   "row_id": "",
+   "actor": "intake_agent",
+   "name": "flag_cell",
+   "args": {
+    "block": "p1b4",
+    "row": null,
+    "field": "block",
+    "question": "Block p1b4 could not be read and is empty. Number not confirmed: N/A",
+    "kind": "check_failure"
+   },
+   "ok": false,
+   "detail": "Invalid arguments: row: Input should be a valid integer",
+   "recorded": false
+  },
+  {
+   "at": "2026-10-23T05:53:13.948246+00:00",
+   "row_id": "",
+   "actor": "code",
+   "name": "intake_summary",
+   "args": {
+    "changes": 1,
+    "agent_questions": 2,
+    "code_questions": 0,
+    "recovery_used": 2,
+    "read_by_code": [],
+    "skipped": []
+   },
+   "ok": true,
+   "detail": "",
+   "recorded": false
+  }
+ ],
+ "tool_calls": [
+  [
+   "intake_agent",
+   "list_pages",
+   true
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "run_checks",
+   true
+  ],
+  [
+   "intake_agent",
+   "view_page",
+   true
+  ],
+  [
+   "intake_agent",
+   "view_page",
+   true
+  ],
+  [
+   "intake_agent",
+   "view_page",
+   true
+  ],
+  [
+   "intake_agent",
+   "view_page",
+   false
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "read_block",
+   true
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   true
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   false
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   true
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   false
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   false
+  ]
+ ],
+ "refused_tool_calls": [
+  [
+   "intake_agent",
+   "view_page",
+   "The page views for this transcript are used up."
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   "That cell does not fail a check. Failing cells in p1b3: row 0 grade. Use another kind for something you noticed yourself."
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   "Invalid arguments: row: Input should be a valid integer"
+  ],
+  [
+   "intake_agent",
+   "flag_cell",
+   "Invalid arguments: row: Input should be a valid integer"
+  ]
+ ],
+ "calls_per_stage": {
+  "intake": {
+   "calls": 16,
+   "seconds": 74.17,
+   "prompt_tokens": 82271,
+   "output_tokens": 3068,
+   "sec_per_call": 4.64
+  },
+  "read": {
+   "calls": 7,
+   "seconds": 41.29,
+   "prompt_tokens": 14278,
+   "output_tokens": 1504,
+   "sec_per_call": 5.9
+  },
+  "tool:intake_agent": {
+   "calls": 14,
+   "seconds": 41.82,
+   "prompt_tokens": 0,
+   "output_tokens": 0,
+   "sec_per_call": 2.99
+  }
+ },
+ "total_model_calls": 23,
+ "mean_sec_per_call": 5.02,
+ "chemistry_final": {
+  "mark": 85.0,
+  "grade": "B",
+  "flags": [],
+  "questions": []
+ },
+ "planted_applied": [
+  {
+   "block": "p1b3",
+   "subject": "AP Statistics",
+   "field": "mark",
+   "from": 96.0,
+   "to": 65.0
+  }
+ ],
+ "recheck_really_fixed": false,
+ "clean": false,
+ "total_wall_s": 120.7,
+ "recording": null
+}
