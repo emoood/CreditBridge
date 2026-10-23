@@ -18,7 +18,7 @@ from ..providers.base import LLMProvider
 from ..services import actions as ac
 from ..services import mapping as mp
 from ..services import sheet as sh
-from .loop import run_bounded_agent
+from .loop import AgentOutcome, run_bounded_agent
 from .tools.base import AgentTool, LoggedRegistry, ToolContext, ToolError
 from .tools.evidence_tools import EmptyArgs
 
@@ -192,8 +192,11 @@ async def run_auditor(provider: LLMProvider, repo, retriever, app_id: str) -> di
     before = _sheet(ctx)
     tools = [RunSheetChecks(), DiffSheetVsDecisions(), ReadTranscriptRow(), ReadMapping(), ProposeFix()]
     s = get_settings()
-    out = await run_bounded_agent(provider, AuditorRegistry(tools), ctx, system=PROMPT, user=json.dumps({"sheet_hash": before["sheet_hash"], "lines": len(before["rows"])}),
-                                  final_model=AuditReport, max_tool_rounds=s.auditor_max_tool_rounds, stage="audit", max_seconds=s.auditor_max_seconds)
+    try:
+        out = await run_bounded_agent(provider, AuditorRegistry(tools), ctx, system=PROMPT, user=json.dumps({"sheet_hash": before["sheet_hash"], "lines": len(before["rows"])}),
+                                      final_model=AuditReport, max_tool_rounds=s.auditor_max_tool_rounds, stage="audit", max_seconds=s.auditor_max_seconds)
+    except Exception as e:  # noqa: BLE001  no model reply: the report is built from the code checks alone and says the agent did not review it
+        out = AgentOutcome("NEEDS_HUMAN_REVIEW", error=f"AGENT_UNAVAILABLE: {type(e).__name__}")
     after = _sheet(ctx, {k: v["to"] for k, v in ctx.proposals.items()})
     proposals = [{**p, "id": p["row_id"]} for p in ctx.proposals.values()]
     explanations = explain(before, ctx.proposals)

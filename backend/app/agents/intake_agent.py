@@ -74,6 +74,7 @@ class IntakeContext(ToolContext):
     lines: dict[str, int] = field(default_factory=dict)  # text lines per block (from the ink), to question a reading that returned far fewer rows
     imgs: dict[int, list[Image.Image]] = field(default_factory=dict)  # dpi -> rendered pages
     record_name: str | None = None
+    text_has_totals: bool = True  # False when the file has a text layer that prints no total or GPA line anywhere
     name_check: dict[str, Any] = field(default_factory=dict)
     by_code: list[str] = field(default_factory=list)  # blocks code had to read itself
     submitted: dict[str, Any] | None = None
@@ -134,7 +135,7 @@ def ensure_planted(ctx: IntakeContext) -> None:
         return
     f = ctx.plant.get("field", "mark")
     cands = [(k, i, r) for k, b in ctx.ordered().items() if not b.get("failed") and not b.get("reread") for i, r in enumerate(b.get("rows", []))
-             if r.get(f) is not None and r.get("mark") is not None and not xc.is_non_course(r)]
+             if r.get(f) is not None and (r.get("mark") is not None or f == "letter") and not xc.is_non_course(r)]
     pick = next((c for c in cands if ctx.plant["subject"].lower() in (c[2].get("subject") or "").lower()), None) or (cands[0] if cands else None)
     if pick is None:
         return
@@ -172,6 +173,10 @@ async def read_once(ctx: IntakeContext, key: str, span: tuple[int, int], dpi: in
     reading = await vr.read_block(ctx.provider, b64, key, hint=hint)
     checked = vr.check_block(reading, ctx.scale)
     checked["page"], checked["reread"] = page, False
+    if not ctx.text_has_totals and any(v is not None for k, v in checked["totals"].items() if k != "term"):
+        # the page prints no totals (its text layer has none), so a total the model reports is not on the page: it is dropped, never compared with the rows
+        checked["totals"] = {k: (v if k == "term" else None) for k, v in checked["totals"].items()}
+        checked["dropped_totals"] = True
     checked["empty"] = is_empty(checked)
     return checked
 

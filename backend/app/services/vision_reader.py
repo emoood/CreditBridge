@@ -225,10 +225,26 @@ def plant_misread(reading: BlockReading, cfg: dict[str, Any]) -> dict[str, Any] 
     return None
 
 
+def move_credits_from_points(d: dict[str, Any], scale: dict[str, Any]) -> None:
+    """A small model often files a transcript's credits column under grade points when the page has no grade-points column. The tell is exact: credits are empty, the
+    "points" number is not what the printed letter is worth, and it is a plausible credit value. Then it is credits (the row keeps a note saying so). Anything else is left
+    for the checks to flag."""
+    pts, letter = d.get("points"), (d.get("letter") or "").strip()
+    if d.get("credits") is None and pts is not None and letter and d.get("mark") is None and 0 < pts <= 6:
+        exp = gc.points_for_letter(letter, scale)
+        if exp is not None and abs(pts - exp) > gc.TOL_POINTS:
+            d["credits"], d["points"], d["normalized"] = pts, None, ["points column read as credits"]
+    elif d.get("credits") is not None and pts is not None and letter and d.get("mark") is None and abs(pts - d["credits"]) < 1e-9:  # the same number twice: the credits copied into points
+        exp = gc.points_for_letter(letter, scale)
+        if exp is not None and abs(pts - exp) > gc.TOL_POINTS:
+            d["points"], d["normalized"] = None, ["points copied from the credits column"]
+
+
 def check_block(b: BlockReading, scale: dict[str, Any]) -> dict[str, Any]:
     rows, flags = [], []
     for r in b.rows:
         d = r.model_dump()
+        move_credits_from_points(d, scale)
         c = gc.check_row(d, scale)
         d["flags"], d["uncertain"] = c.flags, c.uncertain
         rows.append(d)

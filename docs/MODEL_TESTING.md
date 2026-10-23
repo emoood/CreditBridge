@@ -83,3 +83,34 @@ Per vision call 4 to 13 s per block; vision now reads every upload including dig
 
 ## Prompt to paste into Claude Code (or equivalent) on your machine
 > You are in the CreditBridge repository. Follow `docs/MODEL_TESTING.md` exactly. Use synthetic data only; never upload `transcript_a_live_demo.pdf`; never print or commit `.env`; do not tune prompts or code to make a run pass; do not retry a run; do not hand-edit prepared runs. First run `pytest -q` and `ruff check .` and report the result. Check the health endpoint and warm the model. Then run, one at a time, `a2`, `c`, `d`, and `dp` with `scripts/overnight_runs.py`. After each run read `data/overnight/<case>.json`, check every row against the expected shape in the guide, and report: the model, total time, time per stage (Intake, mapping, Case, Auditor), vision time per block, model calls per stage, refused tool calls, each row's final status, and whether the run was saved. If a run is bad, do not record it: run `scripts/read_test.py` on the failing blocks and report the output. Finally verify Demo mode with `scripts/demo_flow.py` twice (with a reset between) and confirm zero live model calls and identical rows. Commit only `fixtures/prepared_runs/*.json` and your notes, and push to a branch, not to main.
+
+## Note on the A2 prepared run (code changed after it was recorded)
+`demo_a2` was recorded before two reading fixes: credits that the model filed under "points" now move to credits when the letter grade proves it, and totals the model reports for a page whose text layer prints none are dropped. Because Demo mode plays the model's replies through live code, the replayed extraction is clean (11 rows, no flags). The activity drawer still shows four refused `flag_cell` calls, because the recorded agent flagged cells that no longer fail. Re-record A2 with the current code (`python scripts/overnight_runs.py a2`) to remove them.
+
+## Note: Rania's demo data changed after `demo_a2` was recorded
+For Rania (BBA) AP Statistics is now conditional on an exam score of at least 4 and AP Microeconomics has a stale mapping; AP Calculus AB and AP Computer Science A are now "Not applicable" (engineering areas are restricted for BBA programs). The recorded Case agent replies do not cover the two new open rows, so in Demo mode those rows use the code's verdict and sentence (the review modal never shows raw agent text). Re-record A2 to capture the agents' work for the new situation: `python scripts/overnight_runs.py a2`.
+
+## Note: classification changed to policies/program_constraints.yaml
+Each mapped course is now classed, in order: **Not applicable** (blocked area or blocked course for the program), **Core course** (in the program's core list), else **General elective suggestion**. There is no allowed-elective list, no credit cap, no "Not in the plan" label and no elective judging by the Case agent (the `set_classification` tool and the `program_mismatch` doubt are gone). The Case review prompt (`case_v3.txt`) lost its elective step, so any recording made before this change differs from a fresh run. The review list is grouped (Core courses, General electives).
+Recordings made before this change: `demo_a2` (the only one). Re-record A2, and record C and D, after the real-model runs are approved.
+
+## Hand-off: model runs still to do (teammate)
+Demo scope is one student: **Rania (BBA, `transcript_a2_batch.pdf`, case `CB-2026-0104`)**. Skip B, C and D as separate cases. The demo already works end to end from the prepared run `demo_a2` (no model needed). The runs below add the variants; each is **one real run, no retries, no tuning**, on synthetic data only.
+
+Setup: Ollama running with `qwen3.5:4b`, API on :8000 with `DEMO_MODE=true` (so replies are captured), `python scripts/warmup.py`, then `curl -X POST localhost:8000/api/v1/dev/reset` for a clean database. Stay off the machine while a run is going (it skews timings).
+
+| Run | Command | Saved as | Saved only if |
+|---|---|---|---|
+| A2 clean (re-record) | `python scripts/overnight_runs.py a2` | `demo_a2` | no problems: Human Geography is Waiting on document with a drafted request; a score of 5 on Statistics changes only that row; no refused tool call |
+| Copy-error variant | `python scripts/overnight_runs.py a2c` | `demo_a2_copy_error` | the Auditor's explanation matches the verified difference (same row, both codes, one difference) |
+| Planted misread | `python scripts/overnight_runs.py a2m` | `demo_a2_misread` | the Intake agent **really repaired** the planted letter (AP Chemistry, `B+` planted as `C+`) |
+
+Each run writes `data/overnight/<name>.json` (gitignored) with timings per stage, model calls and tool calls. Report those numbers, the vision read time per page, and each row's final status in `OVERNIGHT_REPORT.md`. Then commit the new files in `fixtures/prepared_runs/` and push.
+
+The Demo-mode picker lists one entry per prepared run (clean, with a planted misread, with a copy error).
+
+Known issues found by the first real A2 run (2026-10-23, `qwen3.5:4b`), for the teammate to look at:
+- The spring block read 5 of 6 rows: **AP Computer Science A was missed** (it is hidden as Not applicable for BBA, so the demo is unaffected). The cross-check does not flag a missing row; a row-count check against the text layer would.
+- The model copied the credits into the points column on four fall rows. A code rule now drops points that equal the credits when the letter says otherwise (`move_credits_from_points`), so the extraction check is clean on replay.
+- Statistics (needs a score of 4+) comes out of the recorded Case agent as **Waiting on document**, not Conditional; both open an inline form that takes the score.
+- With no recorded Auditor reply, a planted copy error is still caught by the code checks and explained from the verified difference, but no fix is proposed. Recording `a2c` adds the proposal.

@@ -124,3 +124,19 @@ Real local-model runs (qwen3.5:4b, Ollama, thinking off), stopped on request bef
 - **D, one run, not recorded:** reading was poor (26 of 41 rows, five rows without a subject, grade 11 course names lost or shortened), and the Case agent made one refused call. Cause found: the diagonal watermark and pale fills. A background-whitening step was added; one check with it showed grade 11 AP names still missing on the left column and the right column partly read. D is NOT ready and is not recorded. Row statuses of that run are not meaningful.
 - **Not done:** C and the D misread variant were not run; D needs a reading approach that works (stronger model, smaller crops or per-column higher resolution).
 - Time per vision call on this Mac: 4 to 13 s per block.
+
+
+## Update 2026-10-23: single-student demo (Rania, BBA, A2)
+**Real A2 run (1 run, `qwen3.5:4b`, local Ollama), recorded as `demo_a2`.** No refused tool calls, clean by the script's criteria.
+| Stage | Time |
+|---|---|
+| Reading (Intake agent + vision), upload to table | 50.3 s (11 Intake calls 26.8 s, 4 vision reads 22.4 s = 5.6 s per read, 1 recovery round) |
+| Mapping + Case agent (evaluation job) | 38.0 s (8 Case calls 27.3 s, 2 review calls 8.4 s) |
+| Score of 5 on Statistics, resumes that row only | under 0.1 s of work (no model call needed once the score is on file) |
+| Auditor on the export | 6.1 s (3 calls, 5.3 s) |
+| Total, 28 model calls, mean 3.2 s per call | 95.9 s |
+
+Final rows: AP Psychology, Microeconomics, Biology, Chemistry, Physics 1, Art History, Statistics (after the score) = Mapped; AP Human Geography = **Waiting on document** with a drafted syllabus request; AP Calculus AB = Not applicable (BBA); Moral Education = school-specific. AP Computer Science A was **not read** (spring block returned 5 of 6 rows); it would be Not applicable anyway. The score changed only AP Statistics. The Auditor found the sheet clean.
+
+Not done (paused at the user's request; handed to a teammate, see `docs/MODEL_TESTING.md`): the copy-error run, the planted-misread run, and re-recording. Code changes made so the replay is clean: points copied from the credits column are dropped; exact synopsis matching; Rania's demo data now has only two open rows (Statistics, Human Geography) and no stale or blocked rows.
+Demo check (browser, replay, no model): upload, confirm extraction ("Nothing looks uncertain"), Statistics score 5 resumes only that row, Human Geography syllabus attached then Ready, Confirm all ready, Approve enabled, planted copy error caught by the checks.

@@ -3,8 +3,9 @@ import { AlertCircle, Check, ChevronDown, ChevronRight, ClipboardCopy, Download,
 import { api, type AppInfo, type Sheet } from './api';
 import { Activity } from './Activity';
 import { Evidence } from './Evidence';
+import { ReviewBody, RowPanel } from './Review';
 import { ExtractionCheck } from './ExtractionCheck';
-import { appStatus, build, CLASS_LABEL, curriculumOf, RESOLUTION_LABEL, toCsv, toTsv, type Item } from './model';
+import { appStatus, build, CLASS_LABEL, curriculumOf, isOpen, plainSummary, RESOLUTION_LABEL, toCsv, toTsv, type Item } from './model';
 import { AppPill, RowStatusText } from './ui';
 import { useApp, useInclude, useInstitution } from './useApp';
 import { useDemo } from './demo';
@@ -21,6 +22,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [exported, setExported] = useState(false);
+  const [adv, setAdv] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const evaluating = !!data && (['CONFIRMED', 'EVALUATION_IN_PROGRESS'].includes(data.app.status) || data.evalJob?.status === 'RUNNING' || data.evalJob?.status === 'QUEUED');
   const built = useMemo(() => data ? build(data.app, data.results, data.pending, include, evaluating, data.states, data.actions) : null, [data, include, evaluating]);
@@ -29,6 +31,11 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
   const confirmed = !!data?.app.confirmed;
   useEffect(() => { if (confirmed && !evaluating) api.sheet(appId).then(setSheet).catch(() => undefined); }, [appId, confirmed, evaluating, data?.results.length, data?.actions, data?.app.status, data?.app.extraction]);
   const reload = async () => { await refresh(); onChanged(); };
+  useEffect(() => { // after an action the panel moves to the next open row; with none left it closes and the overview shows
+    if (adv === null || !built) return;
+    const next = built.relevant.filter(isOpen).find(i => i.rowId !== adv);
+    setEvidenceKey(next?.key ?? null); setAdv(null);
+  }, [adv]); // eslint-disable-line react-hooks/exhaustive-deps
   async function run(f: () => Promise<unknown>) { setBusy(true); setErr(null); try { await f(); await reload(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } }
 
   if (!data || !built || !status) return <Shell onClose={onClose}>{error ? <div className="eval-error"><AlertCircle size={16} /> Cannot reach the backend ({error}). Start it with scripts/start.sh</div> : <p className="muted pad"><Loader2 size={15} className="spin" /> Loading…</p>}</Shell>;
@@ -73,13 +80,16 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
 
-  return <Shell onClose={onClose} wide={gate} side={selected?.result ? <Evidence appId={appId} r={selected.result} item={selected} role={role} onChanged={reload} onClose={() => setEvidenceKey(null)} />
+  const isUpload = app.kind === 'upload';
+  const advance = async () => { const row = selected?.rowId ?? null; await reload(); setAdv(row); };
+  const newPanel = isUpload && selected && !activity ? <RowPanel key={selected.key} appId={appId} item={selected} role={role} program={app.program} onClose={() => setEvidenceKey(null)} onAdvance={advance} /> : null;
+  return <Shell onClose={onClose} wide={gate} side={isUpload && (newPanel || activity) ? (newPanel ?? <Activity data={data} onClose={() => setActivity(false)} />) : selected?.result ? <Evidence appId={appId} r={selected.result} item={selected} role={role} onChanged={reload} onClose={() => setEvidenceKey(null)} />
     : activity ? <Activity data={data} onClose={() => setActivity(false)} /> : null}>
     <header className="pop-head">
       <div><small>STUDENT</small><h2>{app.student}</h2>
-        <p className="muted">ID {app.student_id || app.id} · {curriculumOf(app, results)} curriculum{app.program ? ` · ${app.program}` : ''}{app.student_record?.term ? ` · entering ${app.student_record.term}` : ''}</p>
-        {app.student_record && <p className="muted">{app.student_record.email} · {app.student_record.phone} · case {app.student_record.case_number}</p>}</div>
-      <div className="pop-head-right">{approved ? <span className="approved-tag"><Check size={13} /> Approved</span> : <AppPill s={status} />}<button className="icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button></div>
+        <p className="muted">ID {app.student_id || app.id} · {app.program || curriculumOf(app, results)}{app.program ? ` · ${curriculumOf(app, results)}` : ''}{app.student_record?.term ? ` · ${app.student_record.term}` : ''}{app.student_record ? ` · case ${app.student_record.case_number}` : ''}</p>
+        {app.student_record && <details className="rv-contact"><summary>Contact details</summary><p className="muted">{app.student_record.email} · {app.student_record.phone}</p></details>}</div>
+      <div className="pop-head-right">{approved ? <span className="approved-tag"><Check size={13} /> Approved</span> : isUpload && !reading && !gate && !evaluating ? null : <AppPill s={status} />}<button className="icon-button" onClick={onClose} aria-label="Close"><X size={22} /></button></div>
     </header>
     {app.replay && <div className="replay-banner"><History size={15} /> <span><strong>{app.replay.label}</strong>. {app.replay.live.length ? `Nothing here was produced just now except ${app.replay.live.length} course(s) run live.` : 'Nothing here was produced just now: no model was called.'}</span></div>}
     {err && <div className="eval-error"><AlertCircle size={15} /> {err}</div>}
@@ -93,7 +103,16 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
     {demoIdle && <div className="pad"><p className="muted">The demo fixtures have not been evaluated yet.</p><button className="primary-button" disabled={busy} onClick={() => run(() => api.evaluate(appId, role))}><Play size={16} /> Run AI evaluation</button></div>}
     {evaluating && <p className="muted pad"><Loader2 size={14} className="spin" /> Working: {results.length} course{results.length === 1 ? '' : 's'} done so far. Results appear as they finish.</p>}
 
-    {!reading && !gate && !demoIdle && <div className="pop-body">
+    {!reading && !gate && !demoIdle && isUpload && <div className="pop-body"><ReviewBody built={built} summary={plainSummary(built, app.program, app.extraction?.case_summary?.text ?? '')} role={role} appId={appId} busy={busy} program={app.program} approved={approved} canApprove={canApprove}
+      selectedKey={evidenceKey} onOpen={setEvidenceKey} onRun={run} onCopy={copySheet} onCsv={downloadCsv} onActivity={() => { setActivity(true); setEvidenceKey(null); }}>
+      {sheet?.planted && <section className="planted"><strong>PLANTED FOR DEMO</strong> One confirmed AUD equivalent ({sheet.planted.source_course}: {sheet.planted.from} → {sheet.planted.to}) was changed in the output stage only. Your decisions are untouched. The sheet checks below should catch it.{' '}
+        <button className="link-btn" disabled={busy} onClick={() => run(() => api.plantCopyError(appId, role, false))}>Remove</button></section>}
+      {sheet && !sheet.ok && <section className="checks"><h4>Sheet checks failed ({sheet.checks.length})</h4>
+        <ul>{sheet.checks.map((k, i) => <li key={i}><strong>{k.source_course}</strong> · {k.check.replace(/_/g, ' ')}: {k.message}</li>)}</ul>
+        <button className="secondary-button" disabled={busy} onClick={() => run(() => api.runAudit(appId, role))}>Explain with the Auditor</button></section>}
+      {sheet?.audit && (!sheet.audit.clean || sheet.audit.proposals.length > 0 || (sheet.audit.warnings ?? []).length > 0) && <AuditBox appId={appId} role={role} audit={sheet.audit} onChanged={reload} />}
+    </ReviewBody></div>}
+    {!reading && !gate && !demoIdle && !isUpload && <div className="pop-body">
       <div className="selection"><div><strong>{built.relevant.length} of {c.total} courses relevant</strong> <button className="link-btn" onClick={() => setNotEvalOpen(true)}>Adjust</button>
         {data.selectionRule && <p className="muted rule">{data.selectionRule}</p>}
         {app.extraction?.case_summary?.text && <p className="case-summary"><strong>{app.extraction.case_summary.by === 'code' ? 'Summary' : 'Case agent'}:</strong> {app.extraction.case_summary.text}</p>}</div>
@@ -118,11 +137,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
 
       {built.relevant.length > 0 && <p className="muted placeholder-note">AUD codes and credits shown are placeholder mapping data for this demo, not AUD&apos;s real equivalencies.</p>}
 
-      {built.electives.length > 0 && <section className="electives"><h4>General elective suggestions <span className="count">{built.electives.length}</span></h4>
-        <p className="muted">Mapped courses outside {app.program || 'the program'} that can count as free electives. Confirm them like any other row.</p>
-        <ul>{built.electives.map(i => <li key={i.key}><strong>{i.title}</strong> <span className="muted">→ {i.audCode}{i.cls?.by === 'case_agent' ? ' · judged by the Case agent: ' + i.cls.why : ''}</span></li>)}</ul></section>}
-
-      {built.needsInput.length > 0 && <section className="needs"><h4>Needs your input <span className="count">{built.needsInput.length}</span></h4>
+      {built.needsInput.length > 0 && <section className="needs"><h4>Open items <span className="count">{built.needsInput.length}</span></h4>
         <div className="needs-cards">{built.needsInput.map(i => <NeedCard key={i.key} i={i} appId={appId} role={role} busy={busy} onOpen={() => i.result && setEvidenceKey(i.key)} onChanged={reload} />)}</div></section>}
 
       {built.notEvaluated.length > 0 && <details className="noteval" open={notEvalOpen} onToggle={e => setNotEvalOpen((e.target as HTMLDetailsElement).open)}>
@@ -131,7 +146,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
           {i.canInclude ? <button className="link-btn" disabled={busy} onClick={() => i.state ? run(() => api.include(appId, i.rowId, role)) : setInclude(i.rowId, true)}>Include</button> : <span className="muted">cannot be mapped</span>}</li>)}</ul></details>}
     </div>}
 
-    {!reading && !gate && <footer className="pop-foot">
+    {!reading && !gate && !isUpload && <footer className="pop-foot">
       <span className="muted"><ShieldCheck size={13} /> Suggestions only. Nothing is final until you confirm.{c.unresolved > 0 && !approved ? ` ${c.unresolved} row${c.unresolved === 1 ? '' : 's'} left to resolve.` : ''}</span>
       <div className="pop-foot-actions">
         <button className="secondary-button" onClick={copySheet} disabled={busy || !c.resolved && !c.mapped} title="Tab-separated, ready to paste into a spreadsheet. Unconfirmed rows are marked."><ClipboardCopy size={15} /> Copy for spreadsheet</button>

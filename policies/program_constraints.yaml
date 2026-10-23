@@ -1,0 +1,27 @@
+# DUMMY program constraints (placeholder data, not AUD's degree plans). Read by Demo mode and live runs.
+# Classification of a mapped AUD equivalent, in order:
+#   1. in blocked_areas or blocked_courses -> Not applicable (hidden; counted in the muted "N courses not applicable" line; officer may Include anyway)
+#   2. in core_courses                     -> Core course
+#   3. anything else mapped                -> General elective suggestion (no allowed list, no cap)
+programs:
+  bba:
+    name: BBA Business Administration
+    names: [BBA Business Administration]
+    blocked_areas: [ENGG, EECE, EMEC, ECVL]
+    blocked_courses: [MATH 210, MATH 220, MATH 230, MATH 231, MATH 240]
+    core_courses: [ECON 201, QUAN 201, PSYC 201, ACCG 201]
+    reasons: {blocked: "Engineering courses are not open to BBA programs."}
+  engineering:
+    name: Engineering
+    names: [BSc Computer Engineering, BSc Mechanical Engineering, Engineering]
+    blocked_areas: [ACCG, MGMT, MKTG, FINA, BUSI, BUAI]
+    blocked_courses: []
+    core_courses: [MATH 210, ENGG 140, PHYS 201, CHEM 201]
+    reasons: {blocked: "Business-only courses are not open to engineering programs."}
+  psychology:
+    name: BSc Psychology
+    names: [BSc Psychology]
+    blocked_areas: []
+    blocked_courses: []
+    core_courses: [PSYC 201, BIOL 201, QUAN 201]
+    reasons: {blocked: "This course is not open to psychology programs."}

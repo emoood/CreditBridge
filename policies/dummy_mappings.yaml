@@ -21,3 +21,5 @@ mappings:
   - {subject_code: AP-SPAN-LANG, subject_name: Spanish Language, aud_code: SPAN 201}
   - {subject_code: AP-FREN-LANG, subject_name: French Language, aud_code: FREN 201}
   - {subject_code: AP-ENG-LANG, subject_name: English Language and Composition, aud_code: ENGL 101}   # English never transfers at AUD: blocked by policy
+  # Mappings limited to one program override the general entry for that program only (demo: Rania Haddad, BBA: Statistics needs an exam score).
+  - {subject_code: AP-STAT, subject_name: Statistics, aud_code: QUAN 201, programs: [BBA Business Administration], condition: {type: min_exam_score, value: 4, evidence: AP exam score report}}   # CONDITIONAL for BBA

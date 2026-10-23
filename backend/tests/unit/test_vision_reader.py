@@ -73,3 +73,26 @@ def test_side_by_side_tables_become_separate_blocks_and_a_one_column_page_is_unt
     one = Image.new("RGB", (1600, 800), "white")
     ImageDraw.Draw(one).rectangle([60, 100, 1540, 700], fill="black")
     assert all(x is None for _sp, x, _o in vr.layout(one, 560))
+
+
+def test_credits_filed_under_points_move_to_credits_only_when_the_letter_proves_it():
+    from backend.app.services import grade_checks as gc
+    from backend.app.services import vision_reader as vr
+    scale = gc.load_scale()
+    reading = vr.BlockReading.model_validate({"rows": [
+        {"subject": "AP Biology", "letter": "A-", "points": "1"},                   # A- is worth 3.7, so "1" is the credit
+        {"subject": "AP Psychology", "letter": "A", "points": 4.0},                 # 4.0 is what A is worth: genuine grade points, untouched
+        {"subject": "AP Statistics", "letter": "A", "points": 1.0, "credits": 1.0}, # the same number twice: credits copied into points, dropped
+        {"subject": "AP Art", "mark": 90, "letter": "A-", "points": 1}]})          # a numeric mark means the page does have points: untouched
+    rows = vr.check_block(reading, scale)["rows"]
+    assert rows[0]["credits"] == 1.0 and rows[0]["points"] is None and not rows[0]["flags"]
+    assert rows[1]["points"] == 4.0 and rows[1]["credits"] is None
+    assert rows[2]["points"] is None and rows[2]["credits"] == 1.0 and not rows[2]["flags"] and rows[3]["flags"]
+
+
+def test_points_copied_from_the_credits_column_are_dropped():
+    from backend.app.services import vision_reader as vr
+    d = {"points": 1.0, "credits": 1.0, "letter": "A", "mark": None}
+    from backend.app.services import grade_checks as gc
+    vr.move_credits_from_points(d, gc.load_scale())
+    assert d["points"] is None and d["credits"] == 1.0

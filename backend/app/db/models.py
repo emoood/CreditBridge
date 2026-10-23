@@ -124,6 +124,7 @@ class CourseMapping(Base):
     version: Mapped[str] = mapped_column(String(30), default="")
     status: Mapped[str] = mapped_column(String(10), default="ACTIVE")  # ACTIVE | STALE | DRAFT
     note: Mapped[str] = mapped_column(Text, default="")
+    programs: Mapped[list | None] = mapped_column(JSON)  # None = applies to every program; else only to the listed programs (which then override the general entry)
 
 
 class RowState(Base):

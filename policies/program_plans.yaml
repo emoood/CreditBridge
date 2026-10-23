@@ -1,3 +1,4 @@
+# Superseded for classification by policies/program_constraints.yaml; kept as the program record shown with the student.
 # DUMMY program plans (placeholder data, not AUD's degree plans). Used to classify each mapped AUD equivalent for a student's program:
 #   required / allowed_electives  -> "Program course"
 #   general_electives             -> "General elective suggestion"   (counted against free_elective_credits)
@@ -6,7 +7,7 @@ programs:
   BSc Computer Engineering:
     required: [MATH 210, MATH 220, MATH 230, MATH 231, PHYS 201, PHYS 202, CHEM 201, ENGG 140]
     allowed_electives: [MATH 240, MATH 250, BIOL 201, ENGG 200]
-    general_electives: [ECON 201, ECON 202, PSYC 201, ARTS 200, GEOG 101, SPAN 201, FREN 201, MKTG 201]
+    general_electives: [ECON 201, ECON 202, PSYC 201, ARTS 200, GEOG 101, SPAN 201, FREN 201]
     free_elective_credits: 6
   BBA Business Administration:
     required: [ECON 201, ECON 202, ACCG 201, QUAN 201, MATH 200, MGMT 201, MKTG 201]

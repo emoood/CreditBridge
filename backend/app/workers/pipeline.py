@@ -91,6 +91,8 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
             ictx.imgs[s.vision_dpi] = pages
             ictx.lines = {k: vr.count_text_lines(pages[p - 1], sp) for p, k, sp, _x, _o in blocks_layout}
             ictx.text = await asyncio.to_thread(cc.text_rows, path, app.id) if digital else None  # the text layer is only a cross-check on what vision reads
+            if ictx.text is not None:
+                ictx.text_has_totals = await asyncio.to_thread(cc.prints_totals, path)
             for u in units:
                 if u.status == "DONE" and u.result:  # resumed job: finished blocks are not read again
                     ictx.blocks[u.unit_key] = u.result
@@ -115,7 +117,7 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
             done = [u.result for u in store.units_of(db, job.id) if u.stage == "read" and u.status == "DONE"]
             merged = gc_merge(done, scale)
             synopsis = {(r.get("subject") or "").strip(): r["description"].strip() for res in done for r in res.get("rows", []) if r.get("description") and r.get("subject") and len(r["description"].strip()) >= 40 and r["description"].strip() != r["subject"].strip()}
-            synopsis_found = synopsis
+            synopsis_found = synopsis or dict(((app.extraction or {}).get("student_record") or {}).get("synopsis") or {})  # the demo student record can stand in for a synopsis page
             intake_info = {"agent": s.intake_agent, "recovery_used": ictx.recovery_used, "changes": ictx.changes, "skipped": ictx.skipped, "read_by_code": ictx.by_code,
                            "name_check": ictx.name_check, "text_layer_crosscheck": ictx.text is not None, "agent_questions": ictx.questions}
             if ictx.name_check.get("status") == "mismatch":
@@ -279,13 +281,13 @@ def _finish_evaluation(db, job: Job, app: Application) -> None:
 def _lookup_rows(db, app: Application, rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Code only: the relevance gate and the batch mapping lookup for the given rows. Saves each row's state."""
     R = rt()
-    maps = mp.lookup_many(db, [r["subject"]["code"] for r in rows if r.get("subject")])
+    maps = mp.lookup_many(db, [r["subject"]["code"] for r in rows if r.get("subject")], app.program)
     out: dict[str, dict[str, Any]] = {}
     for r in rows:
         old = mp.get_state(db, app.id, r["id"])
         verdict = mp.decide_row(r, maps.get((r.get("subject") or {}).get("code")), (old.facts if old else {}) or {}, bool(old and old.included_override), R.repo,
                                 school_specific=is_school_specific(r.get("title") or ""), scale=(app.extraction or {}).get("grading_scale"),
-                                synopsis=(app.extraction or {}).get("synopsis") or None)
+                                synopsis=(app.extraction or {}).get("synopsis") or None, program=app.program)
         waiting = old and old.status == mp.WAITING and any(q["status"] in ("DRAFT", "SENT") for q in (old.requests or []))
         if waiting and verdict["status"] in mp.WORKABLE:  # still waiting on the same document: keep the pause
             verdict = {**verdict, "status": mp.WAITING, "reason": old.reason}
@@ -293,7 +295,7 @@ def _lookup_rows(db, app: Application, rows: list[dict[str, Any]]) -> dict[str, 
                            mapping=verdict["mapping"], condition_result=verdict["condition_result"])
         if verdict["status"] == mp.MAPPED:
             mp.save_state(db, app.id, r["id"], finding=None)
-        _classify_row(db, app, r["id"], verdict["mapping"])
+        _classify_row(db, app, r["id"], None if verdict["kind"] == "not_applicable" else verdict["mapping"])
         out[r["id"]] = mp.state_dict(st)
     usage.trace(app.id, "", "code", "lookup", {"rows": len(rows), **{k: sum(1 for v in out.values() if v["status"] == k) for k in (mp.MAPPED, mp.CONDITIONAL, mp.NO_MAPPING, mp.WAITING, mp.NOT_EVAL)}})
     return out

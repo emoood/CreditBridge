@@ -26,7 +26,7 @@ export type Job = { id: string; app_id?: string; phase?: 'READING' | 'EVALUATION
   courses: Record<string, string>; errors: Record<string, string>; route: string; model: string;
   llm_calls: number; activity: { ts: number; kind: string; course?: string; tool?: string; stage?: string; role?: string; ok?: boolean; duration_s?: number }[] };
 export type Institution = { demo_mode?: boolean; institution: string; transfer_credits: number; display: { mark: boolean; school_credits: boolean; aud_credits: boolean; grade_year: boolean } };
-export type ActionInfo = { id: number; row_id: string; action: 'CONFIRM' | 'CHANGE' | 'REJECT' | 'NO_CREDIT' | 'SEND_FOR_REVIEW' | 'CORRECT'; actor: string; at: string;
+export type ActionInfo = { id: number; row_id: string; action: 'CONFIRM' | 'CHANGE' | 'REJECT' | 'NO_CREDIT' | 'SEND_FOR_REVIEW' | 'CORRECT' | 'RECONFIRM'; actor: string; at: string;
   original: { aud_code: string | null; credits: number | null; status: string; mapping_version?: string }; chosen: { aud_code?: string; credits?: number }; reason: string; batch: boolean };
 export type SheetLine = { row_id: string; source_course: string; grade: string; aud_code: string | null; aud_equivalent: string; aud_credits: number | null; status: string; action: string };
 export type SheetCheck = { row_id: string; source_course: string; check: string; message: string };
@@ -39,13 +39,14 @@ export type Finding = { headline: string; questions_for_chair?: string[]; needs?
 export type DraftedRequest = { id: string; what: string; why: string; to: string; status: 'DRAFT' | 'SENT' | 'RECEIVED' };
 export type RowStatus = 'Mapped' | 'Conditional' | 'No mapping' | 'Waiting on document' | 'Not evaluated';
 export type RowStateInfo = { row_id: string; status: RowStatus; kind: string; reason: string; can_include: boolean; included_override: boolean;
-  mapping: { aud_code: string; aud_credits: number; version: string; status: string; condition: { type: string; value: unknown; evidence?: string } | null } | null;
+  mapping: { aud_code: string; aud_credits: number; version: string; status: string; programs?: string[] | null; condition: { type: string; value: unknown; evidence?: string } | null } | null;
   condition_result: { status: string; reason: string; missing: { field: string; evidence: string }[] } | null; finding: Finding | null; requests: DraftedRequest[]; facts: Record<string, unknown>;
   classification?: ProgramClass | null; doubts?: Doubt[] };
-export type ProgramClass = { value: 'Program course' | 'General elective suggestion' | 'Not applicable'; why: string; by: 'code' | 'case_agent'; aud_code: string };
+export type ProgramClass = { value: 'Core course' | 'General elective suggestion' | 'Not applicable'; why: string; by: 'code' | 'case_agent'; aud_code: string };
 export type Doubt = { kind: string; reason: string; verified: boolean; evidence: string; by: string };
 export type DemoCase = { case_number: string; name: string | null; program: string | null; student_id: string | null; filename: string | null;
-  run: { name: string; label: string; recorded_at: string; model: string } | null; misread_run: { name: string; label: string } | null };
+  run: { name: string; label: string; recorded_at: string; model: string } | null; misread_run: { name: string; label: string } | null; copy_error_run?: { name: string; label: string } | null };
+export type DemoRun = { name: string; case_number: string; variant: 'clean' | 'misread' | 'copy_error'; label: string; recorded_at: string; model: string; filename: string | null; student: string | null };
 export type StudentRecord = { case_number: string; name: string; student_id: string; email: string; phone: string; program: string; term: string; curriculum: string };
 export type Activity = { usage: { tool_calls?: number; tool_seconds?: number; recorded_calls?: number; recorded_seconds?: number; live_calls?: number; calls: number; seconds: number; prompt_tokens: number; output_tokens: number; cost_usd: number; models: string[]; by_stage: Record<string, { calls: number; seconds: number }> };
   trace: { at: string; row_id: string; actor: string; name: string; args: Record<string, unknown>; ok: boolean; detail: string; recorded?: boolean }[] };
@@ -75,7 +76,7 @@ async function j<T>(r: Response): Promise<T> {
 export const api = {
   applications: () => fetch('/api/v1/applications').then(j<AppInfo[]>),
   application: (id: string) => fetch(`/api/v1/applications/${id}`).then(j<AppInfo>),
-  upload: (file: File, label: string, qualification: string, studentId = '', plantMisread = false, caseNumber = '', demoSpeed = '') => { const f = new FormData(); if (demoSpeed) { f.append('demo', '1'); f.append('demo_speed', demoSpeed); } f.append('file', file); f.append('student_label', label); f.append('student_id', studentId); if (caseNumber) f.append('case_number', caseNumber); if (plantMisread) f.append('plant_misread', '1'); f.append('qualification', qualification);
+  upload: (file: File, label: string, qualification: string, studentId = '', plantMisread = false, caseNumber = '', demoSpeed = '', demoRun = '') => { const f = new FormData(); if (demoSpeed) { f.append('demo', '1'); f.append('demo_speed', demoSpeed); } f.append('file', file); f.append('student_label', label); f.append('student_id', studentId); if (caseNumber) f.append('case_number', caseNumber); if (demoRun) f.append('demo_run', demoRun); if (plantMisread) f.append('plant_misread', '1'); f.append('qualification', qualification);
     return fetch('/api/v1/applications', { method: 'POST', body: f, headers: { 'X-Role': 'admissions' } }).then(j<AppInfo>); },
   patchRow: (id: string, row: string, body: Record<string, unknown>) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<Row>),
   addRow: (id: string) => fetch(`/api/v1/applications/${id}/rows`, { method: 'POST' }).then(j<Row>),
@@ -96,12 +97,12 @@ export const api = {
   sheet: (id: string) => fetch(`/api/v1/applications/${id}/sheet`).then(j<Sheet>),
   approve: (id: string, role: string) => fetch(`/api/v1/applications/${id}/approve`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ approved: boolean }>),
   runAudit: (id: string, role: string) => fetch(`/api/v1/applications/${id}/audit`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ job_id: string }>),
-  demoCases: () => fetch('/api/v1/demo/cases').then(j<{ demo_mode: boolean; stage_seconds: number; cases: DemoCase[] }>),
+  demoCases: () => fetch('/api/v1/demo/cases').then(j<{ demo_mode: boolean; stage_seconds: number; cases: DemoCase[]; runs: DemoRun[] }>),
   setDemoSpeed: (id: string, role: string, speed: string) => fetch(`/api/v1/applications/${id}/demo/speed`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ speed }) }).then(j<{ speed: string }>),
   exportCheck: (id: string, role: string) => fetch(`/api/v1/applications/${id}/export-check`, { method: 'POST', headers: ROLE_HEADERS(role) }).then(j<{ ready: boolean; job_id?: string }>),
   studentRecord: (caseNumber: string) => fetch(`/api/v1/students/${encodeURIComponent(caseNumber)}`).then(j<StudentRecord & { plan: unknown }>),
   applyAudit: (id: string, role: string, rowIds: string[]) => fetch(`/api/v1/applications/${id}/audit/apply`, { method: 'POST', headers: ROLE_HEADERS(role), body: JSON.stringify({ row_ids: rowIds }) }).then(j<{ applied: string[]; sheet_ok: boolean }>),
-  searchCatalog: (q: string) => fetch(`/api/v1/catalog/search?q=${encodeURIComponent(q)}`).then(j<{ code: string; title: string; level: number }[]>),
+  searchCatalog: (q: string, program = '') => fetch(`/api/v1/catalog/search?q=${encodeURIComponent(q)}&program=${encodeURIComponent(program)}`).then(j<{ code: string; title: string; level: number }[]>),
   setStudent: (id: string, name: string, studentId: string) => fetch(`/api/v1/applications/${id}/student`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify({ name, student_id: studentId }) }).then(j<AppInfo>),
   activity: (id: string) => fetch(`/api/v1/applications/${id}/activity`).then(j<Activity>),
   institution: () => fetch('/api/v1/config/institution').then(j<Institution>),

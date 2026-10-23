@@ -12,7 +12,7 @@ from ..db.session import app_session
 from ..domain.schemas import AgentOutput
 from ..providers.base import LLMProvider
 from ..services import mapping as mp
-from .loop import run_bounded_agent
+from .loop import AgentOutcome, run_bounded_agent
 from .orchestrator import CaseResult
 from .tools.base import ToolRegistry  # noqa: F401  (re-exported type for callers)
 from .tools.case_tools import REVIEW_TOOLS, ROW_TOOLS, CaseContext, TracedRegistry
@@ -44,9 +44,12 @@ async def run_case_agent(provider: LLMProvider, repo, retriever, precedent, app_
         brief = {"row": {"title": row.get("title"), "grade": row.get("grade")}, "subject": row.get("subject"), "kind": st.kind if st else "", "reason": st.reason if st else "",
                  "open_requests": [r for r in (st.requests if st else []) if r["status"] in ("DRAFT", "SENT")],
                  "mode": mode, "officer_notes": [n["text"] for n in ((st.facts or {}).get("_notes", []) if st else [])], "previous_finding": (st.finding if st else None)}
-    outcome = await run_bounded_agent(provider, TracedRegistry(ROW_TOOLS), ctx, system=PROMPT, user=json.dumps(brief, ensure_ascii=False),
-                                      final_model=CaseFinding, max_tool_rounds=get_settings().case_max_tool_rounds, stage="case",
-                                      max_seconds=get_settings().case_max_seconds)
+    try:
+        outcome = await run_bounded_agent(provider, TracedRegistry(ROW_TOOLS), ctx, system=PROMPT, user=json.dumps(brief, ensure_ascii=False),
+                                          final_model=CaseFinding, max_tool_rounds=get_settings().case_max_tool_rounds, stage="case",
+                                          max_seconds=get_settings().case_max_seconds)
+    except Exception as e:  # noqa: BLE001  no model reply (offline, or Demo mode with no prepared reply for this row): the row keeps the code's verdict
+        outcome = AgentOutcome("NEEDS_HUMAN_REVIEW", error=f"AGENT_UNAVAILABLE: {type(e).__name__}")
     flags = list(outcome.flags)
     finding: dict[str, Any]
     if outcome.status == "OK" and outcome.output is not None:
@@ -69,8 +72,8 @@ def proposal_of(res: dict[str, Any]) -> CaseResult | None:
 
 
 async def run_case_review(provider: LLMProvider, repo, retriever, precedent, app_id: str) -> dict[str, Any]:
-    """The whole-application pass: the Case agent reviews ALL rows (mapped ones too), raises doubts that code corroborates, judges borderline electives
-    against the free-elective allowance and writes a short summary for the officer. It never changes a row's status."""
+    """The whole-application pass: the Case agent reviews ALL rows (mapped ones too), raises doubts that code corroborates, (no elective judging: code classifies every course)
+    and writes a short summary for the officer. It never changes a row's status."""
     ctx = CaseContext(repo, retriever, "case", "", precedent=precedent, app_id=app_id, row_id="", provider=provider)
     s = get_settings()
     outcome = await run_bounded_agent(provider, TracedRegistry(REVIEW_TOOLS), ctx, system=PROMPT, user=json.dumps({"mode": "review_all"}), final_model=CaseFinding,

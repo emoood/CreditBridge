@@ -143,3 +143,11 @@ async def test_an_empty_reading_of_a_block_with_only_a_few_lines_is_a_footer_not
     ctx.lines["p1b2"] = 3                                    # three lines of print: a footer or a legend
     await run_intake_agent(ctx)
     assert not ctx.blocks["p1b2"].get("failed") and ctx.blocks["p1b2"]["rows"] == []
+
+
+async def test_a_total_the_model_reports_is_dropped_when_the_pages_text_layer_prints_none(tmp_path):
+    rows = [{"subject": "AP Biology", "letter": "A-", "credits": 1.0}]
+    ctx = make_ctx(tmp_path, [tc("read_block", targets=["p1b1", "p1b2"]), read(rows, term_credits=9.0), read(SECOND), tc("run_checks"), FINISH], text={1: []})
+    ctx.text_has_totals = False
+    await run_intake_agent(ctx)
+    assert ctx.blocks["p1b1"]["totals"]["term_credits"] is None and ctx.blocks["p1b1"]["dropped_totals"] and not ctx.blocks["p1b1"]["flags"]

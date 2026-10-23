@@ -97,12 +97,15 @@ def test_student_record_by_case_number():
     assert sr.load_record("nope") is None
 
 
-def test_classification_against_program_plan():
+def test_classification_is_blocked_then_core_then_general_elective():
     from backend.app.services import student_record as sr
-    eng = "BSc Computer Engineering"
-    assert sr.classify("MATH 210", eng)["value"] == sr.PROGRAM
-    assert sr.classify("ECON 201", eng)["value"] == sr.ELECTIVE  # business course for an engineering student: elective suggestion
-    assert sr.classify("QUAN 201", eng)["value"] == sr.NOT_APPLICABLE
+    eng, bba = "BSc Computer Engineering", "BBA Business Administration"
+    assert sr.classify("ACCG 201", eng)["value"] == sr.NOT_APPLICABLE and sr.classify("ACCG 201", eng)["why"] == "Business-only courses are not open to engineering programs."
+    assert sr.classify("MATH 210", eng)["value"] == sr.PROGRAM == "Core course"
+    assert sr.classify("ECON 201", eng)["value"] == sr.ELECTIVE  # any other mapped course is a potential general elective: no list, no cap
+    assert sr.classify("ARTS 200", eng)["value"] == sr.ELECTIVE
+    assert sr.classify("ENGG 140", bba)["value"] == sr.NOT_APPLICABLE and sr.classify("MATH 220", bba)["value"] == sr.NOT_APPLICABLE
+    assert sr.classify("ECON 201", bba)["value"] == sr.PROGRAM
     assert sr.classify("MATH 210", "No such program") is None
 
 
@@ -122,7 +125,7 @@ async def _run_with_program(env, program="BSc Computer Engineering"):
 async def test_mapped_rows_run_first_and_carry_a_program_class(case_env):
     app_id = await _run_with_program(case_env)
     st, rows, _res = await states(case_env, app_id)
-    assert st["AP Statistics"]["classification"]["value"] == "Not applicable"  # STA201 is not on the engineering plan
+    assert st["AP Statistics"]["classification"]["value"] == "General elective suggestion"  # STA201 is not a core course for engineering
     with app_session() as db:
         order = [u.unit_key for u in db.scalars(select(JobUnit).where(JobUnit.app_id == app_id, JobUnit.stage == "evaluate").order_by(JobUnit.id))]
     sid = {r["title"]: r["source_id"] for r in rows}
@@ -137,30 +140,15 @@ async def test_raise_doubt_is_checked_by_code_and_blocks_bulk_confirm(case_env):
     row = {r["title"]: r for r in rows}
     ctx = CaseContext(R.repo, R.retriever, "case", "", app_id=app_id, row_id="")
     reg = ToolRegistry(CASE_TOOLS)
-    ok = await reg.execute(ToolCall("1", "raise_doubt", {"row_id": row["AP Statistics"]["id"], "kind": "program_mismatch", "reason": "Not on the engineering plan"}), ctx)
+    ok = await reg.execute(ToolCall("1", "raise_doubt", {"row_id": row["AP Statistics"]["id"], "kind": "near_miss_grade", "reason": "Grade is at the minimum"}), ctx)
     stale_on_fine = await reg.execute(ToolCall("2", "raise_doubt", {"row_id": row["AP Psychology"]["id"], "kind": "stale_mapping", "reason": "Looks old to me"}), ctx)
     stale = await reg.execute(ToolCall("3", "raise_doubt", {"row_id": row["AP Computer Science A"]["id"], "kind": "stale_mapping", "reason": "Version t0 is older than t1"}), ctx)
     other = await reg.execute(ToolCall("4", "raise_doubt", {"row_id": row["AP Psychology"]["id"], "kind": "other", "reason": "Grade looks odd for this course"}), ctx)
-    assert ok.ok and ok.data["verified_by_code"] and not stale_on_fine.ok and stale.ok and other.ok and other.data["verified_by_code"] is False
+    assert not ok.ok and not stale_on_fine.ok and stale.ok and other.ok and other.data["verified_by_code"] is False
     r = await case_env.client.post(f"/api/v1/applications/{app_id}/confirm-mapped", headers=ADMIN)
     assert r.status_code == 200
     done = (await case_env.client.get(f"/api/v1/applications/{app_id}/results")).json()["actions"]
-    assert row["AP Statistics"]["id"] not in done  # Not applicable to the program, so not in the bulk confirm
-
-
-async def test_set_classification_follows_the_allowance_and_level_rules(case_env):
-    app_id = await _run_with_program(case_env, "BSc Psychology")  # a plan with a 9-credit allowance
-    _st, rows, _ = await states(case_env, app_id)
-    R = runtime.rt()
-    stat = next(r for r in rows if r["title"] == "AP Statistics")
-    ctx = CaseContext(R.repo, R.retriever, "case", "", app_id=app_id, row_id="")
-    reg = ToolRegistry(CASE_TOOLS)
-    first = await reg.execute(ToolCall("1", "set_classification", {"row_id": stat["id"], "why": "Intro statistics fits a free elective"}), ctx)
-    again = await reg.execute(ToolCall("2", "set_classification", {"row_id": stat["id"], "why": "Do it twice"}), ctx)
-    assert (first.ok or "above beginner" in (first.error or "")) and not again.ok  # a judged row cannot be judged twice
-    if first.ok:
-        with app_session() as db:
-            assert mp.get_state(db, app_id, stat["id"]).facts["_class"]["by"] == "case_agent"
+    assert row["AP Computer Science A"]["id"] not in done and row["AP Psychology"]["id"] not in done  # a doubted or open row is not in the bulk confirm
 
 
 async def test_the_review_pass_writes_a_summary_and_logs_its_tool_calls(case_env, monkeypatch):
@@ -229,3 +217,39 @@ async def test_demo_mode_says_so_when_there_is_no_prepared_run_for_a_file(case_e
     monkeypatch.setattr(prepared, "DIR", tmp_path)
     r = await _demo_upload(case_env)
     assert r.status_code == 404 and r.json()["detail"] == "No prepared run for this file"
+
+
+# ---- applicability: a course the program cannot take is Not applicable BEFORE conditions and stale checks
+async def test_a_restricted_course_is_not_applicable_and_needs_no_document_or_agent(case_env, monkeypatch):
+    from backend.app.services import student_record as sr
+    monkeypatch.setattr(sr, "_constraints", lambda: {"t": {"names": ["BBA Test"], "blocked_areas": [], "blocked_courses": ["CS101"], "core_courses": [],
+                                                           "reasons": {"blocked": "Engineering courses are not open to BBA programs."}}})
+    app_id = await _run_with_program(case_env, "BBA Test")
+    st, rows, _res = await states(case_env, app_id)
+    csa = st["AP Computer Science A"]
+    assert csa["status"] == "Not evaluated" and csa["kind"] == "not_applicable" and csa["can_include"]   # stale mapping to CS101, but applicability comes first
+    assert csa["reason"] == "Engineering courses are not open to BBA programs." and csa["requests"] == []
+    sid = {r["title"]: r["source_id"] for r in rows}
+    assert sid["AP Computer Science A"] not in {u for stage, u in case_env.model.calls if stage == "case"}   # no agent investigation
+    row_id = next(x["id"] for x in rows if x["title"] == "AP Computer Science A")
+    assert (await case_env.client.post(f"/api/v1/applications/{app_id}/rows/{row_id}/include", headers=ADMIN)).status_code == 200   # the officer includes it anyway
+    await case_env.worker.idle()
+    st2, _r, _x = await states(case_env, app_id)
+    assert st2["AP Computer Science A"]["status"] == "Conditional" and st2["AP Computer Science A"]["kind"] == "stale"   # now it goes through the normal checks
+
+
+async def test_a_blocked_course_is_refused_as_a_change_and_in_the_picker(case_env, monkeypatch):
+    from backend.app.services import student_record as sr
+    monkeypatch.setattr(sr, "_constraints", lambda: {"t": {"names": ["BBA Test"], "blocked_areas": [], "blocked_courses": ["CS101"], "core_courses": [], "reasons": {"blocked": "Engineering courses are not open to BBA programs."}}})
+    app_id = await _run_with_program(case_env, "BBA Test")
+    _st, rows, _ = await states(case_env, app_id)
+    stat = next(r for r in rows if r["title"] == "AP Statistics")
+    r = await case_env.client.post(f"/api/v1/applications/{app_id}/rows/{stat['id']}/action", json={"action": "CHANGE", "aud_code": "CS101", "credits": 3, "reason": "Better fit"}, headers=ADMIN)
+    assert r.status_code == 409 and "not open to BBA" in r.text
+
+
+def test_synopsis_match_is_exact_on_the_normalized_name():
+    from backend.app.services.mapping import synopsis_for
+    syn = {"AP Statistics": "x" * 50, "Economics": "y" * 50}
+    assert synopsis_for({"title": "Statistics"}, syn) and synopsis_for({"title": "ap  statistics"}, syn) is not None
+    assert synopsis_for({"title": "AP Macroeconomics"}, syn) is None and synopsis_for({"title": "AP Human Geography"}, syn) is None

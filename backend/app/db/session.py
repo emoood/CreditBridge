@@ -52,5 +52,11 @@ def app_session() -> Session:
 
 
 def init_app_db() -> None:
+    from sqlalchemy import inspect, text
+
     from .models import Base
-    Base.metadata.create_all(get_app_engine())
+    engine = get_app_engine()
+    Base.metadata.create_all(engine)
+    if "programs" not in {c["name"] for c in inspect(engine).get_columns("course_mappings")}:  # a table made before mappings could be limited to a program
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE course_mappings ADD COLUMN programs JSON"))

@@ -92,19 +92,18 @@ class ListRows(AgentTool):
                 rows.append({"row_id": r["id"], "title": r.get("title"), "grade": r.get("grade"), "status": st.status, "aud_code": m.get("aud_code"),
                              "mapping_version": m.get("version"), "program_class": cls["value"] if cls else None, "class_by": cls["by"] if cls else None,
                              "doubts": [d["kind"] for d in (st.facts or {}).get("_doubts", [])], "signals": sig})
-            left = sr.allowance_left(app.program, doubts.elective_credits_used(db, app))
-            return {"program": app.program, "entry_term": ((app.extraction or {}).get("student_record") or {}).get("term"), "free_elective_credits_left": left, "rows": rows}
+            return {"program": app.program, "entry_term": ((app.extraction or {}).get("student_record") or {}).get("term"), "rows": rows}
 
 
 class RaiseDoubtArgs(BaseModel):
     row_id: str
-    kind: Literal["stale_mapping", "near_miss_grade", "program_mismatch", "other"]
+    kind: Literal["stale_mapping", "near_miss_grade", "other"]
     reason: str = Field(min_length=5, max_length=300)
 
 
 class RaiseDoubt(AgentTool):
     name = "raise_doubt"
-    description = ("Raise a doubt on a row (also a Mapped one) for the officer: stale_mapping, near_miss_grade or program_mismatch. Code checks the doubt against the facts and refuses one it "
+    description = ("Raise a doubt on a row (also a Mapped one) for the officer: stale_mapping or near_miss_grade. Code checks the doubt against the facts and refuses one it "
                    "cannot corroborate. A doubt never changes the row's status, but the row can then no longer be confirmed in bulk. Kind 'other' is recorded as your unverified note.")
     input_schema = RaiseDoubtArgs
     roles: ClassVar[set[str]] = {"case"}
@@ -122,29 +121,6 @@ class RaiseDoubt(AgentTool):
                 return {"note": "This doubt is already recorded."}
             mp.merge_facts(db, app.id, row["id"], _doubts=[*existing, {"kind": args.kind, "reason": args.reason, "verified": evidence is not None, "evidence": evidence or "", "by": "case_agent"}])
             return {"recorded": True, "verified_by_code": evidence is not None}
-
-
-class SetClassificationArgs(BaseModel):
-    row_id: str
-    why: str = Field(min_length=5, max_length=300, description="Why this out-of-program course fits the free-elective allowance")
-
-
-class SetClassification(AgentTool):
-    name = "set_classification"
-    description = ("For a row whose mapped AUD course is 'Not applicable' to the program: judge that it fits the student's free-elective allowance and suggest it as a general elective. "
-                   "Code refuses it when the course is in a never-transferable area, above beginner level, or the allowance is used up.")
-    input_schema = SetClassificationArgs
-    roles: ClassVar[set[str]] = {"case"}
-
-    async def execute(self, args: SetClassificationArgs, ctx: CaseContext):
-        with app_session() as db:
-            app, row, st = _row(db, ctx, args.row_id)
-            why = doubts.can_suggest_elective(db, ctx.repo, app, row["id"], st)
-            if why:
-                raise ToolError(why)
-            code = st.mapping["aud_code"]
-            mp.merge_facts(db, app.id, row["id"], _class={"value": sr.ELECTIVE, "why": args.why, "by": "case_agent", "aud_code": code})
-            return {"classification": sr.ELECTIVE}
 
 
 class ReadSourceExcerpts(AgentTool):
@@ -206,6 +182,12 @@ class ProposeCandidates(AgentTool):
                              note=" | ".join(notes)[:600] or None)
         ctx.proposal = res
         m, r = res.match.output, res.review
+        with app_session() as db:
+            program = db.get(Application, ctx.app_id).program
+        blocked = sr.restriction(ctx.repo.targets.get(m.target_course_id, {}).get("code") if m and m.target_course_id else None, program)
+        if blocked:  # code refuses a candidate the program cannot take
+            ctx.proposal = None
+            raise ToolError(f"The only candidate is not open to this student's program. {blocked}")
         return {"matcher_status": res.match.status, "candidate": m.target_course_id if m else None, "evidence_strength": m.evidence_strength if m else None,
                 "missing_or_weaker": (m.missing_or_weaker_outcomes if m else [])[:4], "reviewer_verdict": r.status if r else None,
                 "objections": [o.text[:240] for o in (r.output.objections if r and r.output else [])][:3],
@@ -264,5 +246,5 @@ class SetRowState(AgentTool):
 
 
 ROW_TOOLS: list[AgentTool] = [ReadMapping(), ReadSourceExcerpts(), ReadTargetExcerpts(), CheckPolicy(), ProposeCandidates(), DraftRequest(), SetRowState()]  # working ONE row
-REVIEW_TOOLS: list[AgentTool] = [ListRows(), RaiseDoubt(), SetClassification()]  # the whole-application review
+REVIEW_TOOLS: list[AgentTool] = [ListRows(), RaiseDoubt()]  # the whole-application review
 CASE_TOOLS: list[AgentTool] = [*ROW_TOOLS, *REVIEW_TOOLS]
