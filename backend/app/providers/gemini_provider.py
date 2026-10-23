@@ -11,6 +11,26 @@ from ..devlog import events
 from .base import LLMProvider, LLMRequest, LLMResponse, ProviderHealth, ToolCall
 
 
+def _extract_retry_delay(e: Exception) -> float:
+    try:
+        details = getattr(e, "details", [])
+        for d in details:
+            if isinstance(d, dict) and "retryDelay" in d:
+                val = str(d["retryDelay"]).rstrip("s")
+                return min(float(val) + 1.0, 30.0)
+    except Exception:
+        pass
+    import re
+    s = str(e)
+    m = re.search(r"retryDelay':\s*'([0-9\.]+)s?'", s) or re.search(r"Please retry in ([0-9\.]+)s", s)
+    if m:
+        try:
+            return min(float(m.group(1)) + 1.0, 30.0)
+        except Exception:
+            pass
+    return 5.0
+
+
 def clean_schema_for_gemini(schema: dict[str, Any]) -> dict[str, Any]:
     """Resolve $defs/$ref and remove fields unsupported by Gemini's schema specification."""
     defs = schema.get("$defs", {})
@@ -178,7 +198,8 @@ class GeminiProvider:
                     if is_daily_quota and not is_last_model:
                         break  # Immediately try fallback model
                     if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "503" in err_str or "UNAVAILABLE" in err_str) and attempt < 2:
-                        await asyncio.sleep(2 * (attempt + 1))
+                        delay = _extract_retry_delay(e)
+                        await asyncio.sleep(delay)
                         continue
                     if is_last_model and attempt == 2:
                         events.emit("error", where="llm_call", provider=self.name, model=current_model,
