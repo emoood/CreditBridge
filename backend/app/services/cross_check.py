@@ -82,3 +82,8 @@ def name_in_text(path: str, name: str) -> bool | None:
         return None
     page = _norm(pymupdf.open(path)[0].get_text())
     return all(tok in page for tok in _norm(name).split())
+
+
+def prints_totals(path: str) -> bool:
+    """Whether the text layer prints any total, GPA or quality-points line. A transcript that prints none cannot have a total to check."""
+    return bool(re.search(r"\b(total|gpa|quality points)\b", " ".join(p.get_text() for p in pymupdf.open(path)), re.IGNORECASE))

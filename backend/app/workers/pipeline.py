@@ -91,6 +91,8 @@ async def run_reading(job_id: str, provider: LLMProvider) -> None:
             ictx.imgs[s.vision_dpi] = pages
             ictx.lines = {k: vr.count_text_lines(pages[p - 1], sp) for p, k, sp, _x, _o in blocks_layout}
             ictx.text = await asyncio.to_thread(cc.text_rows, path, app.id) if digital else None  # the text layer is only a cross-check on what vision reads
+            if ictx.text is not None:
+                ictx.text_has_totals = await asyncio.to_thread(cc.prints_totals, path)
             for u in units:
                 if u.status == "DONE" and u.result:  # resumed job: finished blocks are not read again
                     ictx.blocks[u.unit_key] = u.result
