@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     lmstudio_model: str = ""  # the identifier LM Studio shows for the loaded model
 
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.8-flash"
+    gemini_model: str = "gemini-3.5-flash"
 
     def get_gemini_api_key(self) -> str:
         if self.gemini_api_key:

@@ -1,3 +1,4 @@
+import asyncio
 from copy import deepcopy
 import json
 import time
@@ -44,7 +45,7 @@ def clean_schema_for_gemini(schema: dict[str, Any]) -> dict[str, Any]:
 class GeminiProvider:
     """Google Gemini API provider implementing LLMProvider protocol via google-genai."""
 
-    def __init__(self, api_key: str, model: str = "gemini-3.8-flash",
+    def __init__(self, api_key: str, model: str = "gemini-3.5-flash",
                  temperature: float = 0.0, timeout: float = 120.0):
         self.api_key = api_key
         self.model = model
@@ -62,6 +63,13 @@ class GeminiProvider:
             display = getattr(m, "display_name", None) or self.model
             return ProviderHealth(True, self.name, self.model, f"ok ({display})", loaded=True)
         except Exception as e:  # noqa: BLE001
+            # Try fallback model if configured model fails
+            if self.model != "gemini-3.5-flash":
+                try:
+                    m = await self.client.aio.models.get(model="gemini-3.5-flash")
+                    return ProviderHealth(True, f"gemini:gemini-3.5-flash", "gemini-3.5-flash", f"ok ({m.display_name})", loaded=True)
+                except Exception:
+                    pass
             return ProviderHealth(False, self.name, self.model, f"unreachable: {type(e).__name__}: {e}")
 
     def _convert_tools(self, tools: list[dict[str, Any]]) -> list[types.Tool]:
@@ -115,7 +123,6 @@ class GeminiProvider:
                     contents.append(types.Content(role="model", parts=[types.Part.from_text(text=m.get("content", ""))]))
                 i += 1
             elif role == "tool":
-                # Collect consecutive tool responses into a single user turn
                 tool_parts: list[types.Part] = []
                 while i < len(messages) and messages[i].get("role") == "tool":
                     tm = messages[i]
@@ -146,17 +153,42 @@ class GeminiProvider:
             tools=tools or None,
         )
 
+        models_to_try = [self.model]
+        if self.model != "gemini-3.5-flash":
+            models_to_try.append("gemini-3.5-flash")
+
+        resp = None
+        used_model = self.model
         t0 = time.time()
-        try:
-            resp = await self.client.aio.models.generate_content(
-                model=self.model,
-                contents=contents,
-                config=config,
-            )
-        except Exception as e:
-            events.emit("error", where="llm_call", provider=self.name, model=self.model,
-                        stage=request.stage, error=f"{type(e).__name__}: {e}", **request.meta)
-            raise
+
+        for m_idx, current_model in enumerate(models_to_try):
+            for attempt in range(3):
+                try:
+                    resp = await self.client.aio.models.generate_content(
+                        model=current_model,
+                        contents=contents,
+                        config=config,
+                    )
+                    used_model = current_model
+                    break
+                except Exception as e:
+                    err_str = str(e)
+                    is_daily_quota = ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and "PerDay" in err_str
+                    is_last_model = (m_idx == len(models_to_try) - 1)
+                    if is_daily_quota and not is_last_model:
+                        break  # Immediately try fallback model
+                    if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "503" in err_str or "UNAVAILABLE" in err_str) and attempt < 2:
+                        await asyncio.sleep(2 * (attempt + 1))
+                        continue
+                    if is_last_model and attempt == 2:
+                        events.emit("error", where="llm_call", provider=self.name, model=current_model,
+                                    stage=request.stage, error=f"{type(e).__name__}: {e}", **request.meta)
+                        raise
+            if resp is not None:
+                break
+
+        if resp is None:
+            raise RuntimeError(f"Failed to generate content across candidate models: {models_to_try}")
 
         dur = round(time.time() - t0, 2)
         candidate = resp.candidates[0] if resp.candidates else None
@@ -166,7 +198,6 @@ class GeminiProvider:
         for fc in getattr(resp, "function_calls", None) or []:
             calls.append(ToolCall(id=getattr(fc, "id", "") or "", name=fc.name, arguments=dict(fc.args or {})))
 
-        # Cache candidate content if it emitted tool calls so subsequent turns retain thought signatures
         if calls and candidate_content:
             tcs = [{"name": c.name, "arguments": c.arguments} for c in calls]
             self._content_cache[json.dumps(tcs, sort_keys=True)] = candidate_content
@@ -179,8 +210,8 @@ class GeminiProvider:
         llm_resp = LLMResponse(
             content=text_content,
             tool_calls=calls,
-            provider=self.name,
-            model=self.model,
+            provider=f"gemini:{used_model}",
+            model=used_model,
             duration_s=dur,
             prompt_tokens=prompt_tokens,
             output_tokens=output_tokens,
@@ -189,8 +220,8 @@ class GeminiProvider:
 
         events.emit(
             "llm_call",
-            provider=self.name,
-            model=self.model,
+            provider=llm_resp.provider,
+            model=llm_resp.model,
             stage=request.stage,
             duration_s=dur,
             prompt_tokens=prompt_tokens,
