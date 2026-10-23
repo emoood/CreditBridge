@@ -176,12 +176,12 @@ def compact_failures(fs: list[dict[str, Any]], limit: int = 8) -> list[dict[str,
 
 
 # ----------------------------------------------------------------------------------------------------- reading (tools + code fallback)
-async def read_once(ctx: IntakeContext, key: str, span: tuple[int, int], dpi: int, hint: str | None = None) -> dict[str, Any]:
+async def read_once(ctx: IntakeContext, key: str, span: tuple[int, int], dpi: int, hint: str | None = None, focus: str | None = None) -> dict[str, Any]:
     page = ctx.spans[key][0]
     base = get_settings().vision_dpi
     img = await asyncio.to_thread(ctx.page_img, page, dpi)
     b64 = vr.crop_png_b64(img, span, dpi / base, ctx.xr.get(key))
-    reading = await vr.read_block(ctx.provider, b64, key, hint=hint)
+    reading = await vr.read_block(ctx.provider, b64, key, hint=hint, focus=focus)
     checked = vr.check_block(reading, ctx.scale)
     checked["page"], checked["reread"] = page, False
     if not ctx.text_has_totals and any(v is not None for k, v in checked["totals"].items() if k != "term"):
@@ -625,3 +625,156 @@ async def run_code_only(ctx: IntakeContext) -> IntakeContext:
     ctx.name_check = name_check(ctx.record_name, None, ctx.path)
     await finish(ctx)
     return ctx
+
+
+# ------------------------------------------------------------------------------------------------ re-evaluation (chunk C1, step 3)
+# One cell (or one row, or one page) is read again at a higher zoom and the agent is NOT shown the value that is in the table. The new value is only a PROPOSAL: the
+# officer sees old and new side by side and picks. Code then recomputes what depends on it (row checks, term and cumulative totals, curriculum candidates) with no
+# model call. A field the officer edited is never replaced by AI. The reader is the same one the first reading used (one model call per block), metered the same way.
+REEVAL_FIELDS = ("code", "title", "credits", "grade", "term")
+REEVAL_CALL_BUDGET = 8  # model calls a case may spend on re-evaluation (one per block read; "Re-read this page" costs one per block of the page)
+READING_OF = {"title": ("subject",), "code": ("code",), "credits": ("credits",), "term": ("term",), "grade": ("letter", "mark", "points")}
+
+
+def course_rows(block: dict[str, Any]) -> list[dict[str, Any]]:
+    return [r for r in block.get("rows", []) if not xc.is_non_course(r)]
+
+
+def row_values(r: dict[str, Any]) -> dict[str, str]:
+    """A reading's row as the verification table writes it (the same rules the pipeline uses to build the table)."""
+    return {"code": r.get("code") or "", "title": r.get("subject") or "", "credits": f"{r['credits']:g}" if r.get("credits") is not None else "",
+            "grade": r.get("letter") or (f"{r['mark']:g}" if r.get("mark") is not None else ""), "term": r.get("term") or ""}
+
+
+def blocks_layout(path: str) -> tuple[dict[str, tuple[int, tuple[int, int]]], dict[str, tuple[int, int]]]:
+    """The block keys, spans and horizontal ranges of a file, built exactly as the reading builds them (the layout is deterministic)."""
+    s = get_settings()
+    spans: dict[str, tuple[int, tuple[int, int]]] = {}
+    xr: dict[str, tuple[int, int]] = {}
+    for pi, img in enumerate(vr.render_pages(path, s.vision_dpi)):
+        for n, (sp, x, _o) in enumerate(vr.layout(img, s.vision_max_block_px), 1):
+            spans[f"p{pi + 1}b{n}"] = (pi + 1, sp)
+            if x:
+                xr[f"p{pi + 1}b{n}"] = x
+    return spans, xr
+
+
+def locate_rows(read_units: list[tuple[str, dict[str, Any]]], row_ids: list[str]) -> dict[str, tuple[str, int]] | None:
+    """Row id -> (block key, position among that block's course rows). The table was built from the blocks in order, so the i-th row of the extraction is the i-th course
+    row of the stored readings. None when the counts do not agree (then nothing can be located and nothing is re-read)."""
+    located: dict[str, tuple[str, int]] = {}
+    n = 0
+    for key, res in read_units:
+        for pos in range(len(course_rows(res))):
+            if n >= len(row_ids):
+                return None
+            located[row_ids[n]] = (key, pos)
+            n += 1
+    return located if n == len(row_ids) else None
+
+
+def match_row(new_block: dict[str, Any], old_block: dict[str, Any], pos: int) -> tuple[dict[str, Any] | None, str]:
+    """The row of the new reading that is the same printed row: the one in the same position when the block has as many course rows as before, else the one whose
+    title is most like the stored one (0.8 or better). (row, how) or (None, '')."""
+    new_rows, old_rows = course_rows(new_block), course_rows(old_block)
+    if len(new_rows) == len(old_rows):
+        return new_rows[pos], "position"
+    title = re.sub(r"[^a-z0-9 ]", "", (old_rows[pos].get("subject") or "").lower())
+    best = max(new_rows, key=lambda r: difflib.SequenceMatcher(None, title, re.sub(r"[^a-z0-9 ]", "", (r.get("subject") or "").lower())).ratio(), default=None)
+    if best is not None and _close(old_rows[pos].get("subject") or "", best.get("subject") or ""):
+        return best, "title"
+    return None, ""
+
+
+def same_value(field: str, a: str, b: str) -> bool:
+    if field == "credits":
+        try:
+            return float(a) == float(b)
+        except ValueError:
+            pass
+    return a.strip().casefold() == b.strip().casefold()
+
+
+async def reread_blocks(provider: LLMProvider, path: str, keys: list[str], scale: dict[str, Any], positions: dict[str, int | None]) -> dict[str, dict[str, Any]]:
+    """Read each block again at the higher dpi. `positions` says which course row to look at closely (by position, never by value). A block that fails comes back as
+    {'failed': True, 'error': code}; the others are still returned."""
+    spans, xr = await asyncio.to_thread(blocks_layout, path)
+    if any(k not in spans for k in keys):
+        raise ValueError("the page layout no longer matches the stored reading")
+    ctx = IntakeContext(None, None, "intake", "", provider=provider, path=path, scale=scale, spans=spans, xr=xr)
+    out: dict[str, dict[str, Any]] = {}
+    for k in keys:
+        pos = positions.get(k)
+        focus = None if pos is None else f"course row number {pos + 1} of this block (counting only the rows that show a course, from the top)"
+        try:
+            out[k] = await read_once(ctx, k, spans[k][1], get_settings().vision_reread_dpi, focus=focus)
+        except Exception as e:  # noqa: BLE001  one block failing must not lose the others
+            out[k] = {"failed": True, "error": getattr(e, "code", "model_error")}
+    return out
+
+
+def build_proposals(rows: dict[str, dict[str, Any]], located: dict[str, tuple[str, int]], stored: dict[str, dict[str, Any]], fresh: dict[str, dict[str, Any]],
+                    wanted: list[tuple[str, tuple[str, ...]]], allow_edited: bool) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """For every wanted (row id, fields): what the new reading says, next to what the table has now. Returns (proposals, notes); a note explains why a field has no
+    proposal (edited by the officer, the block failed, the row could not be matched)."""
+    props: list[dict[str, Any]] = []
+    notes: list[dict[str, Any]] = []
+    for rid, fields in wanted:
+        key, pos = located[rid]
+        new_block = fresh.get(key) or {}
+        if new_block.get("failed"):
+            notes.append({"row": rid, "why": f"the re-read of block {key} failed ({new_block.get('error')}); nothing changed"})
+            continue
+        new, how = match_row(new_block, stored[key], pos)
+        if new is None:
+            notes.append({"row": rid, "why": "the new reading did not line up with this row (a different number of courses): try \"Re-read this page\" or edit by hand"})
+            continue
+        vals = row_values(new)
+        for f in fields:
+            if (rows[rid].get("edited") or {}).get(f) and not allow_edited:
+                notes.append({"row": rid, "field": f, "why": "edited by the officer: not re-read unless you confirm"})
+                continue
+            cur = str(rows[rid].get(f) or "")
+            props.append({"row": rid, "field": f, "old": cur, "new": vals[f], "same": same_value(f, cur, vals[f]), "block": key, "pos": pos, "matched": how,
+                          "reading": {k: new.get(k) for k in READING_OF[f]}})
+    return props, notes
+
+
+def recheck_row(row: dict[str, Any], scale: dict[str, Any]) -> None:
+    """The row's own checks again (grade against mark and points, grade read at all). Fields the officer decided are not marked uncertain again."""
+    g = str(row.get("grade") or "").strip()
+    try:
+        credits = float(row["credits"]) if str(row.get("credits") or "").strip() else None
+    except ValueError:
+        credits = None
+    c = gc.check_row({"subject": row.get("title"), "letter": None if re.fullmatch(r"\d+(\.\d+)?", g) else (g or None), "mark": row.get("mark"), "points": row.get("points"), "credits": credits}, scale)
+    row["flags"] = c.flags
+    row["uncertain_fields"] = [u for u in c.uncertain if u not in (row.get("edited") or {})]
+
+
+def apply_proposal(row: dict[str, Any], prop: dict[str, Any], scale: dict[str, Any], who: str, at: str) -> None:
+    """The officer chose the new value: it goes in the table, marked as the officer's decision (so AI never replaces it), the row is checked again and the questions Intake
+    had asked about this field are answered."""
+    f = prop["field"]
+    row[f] = prop["new"]
+    if f == "grade":
+        row["mark"], row["points"] = prop["reading"].get("mark"), prop["reading"].get("points")
+    row["edited"] = {**(row.get("edited") or {}), f: {"by": who, "at": at, "via": "re-read"}}
+    row["corrected"] = True
+    row["questions"] = [q for q in row.get("questions", []) if q.get("field") != f]
+    recheck_row(row, scale)
+
+
+def recompute_extraction(read_units: list[tuple[str, dict[str, Any]]], overrides: list[dict[str, Any]], scale: dict[str, Any]) -> dict[str, Any]:
+    """The term and cumulative checks again, from the stored readings with the officer's chosen re-read values laid over them. Code only. The stored readings are not changed."""
+    blocks = {k: copy.deepcopy(res) for k, res in read_units}
+    for ov in overrides:
+        rows = course_rows(blocks[ov["block"]]) if ov["block"] in blocks else []
+        if ov["pos"] < len(rows):
+            rows[ov["pos"]].update(ov["reading"])
+    done: dict[str, dict[str, Any]] = {}
+    for k, b in blocks.items():
+        done[k] = b
+        if b.get("rows"):
+            refresh(b, scale, xc.prior_rows(done, k))
+    return vr.merge_checked(list(blocks.values()), scale)

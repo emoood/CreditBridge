@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, Check, Loader2, Plus, X } from 'lucide-react';
+import { AlertCircle, Check, Loader2, Plus, RefreshCw, X } from 'lucide-react';
 import { api, type AppInfo, type ExtractionHeader, type Institution, type Row, type Subject } from './api';
 
 /** Step before the worklist view: the scan beside the table, only low-confidence cells highlighted, one Confirm button. */
@@ -37,7 +37,7 @@ export function ExtractionCheck({ app, quals, qual, role, onChanged, display }: 
         {app.document ? <img src={api.previewUrl(app.id, page)} alt={`Transcript page ${page}`} /> : <p className="muted">No scan is stored for this application.</p>}</div>
       <div className="vtable-wrap">
         <table className="xtable"><thead><tr><th /><th>Course (as written)</th><th>Grade</th>{display.mark && <th>Mark</th>}{showCredits && <th>Credits</th>}{display.grade_year && <th>Grade year</th>}<th>Curriculum course</th><th /></tr></thead>
-          <tbody>{[...rows.filter(r => r.subject), ...rows.filter(r => !r.subject)].map(r => <XRow key={r.id} appId={app.id} r={r} quals={quals} qual={qual} wrap={wrap} display={{ ...display, school_credits: showCredits }} />)}</tbody></table>
+          <tbody>{[...rows.filter(r => r.subject), ...rows.filter(r => !r.subject)].map(r => <XRow key={r.id} appId={app.id} r={r} quals={quals} qual={qual} wrap={wrap} live={!ex?.demo} display={{ ...display, school_credits: showCredits }} />)}</tbody></table>
         {rows.length === 0 && <div className="empty-state">No courses were recognised. Add rows manually.</div>}
         <div className="verify-actions">
           <button className="link-btn" onClick={() => wrap(() => api.addRow(app.id))}><Plus size={13} /> Add a course</button>
@@ -69,25 +69,57 @@ function HeaderBar({ appId, h, recordName, wrap }: { appId: string; h: Extractio
 }
 
 type Field = 'title' | 'credits' | 'grade' | 'term';
-function XRow({ appId, r, quals, qual, wrap, display }: { display: Institution['display']; appId: string; r: Row; quals: string[]; qual: string; wrap: (f: () => Promise<unknown>) => Promise<void> }) {
+const LABEL: Record<string, string> = { title: 'Course', grade: 'Grade', credits: 'Credits', term: 'Grade year', code: 'Code' };
+function XRow({ appId, r, quals, qual, wrap, display, live }: { display: Institution['display']; appId: string; r: Row; quals: string[]; qual: string; live: boolean; wrap: (f: () => Promise<unknown>) => Promise<void> }) {
   const [picker, setPicker] = useState(false);
+  const [menu, setMenu] = useState<Field | null>(null);      // C1 step 3: which cell's Re-evaluate menu is open
+  const [ask, setAsk] = useState<Field | null>(null);        // an officer-edited cell: re-evaluating it asks first
+  const [reading, setReading] = useState(false);
+  const [notes, setNotes] = useState<string[]>([]);
   const flagged = (r.flags?.length ?? 0) > 0;
   const asked = (f: string) => (r.questions ?? []).some(q => q.field === f);
+  const pending = Object.values(r.reeval ?? {});
+  async function reread(scope: 'field' | 'row' | 'page', field: Field, confirm = false) {
+    const hit = r.edited?.[field];
+    if (scope === 'field' && hit && !confirm) { setMenu(null); setAsk(field); return; }
+    setMenu(null); setAsk(null); setReading(true); setNotes([]);
+    await wrap(async () => { try { const res = await api.reevaluate(appId, { scope, row_id: r.id, field, page: r.page, confirm_overwrite: confirm }); setNotes(res.notes.map(n => n.why)); } finally { setReading(false); } });
+  }
+  const editedNote = (k: string) => r.edited?.[k] && <small className="muted">{r.edited[k].via === 're-read' ? 're-read value chosen' : 'edited'} by {r.edited[k].by} · {r.edited[k].at.slice(0, 10)}</small>;
+  const reButton = (k: Field) => <button className="icon-button" aria-label={`Re-evaluate ${LABEL[k]}`} title={live ? 'Re-evaluate with AI' : 'Re-evaluate needs Live AI (this case replays a recording)'} disabled={!live || reading} onClick={() => setMenu(menu === k ? null : k)}>{reading && menu === null && ask === null ? <Loader2 size={12} className="spin" /> : <RefreshCw size={12} />}</button>;
   const cell = (k: Field, low: boolean, w?: number) =>
-    <input defaultValue={r[k]} className={`cell ${low ? 'low' : ''}`} style={w ? { width: w } : undefined} aria-label={k}
-      onBlur={e => { if (e.target.value !== r[k]) wrap(() => api.patchRow(appId, r.id, { [k]: e.target.value })); }} />;
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><input defaultValue={r[k]} key={`${k}-${r[k]}`} className={`cell ${low ? 'low' : ''}`} style={w ? { width: w } : undefined} aria-label={k}
+      onBlur={e => { if (e.target.value !== r[k]) wrap(() => api.patchRow(appId, r.id, { [k]: e.target.value })); }} />{reButton(k)}</span>;
+  const under = (k: Field) => <>
+    {editedNote(k)}
+    {menu === k && <span className="re-menu" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <button className="link-btn" onClick={() => reread('field', k)}>Re-read this cell</button>
+      <button className="link-btn" onClick={() => reread('row', k)}>Re-read this row</button>
+      <button className="link-btn" onClick={() => reread('page', k)}>Re-read this page</button></span>}
+    {ask === k && <span className="re-menu" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><small>Edited by {r.edited?.[k]?.by} on {r.edited?.[k]?.at.slice(0, 10)}. Re-read it anyway? Your value stays unless you choose the new one.</small>
+      <button className="link-btn" onClick={() => reread('field', k, true)}>Re-read</button><button className="link-btn" onClick={() => setAsk(null)}>Cancel</button></span>}
+  </>;
+  const span = 5 + (display.mark ? 1 : 0) + (display.school_credits ? 1 : 0) + (display.grade_year ? 1 : 0);
   return <>
     <tr className={`${r.included ? '' : 'off'} ${r.subject ? '' : 'nocur'}`}>
       <td><input type="checkbox" checked={r.included} aria-label="Include" onChange={e => wrap(() => api.patchRow(appId, r.id, { included: e.target.checked }))} /></td>
-      <td>{cell('title', r.uncertain_fields.includes('title'))}{(r.questions ?? []).map((q, i) => <small className="rowq" key={i}>? {q.question}</small>)}{flagged && !(r.questions?.length) && <small className="rowflag" title={r.flags?.join('\n')}>Check: {r.flags?.[0]}</small>}</td>
-      <td>{cell('grade', r.uncertain_fields.includes('grade') || asked('grade') || flagged, 56)}</td>
+      <td>{cell('title', r.uncertain_fields.includes('title'))}{under('title')}{(r.questions ?? []).map((q, i) => <small className="rowq" key={i}>? {q.question}</small>)}{flagged && !(r.questions?.length) && <small className="rowflag" title={r.flags?.join('\n')}>Check: {r.flags?.[0]}</small>}{notes.map((n, i) => <small className="rowflag" key={i}>{n}</small>)}</td>
+      <td>{cell('grade', r.uncertain_fields.includes('grade') || asked('grade') || flagged, 56)}{under('grade')}</td>
       {display.mark && <td className={`num ${flagged ? 'lowtext' : ''}`}>{r.mark ?? ''}</td>}
-      {display.school_credits && <td>{cell('credits', r.uncertain_fields.includes('credits') || !!r.credits_missing, 56)}{r.credits_missing && <small className="rowflag">Credits missing</small>}</td>}
-      {display.grade_year && <td>{cell('term', r.uncertain_fields.includes('term'), 90)}</td>}
+      {display.school_credits && <td>{cell('credits', r.uncertain_fields.includes('credits') || !!r.credits_missing, 56)}{r.credits_missing && <small className="rowflag">Credits missing</small>}{under('credits')}</td>}
+      {display.grade_year && <td>{cell('term', r.uncertain_fields.includes('term'), 90)}{under('term')}</td>}
       <td className={r.subject ? 'subj' : 'subj lowcell'}>{r.subject ? <span className="subj-chosen"><strong>{r.subject.code}</strong><small>{r.subject.qualification}{r.subject.name.trim().toLowerCase() !== (r.title || '').trim().toLowerCase() ? ` · ${r.subject.name}` : ''}</small></span> : <span className="unrec">Not in curriculum</span>}
         <button className="link-btn" onClick={() => setPicker(!picker)}>{r.subject ? 'Change' : 'Choose'}</button></td>
       <td><button className="icon-button" aria-label="Remove row" onClick={() => wrap(() => api.deleteRow(appId, r.id))}><X size={14} /></button></td></tr>
-    {picker && <tr><td colSpan={5 + (display.mark ? 1 : 0) + (display.school_credits ? 1 : 0) + (display.grade_year ? 1 : 0)}><Picker r={r} quals={quals} qual={qual} onPick={id => { setPicker(false); wrap(() => api.patchRow(appId, r.id, { subject_id: id })); }} /></td></tr>}
+    {pending.length > 0 && <tr><td colSpan={span}><div className="reeval" style={{ display: 'grid', gap: 4, padding: '4px 0' }}>
+      {pending.map(p => <div key={p.field} style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <strong>{LABEL[p.field] ?? p.field}</strong>
+        {p.same ? <span>Re-read agrees: {p.new || '(empty)'}</span>
+          : <span>In the table: <b>{p.old || '(empty)'}</b> · Re-read: <b>{p.new || '(empty)'}</b></span>}
+        {p.same ? <button className="link-btn" onClick={() => wrap(() => api.chooseReeval(appId, r.id, p.field, 'old'))}>OK</button>
+          : <><button className="link-btn" onClick={() => wrap(() => api.chooseReeval(appId, r.id, p.field, 'old'))}>Keep the table value</button>
+            <button className="link-btn" onClick={() => wrap(() => api.chooseReeval(appId, r.id, p.field, 'new'))}>Use the re-read value</button></>}</div>)}</div></td></tr>}
+    {picker && <tr><td colSpan={span}><Picker r={r} quals={quals} qual={qual} onPick={id => { setPicker(false); wrap(() => api.patchRow(appId, r.id, { subject_id: id })); }} /></td></tr>}
   </>;
 }
 

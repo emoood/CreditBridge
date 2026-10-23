@@ -56,7 +56,11 @@ export type Subject = { id: string; name: string; code: string; qualification: s
 export type Candidate = Subject & { score: number };
 export type Row = { id: string; code: string; title: string; title_ar: string; credits: string; grade: string; term: string; page: number; evidence_ref: string;
   uncertain_fields: string[]; subject: Subject | null; candidates: Candidate[]; included: boolean; corrected: boolean; auto_linked?: boolean;
-  mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string; source_id?: string; questions?: { field: string; question: string }[]; credits_missing?: boolean };
+  mark?: number | null; points?: number | null; flags?: string[]; curriculum_status?: string; source_id?: string; questions?: { field: string; question: string }[]; credits_missing?: boolean;
+  edited?: Record<string, { by: string; at: string; via: 'typed' | 're-read' }>; reeval?: Record<string, Reeval> };
+/** C1 step 3: a re-read value waiting for the officer (old and new side by side). `same` = the re-read agrees with the table. */
+export type Reeval = { row: string; field: string; old: string; new: string; same: boolean; matched: string; by: string; at: string };
+export type ReevalResult = { proposals: Reeval[]; notes: { row?: string; field?: string; why: string }[]; calls_used: number; calls_budget: number };
 /** C1: the extraction header ("Institution / curriculum", major for a university transcript) and what credits mean for this student type. */
 export type ExtractionHeader = { value: string | null; student_type: 'school' | 'university' | null; major: string | null; major_missing: boolean; source: string | null; major_source: string | null;
   basis: string | null; disagrees: { text_layer: string; basis: string | null } | null; curriculum_check: { status: 'match' | 'mismatch' | 'unchecked'; record: string | null; seen: string | null };
@@ -67,7 +71,7 @@ export type AppInfo = { id: string; kind: 'demo' | 'upload'; student: string; pr
     planted_misread?: { subject: string; wrong: number | string; field?: string; applied?: { subject: string; field?: string; from: number | string; to: number | string }[] } | null;
     intake?: { agent: boolean; recovery_used: number; changes: { block: string; row: string; field: string; from: unknown; to: unknown }[]; skipped: Record<string, string>; read_by_code: string[]; text_layer_crosscheck: boolean; agent_questions: number;
       name_check?: { status: 'match' | 'mismatch' | 'unchecked'; source?: string; seen?: string | null; why?: string } };
-    header?: ExtractionHeader; credits?: { show: boolean; required: boolean; missing: number };
+    demo?: unknown; header?: ExtractionHeader; credits?: { show: boolean; required: boolean; missing: number };
     case_summary?: { text: string; by: string; ok?: boolean } };
   curriculum?: { available: boolean; error: string | null };
   replay?: { name: string; label: string; recorded_at: string; model: string; live: string[] } | null };
@@ -87,6 +91,8 @@ export const api = {
     return fetch('/api/v1/applications', { method: 'POST', body: f, headers: { 'X-Role': 'admissions' } }).then(j<AppInfo>); },
   patchRow: (id: string, row: string, body: Record<string, unknown>) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<Row>),
   patchHeader: (id: string, body: { value?: string; major?: string }) => fetch(`/api/v1/applications/${id}/header`, { method: 'PATCH', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<ExtractionHeader>),
+  reevaluate: (id: string, body: { scope: 'field' | 'row' | 'page'; row_id?: string; field?: string; page?: number; confirm_overwrite?: boolean }) => fetch(`/api/v1/applications/${id}/reevaluate`, { method: 'POST', headers: ROLE_HEADERS('admissions'), body: JSON.stringify(body) }).then(j<ReevalResult>),
+  chooseReeval: (id: string, row: string, field: string, choice: 'new' | 'old') => fetch(`/api/v1/applications/${id}/rows/${row}/reeval/${field}`, { method: 'POST', headers: ROLE_HEADERS('admissions'), body: JSON.stringify({ choice }) }).then(j<Row>),
   addRow: (id: string) => fetch(`/api/v1/applications/${id}/rows`, { method: 'POST' }).then(j<Row>),
   deleteRow: (id: string, row: string) => fetch(`/api/v1/applications/${id}/rows/${row}`, { method: 'DELETE' }).then(j<{ deleted: boolean }>),
   link: (id: string, qualification: string | null, relink: boolean) => fetch(`/api/v1/applications/${id}/link`, { method: 'POST', headers: ROLE_HEADERS('admissions'), body: JSON.stringify({ qualification, relink }) }).then(j<AppInfo>),

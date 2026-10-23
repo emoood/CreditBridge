@@ -1,20 +1,24 @@
 """Upload (returns a job id at once), the verification table, curriculum linking, and the officer gate (confirm)."""
 import asyncio
+import time
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from .. import runtime
+from ..agents import intake_agent as ia
 from ..config import get_settings
 from ..db.models import Application, Job
 from ..db.session import app_session
 from ..services import extraction_checks as xc
-from ..services import prepared
+from ..services import grade_checks as gc
+from ..services import prepared, usage
 from ..services import student_record as sr
 from ..services.curriculum import curriculum
 from ..services.documents import UploadError, render_page_png, save_upload
@@ -208,6 +212,9 @@ def patch_row(app_id: str, row_id: str, body: RowPatch, x_actor: str | None = He
                 row[f] = ch[f].strip()
                 row["uncertain_fields"] = [u for u in row.get("uncertain_fields", []) if u != f]
                 row["corrected"] = True
+                row["edited"] = {**(row.get("edited") or {}), f: {"by": x_actor or "officer", "at": datetime.now(UTC).isoformat(), "via": "typed"}}  # AI never replaces this field
+                if (row.get("reeval") or {}).get(f):
+                    row["reeval"] = {k: v for k, v in row["reeval"].items() if k != f}
         if "included" in ch:
             row["included"] = ch["included"]
         if "subject_id" in ch:
@@ -225,6 +232,140 @@ def patch_row(app_id: str, row_id: str, body: RowPatch, x_actor: str | None = He
             row["candidates"] = candidates(row, None)
         store.set_json(app, "rows", rows)
         db.commit()
+        return row
+
+
+# ----------------------------------------------------------------------------------------------- re-evaluate (chunk C1, step 3)
+class ReevalIn(BaseModel):
+    scope: Literal["field", "row", "page"] = "field"
+    row_id: str | None = None
+    field: str | None = None
+    page: int | None = None
+    confirm_overwrite: bool = False  # the officer agreed to re-read fields they edited themselves
+
+
+def _reading_units(db, app: Application) -> list[tuple[str, dict[str, Any]]]:
+    """(block key, stored reading) of the finished blocks of the latest reading, in the order the table was built from."""
+    job = db.scalar(select(Job).where(Job.app_id == app.id, Job.phase == "READING").order_by(Job.created_at.desc()))
+    return [(u.unit_key, u.result) for u in store.units_of(db, job.id) if u.stage == "read" and u.status == "DONE" and u.result] if job else []
+
+
+def _scale(app: Application) -> dict[str, Any]:
+    return gc.load_scale(((app.extraction or {}).get("student_record") or {}).get("grade_scale"))
+
+
+@router.post("/applications/{app_id}/reevaluate")
+async def reevaluate(app_id: str, body: ReevalIn, x_actor: str | None = Header(default=None)):
+    """Read a cell, a row or a page again at a higher zoom, WITHOUT showing the model what the table says now. Nothing in the table changes: each differing value is
+    stored on its row as a proposal (old and new side by side) for the officer to pick. Fields the officer edited are skipped unless `confirm_overwrite` is set."""
+    who = x_actor or "officer"
+    with app_session() as db:
+        app = _editable(db, app_id)
+        ex = app.extraction or {}
+        if ex.get("demo"):
+            raise HTTPException(409, "Re-evaluate needs Live AI. This case replays a recording, which has no answer for a new question.")
+        if not app.document:
+            raise HTTPException(404, "No document")
+        path, scale = app.document["path"], _scale(app)
+        rows = {r["id"]: dict(r) for r in app.rows}
+        ids = [r["id"] for r in app.extracted_rows]
+        units = _reading_units(db, app)
+        used = (ex.get("reeval") or {}).get("calls", 0)
+    stored = dict(units)
+    located = ia.locate_rows(units, ids)
+    if located is None:
+        raise HTTPException(409, "This extraction cannot be matched to the page blocks, so nothing can be re-read. Edit by hand.")
+    fields: tuple[str, ...]
+    if body.scope == "page":
+        if not body.page:
+            raise HTTPException(422, "Give the page to re-read")
+        keys = [k for k in stored if k.startswith(f"p{body.page}b") and ia.course_rows(stored[k])]
+        wanted = [(rid, ("title", "grade", "credits", "term")) for rid, (k, _p) in located.items() if k in keys and rid in rows]
+        positions: dict[str, int | None] = {}
+        obj = f"page {body.page}"
+    else:
+        if body.row_id not in rows or body.row_id not in located:
+            raise HTTPException(404 if body.row_id not in rows else 409, "Unknown row" if body.row_id not in rows else "This row was added by hand: there is nothing on the page to re-read.")
+        key, pos = located[body.row_id]
+        if body.scope == "field":
+            if body.field not in ia.REEVAL_FIELDS:
+                raise HTTPException(422, f"field must be one of {', '.join(ia.REEVAL_FIELDS)}")
+            fields = (body.field,)
+            hit = (rows[body.row_id].get("edited") or {}).get(body.field)
+            if hit and not body.confirm_overwrite:
+                raise HTTPException(409, f"Edited by {hit['by']} on {hit['at'][:10]}. Re-read it anyway? The edited value is kept unless you choose the new one.")
+        else:
+            fields = ("title", "grade", "credits", "term")
+        keys, wanted, positions, obj = [key], [(body.row_id, fields)], {key: pos}, body.row_id
+    if not keys:
+        return {"proposals": [], "notes": [{"why": "no course rows on that page"}], "calls_used": used, "calls_budget": ia.REEVAL_CALL_BUDGET}
+    if used + len(keys) > ia.REEVAL_CALL_BUDGET:
+        raise HTTPException(409, f"The re-evaluation budget for this case is used ({used} of {ia.REEVAL_CALL_BUDGET} model calls). Edit by hand.")
+    t0 = time.monotonic()
+    try:
+        fresh = await ia.reread_blocks(usage.MeteredProvider(runtime.get_provider(), app_id, body.row_id or ""), path, keys, scale, positions)
+    except ValueError as e:
+        raise HTTPException(409, str(e)) from e
+    except Exception as e:  # the provider is down or timed out: nothing was changed
+        usage.log_tool(app_id, body.row_id or "", "intake", "reevaluate", {"scope": body.scope, "blocks": keys}, False, type(e).__name__, time.monotonic() - t0)
+        raise HTTPException(502, "The re-read failed. Nothing was changed.") from e
+    props, notes = ia.build_proposals(rows, located, stored, fresh, wanted, body.confirm_overwrite)
+    at = datetime.now(UTC).isoformat()
+    with app_session() as db:
+        app = _editable(db, app_id)
+        table = [dict(r) for r in app.rows]
+        for r in table:
+            for p in (p for p in props if p["row"] == r["id"]):
+                r["reeval"] = {**(r.get("reeval") or {}), p["field"]: {**p, "by": who, "at": at}}
+        ex = dict(app.extraction or {})
+        ex["reeval"] = {**(ex.get("reeval") or {}), "calls": used + len(keys)}
+        store.set_json(app, "rows", table)
+        store.set_json(app, "extraction", ex)
+        db.commit()
+        store.audit(db, app_id, who, "reevaluate", obj, scope=body.scope, blocks=len(keys), proposals=sum(1 for p in props if not p["same"]), agreed=sum(1 for p in props if p["same"]))
+    usage.log_tool(app_id, body.row_id or "", "intake", "reevaluate", {"scope": body.scope, "blocks": keys}, True, f"{len(props)} values compared", time.monotonic() - t0)
+    return {"proposals": [{k: v for k, v in p.items() if k != "reading"} for p in props], "notes": notes, "calls_used": used + len(keys), "calls_budget": ia.REEVAL_CALL_BUDGET}
+
+
+class ReevalChoice(BaseModel):
+    choice: Literal["new", "old"]
+
+
+@router.post("/applications/{app_id}/rows/{row_id}/reeval/{field}")
+def resolve_reeval(app_id: str, row_id: str, field: str, body: ReevalChoice, x_actor: str | None = Header(default=None)):
+    """The officer picks between the value in the table and the re-read one. Picking the new one puts it in the table as the officer's decision, then code checks the row
+    again, recomputes the term and cumulative totals and refreshes the curriculum candidates (no model call)."""
+    who = x_actor or "officer"
+    with app_session() as db:
+        app = _editable(db, app_id)
+        rows = [dict(r) for r in app.rows]
+        row = next((r for r in rows if r["id"] == row_id), None)
+        if row is None:
+            raise HTTPException(404, "Unknown row")
+        prop = (row.get("reeval") or {}).get(field)
+        if not prop:
+            raise HTTPException(404, "There is no re-read value to choose for this field")
+        ex = dict(app.extraction or {})
+        if body.choice == "new" and not prop["same"]:
+            at = datetime.now(UTC).isoformat()
+            scale = _scale(app)
+            ia.apply_proposal(row, prop, scale, who, at)
+            if field in ("title", "code"):
+                if row.get("auto_linked"):
+                    row["subject"] = None
+                autolink(row, app.qualification_hint or None)
+            overrides = [*((ex.get("reeval") or {}).get("overrides") or []), {"block": prop["block"], "pos": prop["pos"], "reading": prop["reading"]}]
+            merged = ia.recompute_extraction(_reading_units(db, app), overrides, scale)
+            kept = [f for f in ex.get("flags", []) if f.startswith(("The name on the transcript", "curriculum_unavailable"))]
+            ex = {**ex, "flags": [*merged["flags"], *kept], "cumulative": merged["cumulative"], "unrecognized": sum(1 for r in rows if not r.get("subject")),
+                  "reeval": {**(ex.get("reeval") or {}), "overrides": overrides}}
+            store.set_json(app, "extraction", ex)
+        row["reeval"] = {k: v for k, v in row["reeval"].items() if k != field}
+        if not row["reeval"]:
+            del row["reeval"]
+        store.set_json(app, "rows", rows)
+        db.commit()
+        store.audit(db, app_id, who, "reeval_chosen", row_id, field=field, choice=body.choice, changed=body.choice == "new" and not prop["same"])
         return row
 
 

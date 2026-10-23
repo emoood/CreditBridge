@@ -11,6 +11,7 @@ import pymupdf
 from PIL import Image
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, ValidationError
 
+from ..config import get_settings
 from ..providers.base import LLMProvider, LLMRequest
 from . import grade_checks as gc
 
@@ -64,7 +65,9 @@ def render_pages(path: str, dpi: int) -> list[Image.Image]:
     p = path.lower()
     if p.endswith(".pdf"):
         return [Image.open(io.BytesIO(pg.get_pixmap(dpi=dpi).tobytes("png"))).convert("RGB") for pg in pymupdf.open(path)]
-    return [Image.open(path).convert("RGB")]
+    img = Image.open(path).convert("RGB")
+    base = get_settings().vision_dpi  # an image file has no dpi of its own: it is taken as the base reading size, so a higher dpi enlarges it (the crops are scaled the same way)
+    return [img if dpi == base else img.resize((round(img.width * dpi / base), round(img.height * dpi / base)), Image.LANCZOS)]
 
 
 def cut_row(ink: np.ndarray, lo: int, hi: int) -> int:
@@ -190,8 +193,11 @@ def crop_png_b64(img: Image.Image, span: tuple[int, int], scale: float = 1.0, xr
     return base64.b64encode(buf.getvalue()).decode()
 
 
-async def read_block(provider: LLMProvider, image_b64: str, unit: str, hint: str | None = None) -> BlockReading:
+async def read_block(provider: LLMProvider, image_b64: str, unit: str, hint: str | None = None, focus: str | None = None) -> BlockReading:
+    """`hint` says which check failed on a previous reading. `focus` (re-evaluation, C1 step 3) only says WHERE to look closely: it never carries the value that was read before."""
     ask = "Read this transcript block." + (f" A check failed on a previous reading: {hint} Look closely at that cell and copy exactly what is printed." if hint else "")
+    if focus:
+        ask += f" Read every row, and look especially closely at {focus}; copy exactly what is printed."
     req = LLMRequest([{"role": "system", "content": PROMPT}, {"role": "user", "content": ask, "images": [image_b64]}],
                      [_tool()], "read", {"course": unit, "redact": True})
     resp = await provider.complete(req)
