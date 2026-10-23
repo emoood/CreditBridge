@@ -50,7 +50,7 @@ function Metric({icon:Icon,label,value,delta,foot,tone}:{icon:typeof FileText,la
 function ApplicationsTable({rows,onOpen}:{rows:Application[],onOpen:(a:Application)=>void}){return <div className="table-wrap"><table className="applications-table"><thead><tr><th>APPLICATION ID</th><th>STUDENT</th><th>SOURCE INSTITUTION</th><th>COURSES</th><th>DATE</th><th>STATUS</th><th/></tr></thead><tbody>{rows.map(a=><tr key={a.id} onClick={()=>onOpen(a)} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')onOpen(a)}}><td><strong className="table-id">{a.id}</strong></td><td><strong>{a.student}</strong></td><td className="institution-col">{a.institution}</td><td>{a.courses}</td><td>{a.submitted}</td><td><Status status={a.status}/></td><td><ChevronRight size={16}/></td></tr>)}</tbody></table>{rows.length===0&&<div className="empty-state">No applications match your filters.</div>}</div>}
 function Detail({label,value}:{label:string,value:string}){return <div className="detail-row"><span>{label}</span><strong>{value}</strong></div>}
 
-function Banner(){return <div className="synthetic-banner" role="note"><ShieldCheck size={15}/> SYNTHETIC / DEMO DATA — no real student records. AI suggestions are not decisions.</div>}
+function Banner(){return <div className="synthetic-banner" role="note"><ShieldCheck size={15}/> SYNTHETIC / DEMO DATA</div>}
 function RuntimeFooter(){
   const [t,setT]=useState<string>('model status unavailable');
   useEffect(()=>{const f=()=>api.runtime().then(r=>setT(`${r.route} · ${r.model} · last call ${r.last_latency_s??'—'}${r.last_latency_s?'s':''}`)).catch(()=>setT('backend offline'));f();const i=setInterval(f,5000);return()=>clearInterval(i)},[]);
