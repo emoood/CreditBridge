@@ -36,7 +36,7 @@ def clean_schema_for_gemini(schema: dict[str, Any]) -> dict[str, Any]:
 
         cleaned: dict[str, Any] = {}
         for k, v in node.items():
-            if k in ("$defs", "$ref", "title", "additionalProperties", "$schema"):
+            if k in ("$defs", "$ref", "title", "additionalProperties", "$schema", "exclusiveMinimum", "exclusiveMaximum"):
                 continue
             cleaned[k] = resolve(v)
         return cleaned
@@ -199,9 +199,12 @@ class GeminiProvider:
                     if is_daily_quota and not is_last_model:
                         break  # Immediately try fallback model
                     if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "503" in err_str or "UNAVAILABLE" in err_str) and attempt < 3:
-                        delay = RateLimiter.extract_retry_delay(e)
-                        self.rate_limiter.penalize(delay)
-                        await asyncio.sleep(delay)
+                        if getattr(self.rate_limiter, "enabled", True):
+                            delay = RateLimiter.extract_retry_delay(e)
+                            self.rate_limiter.penalize(delay)
+                            await asyncio.sleep(delay)
+                        else:
+                            await asyncio.sleep(1.0)
                         continue
                     if is_last_model and attempt == 3:
                         events.emit("error", where="llm_call", provider=self.name, model=current_model,

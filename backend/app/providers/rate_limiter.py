@@ -8,8 +8,9 @@ class RateLimiter:
     """Async sliding-window rate limiter with request spacing and dynamic backoff."""
 
     def __init__(self, rpm: int = 5):
+        self.enabled = rpm > 0
         self.rpm = max(1, rpm)
-        self.min_interval = 60.0 / self.rpm
+        self.min_interval = 60.0 / self.rpm if self.enabled else 0.0
         self._lock = asyncio.Lock()
         self._timestamps: list[float] = []
         self._last_call: float = 0.0
@@ -18,6 +19,8 @@ class RateLimiter:
     async def acquire(self) -> float:
         """Wait until a slot is available under the RPM limit and spacing rule.
         Returns the seconds waited (if any)."""
+        if not self.enabled:
+            return 0.0
         t_start = time.time()
         while True:
             async with self._lock:
@@ -50,6 +53,8 @@ class RateLimiter:
 
     def penalize(self, seconds: float) -> None:
         """Pause the limiter for a specified penalty duration (e.g. on 429)."""
+        if not self.enabled:
+            return
         now = time.time()
         self._pause_until = max(self._pause_until, now + seconds)
 
