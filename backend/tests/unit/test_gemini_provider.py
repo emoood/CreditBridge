@@ -73,3 +73,18 @@ def test_gemini_provider_content_building():
     assert contents[0].role == "user"
     assert contents[1].role == "model"
     assert contents[2].role == "user"
+
+
+def test_gemini_provider_multimodal_images():
+    prov = GeminiProvider(api_key="fake-key", model="gemini-3.5-flash-lite")
+    b64_img = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+    messages = [
+        {"role": "user", "content": "Read this transcript block.", "images": [b64_img]},
+    ]
+    contents = prov._build_contents(messages)
+    assert len(contents) == 1
+    assert contents[0].role == "user"
+    assert len(contents[0].parts) == 2
+    assert contents[0].parts[0].text == "Read this transcript block."
+    assert contents[0].parts[1].inline_data is not None
+    assert contents[0].parts[1].inline_data.mime_type == "image/png"

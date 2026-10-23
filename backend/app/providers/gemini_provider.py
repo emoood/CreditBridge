@@ -1,4 +1,5 @@
 import asyncio
+import base64
 from copy import deepcopy
 import json
 import time
@@ -102,7 +103,19 @@ class GeminiProvider:
                 i += 1
                 continue
             elif role == "user":
-                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=m.get("content", ""))]))
+                parts: list[types.Part] = []
+                content_text = m.get("content")
+                if content_text:
+                    parts.append(types.Part.from_text(text=content_text))
+                for img_b64 in m.get("images") or []:
+                    try:
+                        img_bytes = base64.b64decode(img_b64)
+                        parts.append(types.Part.from_bytes(data=img_bytes, mime_type="image/png"))
+                    except Exception:
+                        pass
+                if not parts:
+                    parts.append(types.Part.from_text(text=""))
+                contents.append(types.Content(role="user", parts=parts))
                 i += 1
             elif role == "assistant":
                 tool_calls = m.get("tool_calls")

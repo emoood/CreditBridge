@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     recordings_root: str = "./data/recordings"  # recorded real runs for replay (local, gitignored)
     catalog: str = "demo"  # demo (synthetic, used by fixtures/tests) | aud_2026_2027 (real AUD catalog, descriptions only)
 
-    llm_default_route: str = "gemini"  # gemini | mac_dev | mac_quality | home_gpu | fixture_test
+    llm_default_route: str = "mac_dev"  # mac_dev | mac_quality | home_gpu | gemini | fixture_test
     llm_allow_fallback: bool = True
     llm_fallback_route: str = "mac_dev"
     matcher_max_tool_rounds: int = 6
