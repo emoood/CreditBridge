@@ -61,6 +61,7 @@ export function OutboxModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [recipientInput, setRecipientInput] = useState<string>('');
 
   // Form state for adding/editing item
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -82,6 +83,9 @@ export function OutboxModal({
 
       const prevRes = await outboxApi.preview(appId);
       setPreview(prevRes);
+      if (prevRes?.recipient) {
+        setRecipientInput(prevRes.recipient);
+      }
 
       const histRes = await outboxApi.history(appId);
       setHistory(histRes || []);
@@ -151,10 +155,15 @@ export function OutboxModal({
   };
 
   const handleSend = async () => {
+    const toSend = recipientInput.trim();
+    if (!toSend) {
+      setError('Student email address is missing. Enter an email address before sending.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const res = await outboxApi.send(appId, role, { recipient: preview?.recipient });
+      const res = await outboxApi.send(appId, role, { recipient: toSend });
       setToast(res.simulated ? 'Simulated send complete.' : 'Email sent successfully via SMTP.');
       await loadData();
       onChanged();
@@ -327,7 +336,28 @@ export function OutboxModal({
               {preview ? (
                 <div style={{ border: '1px solid var(--border, #cbd5e1)', padding: '14px', borderRadius: '6px', background: '#fff' }}>
                   <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '8px', fontSize: '12px' }}>
-                    <div><strong>To:</strong> {preview.recipient || <span style={{ color: '#ef4444' }}>Missing student email</span>}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <label htmlFor="outbox-recipient-input" style={{ fontWeight: 600, minWidth: '24px' }}>To:</label>
+                      <input
+                        id="outbox-recipient-input"
+                        type="email"
+                        placeholder="student@example.com (enter student email)"
+                        value={recipientInput}
+                        onChange={e => setRecipientInput(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          border: !recipientInput.trim() ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                          fontSize: '12px',
+                        }}
+                      />
+                    </div>
+                    {!recipientInput.trim() && (
+                      <div style={{ color: '#ef4444', fontSize: '11px', marginLeft: '32px', marginBottom: '6px' }}>
+                        Student email missing. Enter an email address to send.
+                      </div>
+                    )}
                     <div><strong>Subject:</strong> {preview.subject}</div>
                     {preview.simulated && (
                       <span style={{ display: 'inline-block', marginTop: '4px', fontSize: '11px', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px' }}>
@@ -342,7 +372,7 @@ export function OutboxModal({
                   <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                     <button
                       className="primary-button"
-                      disabled={busy || !preview.recipient || items.length === 0}
+                      disabled={busy || !recipientInput.trim() || items.length === 0}
                       onClick={handleSend}
                     >
                       <Send size={15} /> {preview.simulated ? 'Simulated send' : 'Send email'}

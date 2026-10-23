@@ -121,12 +121,11 @@ def preview_email(app_id: str, upload_base_url: str = ""):
     """Preview the grouped email for this student built from all open request items."""
     with app_session() as db:
         app = get_app(db, app_id)
-        rec = load_record(getattr(app, "case_number", "") or "") if getattr(app, "case_number", "") else None
+        rec = ob.get_student_record(app)
         items = ob.get_student_requests(db, app_id)
         open_items = [i for i in items if i.get("status") in ("DRAFT", "SENT")]
         content = ob.build_email_content(app, rec, open_items, upload_base_url=upload_base_url)
-        email_addr = (rec or {}).get("email") or ""
-        import os
+        email_addr = ob.get_student_email(app)
         sending_enabled = ob.is_email_sending_enabled()
     return {
         "student_name": content["student_name"],
@@ -233,7 +232,7 @@ def check_reply_token(token: str):
             for r in (st.requests or []):
                 if r.get("token") == token or r.get("id") == token:
                     app = db.get(Application, st.app_id)
-                    rec = load_record(getattr(app, "case_number", "") or "") if getattr(app, "case_number", "") else None
+                    rec = ob.get_student_record(app) if app else None
                     course_title = next((row.get("title") for row in (app.rows or []) if row.get("id") == st.row_id), st.row_id) if app else st.row_id
                     return {
                         "valid": True,
