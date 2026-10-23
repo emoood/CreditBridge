@@ -37,6 +37,7 @@ from .tools.base import AgentTool, LoggedRegistry, ToolContext, ToolError, WithI
 PROMPT_VERSION = "intake_v3"
 PROMPT = (Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text()
 SUBMIT = "submit_courses"
+MIN_LINES_FOR_EMPTY_FAILURE = 4  # an empty reading of a block with only a few lines of print is a footer or a legend, not a lost table
 FIELD_ALIASES = {"letter": "grade", "mark": "grade", "subject": "title", "course": "title", "name": "title", "gpa": "points", "grade points": "points", "quality points": "points",
                  "credit": "credits", "term total": "credits"}
 TOTAL_FIELDS = {"credits", "points"}
@@ -192,7 +193,7 @@ async def code_read_block(ctx: IntakeContext, key: str) -> None:
                 break
         except Exception as e:  # noqa: BLE001  timeout, bad output or model error: try once more, then give up on this block
             err = getattr(e, "code", "model_error")
-    if best is None or best["empty"]:
+    if best is None or (best["empty"] and ctx.lines.get(key, 0) >= MIN_LINES_FOR_EMPTY_FAILURE):
         ctx.blocks[key] = {"rows": [], "flags": [], "totals": {}, "failed": True, "error": "empty_reading" if best else (err or "model_error"), "page": ctx.spans[key][0]}
     else:
         ctx.blocks[key] = best
@@ -372,7 +373,7 @@ class ReadBlock(AgentTool):
                 continue
             changes: list[dict[str, Any]] = []
             if first:
-                if new["empty"]:
+                if new["empty"] and ctx.lines.get(key, 0) >= MIN_LINES_FOR_EMPTY_FAILURE:
                     ctx.blocks[key] = {"rows": [], "flags": [], "totals": {}, "failed": True, "error": "empty_reading", "page": ctx.spans[key][0]}
                 else:
                     ctx.blocks[key] = new

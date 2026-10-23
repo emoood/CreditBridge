@@ -1,0 +1,878 @@
+{
+ "version": 1,
+ "name": "demo_a2",
+ "case_number": "CB-2026-0104",
+ "recorded_at": "2026-10-23T05:51:02.441181+00:00",
+ "model": "qwen3.5:4b",
+ "notes": "A2 clean run: real local model, Intake agent + Case agent + review + export audit",
+ "label": "Prepared run, recorded 2026-10-23, qwen3.5:4b",
+ "source": {
+  "filename": "transcript_a2_batch.pdf",
+  "sha256": "d81fec7f4c56bbd155acc84ee78215aa22827ce0f855d9ca9ae9006807cf4f35"
+ },
+ "planted": {
+  "misread": false
+ },
+ "links": {
+  "ap calculus ab": {
+   "id": "84a7b662-4658-5497-8ce9-358041b05fb1",
+   "name": "Calculus AB",
+   "code": "AP-CALC-AB",
+   "qualification": "Advanced Placement"
+  },
+  "ap psychology": {
+   "id": "cce3210b-8b8e-5f5d-ab2b-f9eaa002ada4",
+   "name": "Psychology",
+   "code": "AP-PSYC",
+   "qualification": "Advanced Placement"
+  },
+  "ap biology": {
+   "id": "11eda15a-9da6-54c2-a391-679b2dddeb97",
+   "name": "Biology",
+   "code": "AP-BIO",
+   "qualification": "Advanced Placement"
+  },
+  "ap microeconomics": {
+   "id": "95c27aea-d53b-50d9-9f58-6c461384529b",
+   "name": "Microeconomics",
+   "code": "AP-ECON-MICRO",
+   "qualification": "Advanced Placement"
+  },
+  "ap computer science a": {
+   "id": "6dd9c060-16ce-529c-aa74-1db976eddcbb",
+   "name": "Computer Science A",
+   "code": "AP-CSA",
+   "qualification": "Advanced Placement"
+  },
+  "ap statistics": {
+   "id": "5d1d01ed-7172-59dc-9a3e-a0ab996fe68c",
+   "name": "Statistics",
+   "code": "AP-STAT",
+   "qualification": "Advanced Placement"
+  },
+  "ap chemistry": {
+   "id": "1a562a42-9855-59c5-8811-a36343d9c2e7",
+   "name": "Chemistry",
+   "code": "AP-CHEM",
+   "qualification": "Advanced Placement"
+  },
+  "ap physics 1": {
+   "id": "01c8a6f3-ccdd-5b0a-ae57-5c70c0f32949",
+   "name": "Physics 1: Algebra-Based",
+   "code": "AP-PHYS-1",
+   "qualification": "Advanced Placement"
+  },
+  "ap art history": {
+   "id": "8aa54074-37a0-56b6-9b6e-0462009b0ae5",
+   "name": "Art History",
+   "code": "AP-ART-HIST",
+   "qualification": "Advanced Placement"
+  },
+  "ap human geography": {
+   "id": "57e68298-b286-547a-ac57-b6b2e17e7e9f",
+   "name": "Human Geography",
+   "code": "AP-HUMAN-GEO",
+   "qualification": "Advanced Placement"
+  }
+ },
+ "model_calls": 32,
+ "model_log": [
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 0,
+   "response": {
+    "content": "I'll start by listing the pages to understand the structure of this transcript and identify which blocks contain course information for the relevant years.",
+    "tool_calls": [
+     {
+      "id": "call_7b3hpfeb",
+      "name": "list_pages",
+      "arguments": {}
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 3.89,
+    "prompt_tokens": 1903,
+    "output_tokens": 40
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 1,
+   "response": {
+    "content": "I can see this is a single-page transcript with 4 blocks:\n- p1b1: Cover/header page (SYNTHETIC DEMO DATA)\n- p1b2: Course data for Fall 2025 (AP Psychology, AP Biology)\n- p1b3: Course data for Spring 2026 (AP Statistics, AP Chemistry)\n- p1b4: Grading scale legend\n\nI should skip the cover page (p1b1) and the grading scale (p1b4), but read the two course blocks (p1b2 and p1b3). Let me read these blocks now.",
+    "tool_calls": [
+     {
+      "id": "call_rsevaakg",
+      "name": "read_block",
+      "arguments": {
+       "targets": [
+        "p1b2",
+        "p1b3"
+       ]
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 3.35,
+    "prompt_tokens": 2283,
+    "output_tokens": 175
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "967135592d412ab7",
+   "idx": 0,
+   "response": {
+    "content": "```json\n[\n    {\n        \"term\": \"Fall 2025 (Yr 11)\",\n        \"rows\": [\n            {\n                \"subject\": \"AP Psychology\",\n                \"mark\": \"A\",\n                \"points\": 1.0,\n                \"credits\": null\n            },\n            {\n                \"subject\": \"AP Biology\",\n                \"mark\": \"A-\",\n                \"points\": 1.0,\n                \"credits\": null\n            },\n            {\n                \"subject\": \"AP Microeconomics\",\n                \"mark\": \"A-\",\n                \"points\": 0.5,\n                \"credits\": null\n            },\n            {\n                \"subject\": \"Moral Education\",\n                \"mark\": \"A\",\n                \"points\": 0.5,\n                \"credits\": null\n            }\n        ]\n    },\n    {\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"rows\": [\n            {\n                \"subject\": \"AP Computer Science A\",\n                \"mark\": \"A-\",\n                \"points\": null,\n                \"credits\": 1.0\n            }\n        ]\n    }\n]\n```",
+    "tool_calls": [],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 6.9,
+    "prompt_tokens": 1324,
+    "output_tokens": 276
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "69545acc66ec2472",
+   "idx": 0,
+   "response": {
+    "content": "```json\n[\n    {\n        \"subject\": \"AP Statistics\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 1.0,\n        \"points\": null,\n        \"mark\": \"B+\",\n        \"description\": null,\n        \"letter\": \"B+\",\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    },\n    {\n        \"subject\": \"AP Chemistry\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 1.0,\n        \"points\": null,\n        \"mark\": \"B+\",\n        \"description\": null,\n        \"letter\": \"B+\",\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    },\n    {\n        \"subject\": \"AP Physics 1\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 1.0,\n        \"points\": null,\n        \"mark\": \"B\",\n        \"description\": null,\n        \"letter\": \"B\",\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    },\n    {\n        \"subject\": \"AP Art History\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 0.5,\n        \"points\": null,\n        \"mark\": \"B\",\n        \"description\": null,\n        \"letter\": \"B\",\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    },\n    {\n        \"subject\": \"AP Human Geography\",\n        \"term\": \"Spring 2026 (Yr 11)\",\n        \"credits\": 0.5,\n        \"points\": null,\n        \"mark\": \"A\",\n        \"description\": null,\n        \"letter\": \"A\",\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    }\n]\n```",
+    "tool_calls": [],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 12.91,
+    "prompt_tokens": 1324,
+    "output_tokens": 662
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 2,
+   "response": {
+    "content": "The read_block results show:\n- p1b2 was successfully read with 5 course rows\n- p1b3 is marked as EMPTY (0 course rows) - this needs recovery\n- I have 2 recovery rounds left\n\nLet me first view the pages to see what's actually on them, especially to check for the student name in the header and understand why p1b3 might be empty.",
+    "tool_calls": [
+     {
+      "id": "call_unk4zybb",
+      "name": "view_page",
+      "arguments": {
+       "page": 1
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 2.4,
+    "prompt_tokens": 2584,
+    "output_tokens": 110
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 3,
+   "response": {
+    "content": "I can see the full page now. The transcript shows:\n- Student name: Rania Haddad (ID: SYN-1004)\n- Fall 2025 courses with grades and credits\n- Spring 2026 courses with grades and credits\n- Grading scale at the bottom\n\nThe block p1b3 was marked as empty, but I can see it contains course data. Let me view the specific blocks to understand what's happening. First, let me check p1b2 (Fall 2025) and then p1b3 (Spring 2026).",
+    "tool_calls": [
+     {
+      "id": "call_q67hzu2z",
+      "name": "view_page",
+      "arguments": {
+       "page": 1,
+       "block": "p1b2"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 5.06,
+    "prompt_tokens": 3559,
+    "output_tokens": 171
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 4,
+   "response": {
+    "content": "I can see block p1b2 contains the Fall 2025 courses (AP Psychology, AP Biology, AP Microeconomics, Moral Education) and the beginning of Spring 2026 section. Now let me view p1b3 to see what's there.",
+    "tool_calls": [
+     {
+      "id": "call_zq9ugujj",
+      "name": "view_page",
+      "arguments": {
+       "page": 1,
+       "block": "p1b3"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 2.48,
+    "prompt_tokens": 3989,
+    "output_tokens": 99
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 5,
+   "response": {
+    "content": "I can see block p1b3 contains the Spring 2026 courses (AP Statistics, AP Chemistry, AP Physics 1, AP Art History, AP Human Geography). The block was marked as empty during read_block, but visually it clearly has data. This is likely a reading issue that needs recovery.\n\nLet me run checks to see what failed and why p1b3 was marked empty.",
+    "tool_calls": [
+     {
+      "id": "call_u04c1swt",
+      "name": "run_checks",
+      "arguments": {}
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 2.5,
+    "prompt_tokens": 4347,
+    "output_tokens": 98
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 6,
+   "response": {
+    "content": "I see the issues now:\n1. p1b2 has grading_scale failures - the code is checking that letter grades (A, A-) should be converted to points (4.0, 3.7), but the printed values are 1.0 or 0.5 instead. This seems like a data inconsistency issue.\n2. p1b3 was marked as unreadable/empty - I need to recover this block.\n\nLet me try to recover p1b3 first since it's completely empty. I'll use crop_region with a higher zoom to improve the reading.",
+    "tool_calls": [
+     {
+      "id": "call_5qrg8pj6",
+      "name": "crop_region",
+      "arguments": {
+       "block": "p1b3",
+       "top": 0,
+       "bottom": 1,
+       "zoom": 2
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 4.21,
+    "prompt_tokens": 4892,
+    "output_tokens": 187
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 7,
+   "response": {
+    "content": "Good, I've created a region for p1b3 with zoom level 2. Now let me read this region to recover the block.",
+    "tool_calls": [
+     {
+      "id": "call_73wy1qbj",
+      "name": "read_block",
+      "arguments": {
+       "targets": [
+        "p1b3.r1"
+       ]
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 1.51,
+    "prompt_tokens": 5138,
+    "output_tokens": 62
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "1b6d4b6c127c88c2",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_q88jzc7t",
+      "name": "submit_block",
+      "arguments": {
+       "term": "Spring 2026 (Yr 11)",
+       "term_credits": 4,
+       "term_quality_points": 3.5,
+       "term_gpa": null,
+       "cumulative_credits": null,
+       "cumulative_quality_points": null,
+       "cumulative_gpa": null,
+       "rows": [
+        {
+         "credits": 1,
+         "description": null,
+         "letter": "B+",
+         "points": null,
+         "subject": "AP Statistics"
+        },
+        {
+         "credits": 1,
+         "description": null,
+         "letter": "B+",
+         "points": null,
+         "subject": "AP Chemistry"
+        },
+        {
+         "credits": 1,
+         "description": null,
+         "letter": "B",
+         "points": null,
+         "subject": "AP Physics 1"
+        },
+        {
+         "credits": 0.5,
+         "description": null,
+         "letter": "B",
+         "points": null,
+         "subject": "AP Art History"
+        },
+        {
+         "credits": 0.5,
+         "description": null,
+         "letter": "A",
+         "points": null,
+         "subject": "AP Human Geography"
+        }
+       ]
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 10.34,
+    "prompt_tokens": 2805,
+    "output_tokens": 300
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 8,
+   "response": {
+    "content": "Good! p1b3 is now recovered - it had 5 course rows read successfully. The recovery was successful (block unreadable -> 5 rows read).\n\nNow I have 1 recovery round left. The remaining failures are all in p1b2 related to grading_scale mismatches:\n- AP Psychology: letter A should be 4.0 points, but printed is 1\n- AP Biology: letter A- should be 3.7 points, but printed is 1\n- AP Microeconomics: letter A- should be 3.7 points, but printed is 0.5\n- Moral Education: letter A should be 4.0 points, but printed is 0.5\n\nThese are code check failures where the printed values don't match what the grading scale expects. I need to flag these cells with kind \"check_failure\" and provide a specific question about the number I couldn't confirm.\n\nLet me run checks again to see if there are any other issues, then flag the failing cells.",
+    "tool_calls": [
+     {
+      "id": "call_32u9sm1d",
+      "name": "run_checks",
+      "arguments": {}
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 4.64,
+    "prompt_tokens": 5538,
+    "output_tokens": 228
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 9,
+   "response": {
+    "content": "I have 4 failing cells all in p1b2 related to grading_scale mismatches. The code is flagging that the printed points don't match what the grading scale expects:\n- AP Psychology: A grade should equal 4.0 points, but printed value is 1\n- AP Biology: A- grade should equal 3.7 points, but printed value is 1\n- AP Microeconomics: A- grade should equal 3.7 points, but printed value is 0.5\n- Moral Education: A grade should equal 4.0 points, but printed value is 0.5\n\nI need to flag these cells with kind \"check_failure\" and provide a specific question about the number I couldn't confirm. The issue is that the code expects letter grades to be converted to their corresponding point values according to the grading scale, but the actual printed values are different.\n\nLet me flag each failing cell:",
+    "tool_calls": [
+     {
+      "id": "call_9i3cle1w",
+      "name": "flag_cell",
+      "arguments": {
+       "block": "p1b2",
+       "row": 0,
+       "field": "points",
+       "question": "points value 1 does not match letter grade A which should equal 4.0 per grading scale",
+       "kind": "check_failure"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 6.13,
+    "prompt_tokens": 6270,
+    "output_tokens": 291
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 10,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_0k8t209q",
+      "name": "flag_cell",
+      "arguments": {
+       "block": "p1b2",
+       "row": 1,
+       "field": "points",
+       "question": "points value 1 does not match letter grade A- which should equal 3.7 per grading scale",
+       "kind": "check_failure"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 2.46,
+    "prompt_tokens": 6589,
+    "output_tokens": 97
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 11,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_11hnw5ak",
+      "name": "flag_cell",
+      "arguments": {
+       "block": "p1b2",
+       "row": 2,
+       "field": "points",
+       "question": "points value 0.5 does not match letter grade A- which should equal 3.7 per grading scale",
+       "kind": "check_failure"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 1.91,
+    "prompt_tokens": 6714,
+    "output_tokens": 99
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 12,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_sec5j7me",
+      "name": "flag_cell",
+      "arguments": {
+       "block": "p1b2",
+       "row": 3,
+       "field": "points",
+       "question": "points value 0.5 does not match letter grade A which should equal 4.0 per grading scale",
+       "kind": "check_failure"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 2.19,
+    "prompt_tokens": 6841,
+    "output_tokens": 98
+   }
+  },
+  {
+   "stage": "intake",
+   "runkey": "89cd03e7b1250700",
+   "idx": 13,
+   "response": {
+    "content": "All four failing cells have been flagged. Now I need to submit the final courses result. Let me review what I've done:\n\n- Read blocks p1b2 and p1b3 (the course data blocks)\n- Recovered p1b3 which was initially empty\n- Flagged 4 check_failure issues in p1b2 related to grading_scale mismatches\n- Skipped p1b1 (cover page) and p1b4 (grading scale legend)\n\nThe student name I saw is \"Rania Haddad\" from the header.\n\nLet me submit the final result:",
+    "tool_calls": [
+     {
+      "id": "call_etngq0r2",
+      "name": "submit_courses",
+      "arguments": {
+       "blocks_read": [
+        "p1b2",
+        "p1b3"
+       ],
+       "skipped": [
+        {
+         "block": "p1b1",
+         "reason": "cover page header"
+        },
+        {
+         "block": "p1b4",
+         "reason": "grading scale legend"
+        }
+       ],
+       "name_seen": "Rania Haddad",
+       "note": "Four grading_scale check_failures in p1b2: points values (1, 1, 0.5, 0.5) do not match letter grades (A, A-, A-, A) per expected scale conversion"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 5.15,
+    "prompt_tokens": 6967,
+    "output_tokens": 287
+   }
+  },
+  {
+   "stage": "read",
+   "runkey": "ce2c22848439ca36",
+   "idx": 0,
+   "response": {
+    "content": "```json\n[\n    {\n        \"term\": \"Fall 2025 (Yr 11)\",\n        \"rows\": [\n            {\n                \"subject\": \"AP Calculus AB\",\n                \"grade\": \"A\",\n                \"credits\": 1.0,\n                \"term\": \"Fall 2025 (Yr 11)\"\n            }\n        ],\n        \"term_credits\": null,\n        \"term_quality_points\": null,\n        \"term_gpa\": null,\n        \"cumulative_credits\": null,\n        \"cumulative_quality_points\": null,\n        \"cumulative_gpa\": null\n    }\n]\n```",
+    "tool_calls": [],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 3.7,
+    "prompt_tokens": 1324,
+    "output_tokens": 152
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "52ae238678a8a577",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_ffbko9xa",
+      "name": "read_mapping",
+      "arguments": {}
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 3.63,
+    "prompt_tokens": 2054,
+    "output_tokens": 13
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "52ae238678a8a577",
+   "idx": 1,
+   "response": {
+    "content": "This row has a mapping to MATH 210, but the condition (AP exam score ≥ 4) is not met because no exam score report is on file. The program class is \"Not applicable\" because MATH 210 doesn't fit the BBA plan, but the row status is still \"Conditional\" due to missing evidence.\n\nI need to:\n1. Draft a request for the AP exam score report\n2. Set the row state to \"Waiting on document\" since we're waiting for this evidence",
+    "tool_calls": [
+     {
+      "id": "call_b0o94lc5",
+      "name": "draft_request",
+      "arguments": {
+       "what": "AP exam score report",
+       "why": "The mapping requires an AP exam score of at least 4 to satisfy the condition for MATH 210; none is on file.",
+       "to": "student"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 3.79,
+    "prompt_tokens": 2349,
+    "output_tokens": 192
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "52ae238678a8a577",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_arngd9rv",
+      "name": "set_row_state",
+      "arguments": {
+       "status": "Waiting on document",
+       "reason": "AP exam score report needed to satisfy mapping condition (score ≥ 4)"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 1.27,
+    "prompt_tokens": 2584,
+    "output_tokens": 53
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "52ae238678a8a577",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_l179e7u5",
+      "name": "submit_result",
+      "arguments": {
+       "headline": "AP Calculus AB mapped to MATH 210 but requires AP exam score ≥ 4; waiting for score report",
+       "needs": "WAITING_ON_DOCUMENT",
+       "missing_evidence": [
+        "AP exam score report"
+       ],
+       "gaps": [
+        "No AP exam score report on file to satisfy the mapping condition of score ≥ 4"
+       ],
+       "candidates": [],
+       "review_package": [
+        "Awaiting AP exam score report to evaluate mapping to MATH 210"
+       ],
+       "questions_for_chair": []
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 6.23,
+    "prompt_tokens": 2103,
+    "output_tokens": 171
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "24cfb934f4e2222e",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_cjdb3nuh",
+      "name": "read_mapping",
+      "arguments": {}
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 3.53,
+    "prompt_tokens": 2059,
+    "output_tokens": 13
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "24cfb934f4e2222e",
+   "idx": 1,
+   "response": {
+    "content": "This row is marked as \"stale\" with a mapping to ENGG 140 that needs confirming. The condition result is null, indicating the condition isn't met or verified. The program class is \"Not applicable\" because ENGG 140 is not on the student's plan for BBA Business Administration.\n\nSince this is a stale mapping issue and the course doesn't fit the student's program, I should keep it as \"Conditional\" and explain the gap. The stale version needs to be re-confirmed against the current catalog.",
+    "tool_calls": [
+     {
+      "id": "call_cj0kpl1w",
+      "name": "set_row_state",
+      "arguments": {
+       "status": "Conditional",
+       "reason": "Stale mapping (version dummy-2025-09) needs re-confirming against current catalog; course not on student's BBA plan"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 3.3,
+    "prompt_tokens": 2315,
+    "output_tokens": 180
+   }
+  },
+  {
+   "stage": "case",
+   "runkey": "24cfb934f4e2222e",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_om00789d",
+      "name": "submit_result",
+      "arguments": {
+       "headline": "AP Computer Science A (A-) maps to ENGG 140 but the mapping is stale and the course is not on the student's BBA Business Administration plan",
+       "needs": "NEEDS_YOU",
+       "missing_evidence": [],
+       "gaps": [
+        "Stale mapping (version dummy-2025-09) needs re-confirming against current catalog"
+       ],
+       "candidates": [],
+       "review_package": [
+        "Confirm the stale ENGG 140 mapping against current catalog; note course not on student's BBA plan"
+       ],
+       "questions_for_chair": [
+        "Should the stale ENGG 140 mapping be re-confirmed or removed given it's not on the student's program?"
+       ]
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 3.83,
+    "prompt_tokens": 2523,
+    "output_tokens": 215
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 0,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_o5gq3aov",
+      "name": "list_rows",
+      "arguments": {}
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 2.87,
+    "prompt_tokens": 1774,
+    "output_tokens": 13
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 1,
+   "response": {
+    "content": "I see the application data. The student is in BBA Business Administration (Fall 2026) with -9 free-elective credits left, meaning they have exceeded their allowance.\n\nKey observations:\n- Row \"6444d5a2\" (AP Calculus AB) has status \"Waiting on document\" and program_mismatch signal - MATH 210 is classed 'Not applicable' for BBA Business Administration\n- Row \"2ab4a262\" (AP Computer Science A) has status \"Conditional\" with stale_mapping and program_mismatch signals\n- Several rows have program_mismatch signals indicating courses are not applicable to the BBA program\n\nThe student has -9 free-elective credits left, which is problematic. I need to address the rows with issues:\n\n1. For row \"6444d5a2\" (AP Calculus AB) - needs documentation to resolve the waiting status\n2. For row \"2ab4a262\" (AP Computer Science A) - has stale mapping issue that needs resolution\n\nLet me raise doubts for the problematic rows and prepare a result. Since this is mode \"review_all\", I should:\n- Raise doubts on rows with signals\n- For unmapped or Not applicable courses, consider if they fit free-elective allowance (but student has -9 credits, so likely none will fit)",
+    "tool_calls": [
+     {
+      "id": "call_3ubalj58",
+      "name": "raise_doubt",
+      "arguments": {
+       "row_id": "6444d5a2",
+       "kind": "program_mismatch",
+       "reason": "MATH 210 is classed 'Not applicable' for BBA Business Administration per code classification"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 7.54,
+    "prompt_tokens": 2804,
+    "output_tokens": 371
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 2,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_fvmp2h3s",
+      "name": "raise_doubt",
+      "arguments": {
+       "row_id": "2ab4a262",
+       "kind": "stale_mapping",
+       "reason": "mapping version dummy-2025-09 is older than the newest in the table (dummy-2026-10)"
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 2.09,
+    "prompt_tokens": 3210,
+    "output_tokens": 89
+   }
+  },
+  {
+   "stage": "case_review",
+   "runkey": "350cdfafa535d978",
+   "idx": 3,
+   "response": {
+    "content": "",
+    "tool_calls": [
+     {
+      "id": "call_82kfdh7e",
+      "name": "submit_result",
+      "arguments": {
+       "headline": "Two rows require resolution: AP Calculus AB needs document submission; AP Computer Science A has stale mapping issue",
+       "needs": "NEEDS_YOU",
+       "missing_evidence": [
+        "AP Calculus AB score report or exam documentation"
+       ],
+       "gaps": [
+        "Student has -9 free-elective credits left, exceeding allowance",
+        "MATH 210 and ENGG 140 are classed 'Not applicable' for BBA Business Administration"
+       ],
+       "candidates": [],
+       "review_package": [
+        "Doubts raised on AP Calculus AB (program_mismatch) and AP Computer Science A (stale_mapping)",
+        "Student's free-elective allowance is exceeded (-9 credits)"
+       ],
+       "questions_for_chair": [
+        "How to handle student exceeding free-elective credit allowance",
+        "What documentation is needed for AP Calculus AB mapping resolution"
+       ]
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 4.06,
+    "prompt_tokens": 3334,
+    "output_tokens": 240
+   }
+  },
+  {
+   "stage": "audit",
+   "runkey": "989af63f0ada60b9",
+   "idx": 0,
+   "response": {
+    "content": "I will begin by running the deterministic sheet checks to identify any failures in mapping, credits, policy, unresolved-but-confirmed status, duplicates, and program-plan warnings.",
+    "tool_calls": [
+     {
+      "id": "call_zjwsstr1",
+      "name": "run_sheet_checks",
+      "arguments": {}
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 0.98,
+    "prompt_tokens": 1053,
+    "output_tokens": 49
+   }
+  },
+  {
+   "stage": "audit",
+   "runkey": "989af63f0ada60b9",
+   "idx": 1,
+   "response": {
+    "content": "The sheet checks passed with no failures or warnings. Now I will check if there are any differences between the sheet and the officer's decisions.",
+    "tool_calls": [
+     {
+      "id": "call_6w4p0fj3",
+      "name": "diff_sheet_vs_decisions",
+      "arguments": {}
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 0.92,
+    "prompt_tokens": 1144,
+    "output_tokens": 46
+   }
+  },
+  {
+   "stage": "audit",
+   "runkey": "989af63f0ada60b9",
+   "idx": 2,
+   "response": {
+    "content": "The sheet passes all checks with no failures or warnings, and there are no differences between the sheet and the officer's decisions. Since the sheet is clean and matches the officer's decisions, no fixes need to be proposed. I will now submit the final result.",
+    "tool_calls": [
+     {
+      "id": "call_fm00jzcs",
+      "name": "submit_result",
+      "arguments": {
+       "summary": "The transfer sheet passes all checks with no failures or warnings and matches the officer's decisions exactly."
+      }
+     }
+    ],
+    "provider": "ollama:mac_dev",
+    "model": "qwen3.5:4b",
+    "duration_s": 1.71,
+    "prompt_tokens": 1218,
+    "output_tokens": 97
+   }
+  }
+ ]
+}

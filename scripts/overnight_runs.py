@@ -95,12 +95,15 @@ def collect_activity(app_id: str) -> dict:
     return a
 
 
-def finish(name: str, rec_name: str | None, ok: bool) -> None:
+def finish(name: str, rec_name: str | None, ok: bool, case_number: str = "") -> None:
     log["clean"] = ok and not log["problems"]
     log["total_wall_s"] = now()
     if log["clean"] and rec_name:
-        r = c.post("/recordings", json={"app_id": log["app_id"], "name": rec_name, "timings": log["steps"] | {"total_wall_s": log["total_wall_s"]}}, headers=H)
-        log["recording"] = {"name": rec_name, "http": r.status_code}
+        sys.path.insert(0, str(ROOT))
+        from backend.app.services import (
+            prepared,  # the model replies captured during this real run become a prepared run (fixtures/prepared_runs)
+        )
+        log["recording"] = prepared.save(log["app_id"], rec_name, case_number, notes=f"real run, timings {log['steps']}")
     else:
         log["recording"] = None
     (OUT / f"{name}.json").write_text(json.dumps(log, indent=1, default=str))
@@ -134,7 +137,7 @@ def run_a2() -> None:
     log["export_audit"] = {k: (sh["audit"] or {}).get(k) for k in ("clean", "summary", "warnings", "differences", "proposals", "flags", "agent_comment")}
     log["sheet_ok"] = sh["ok"]
     collect_activity(app_id)
-    finish("a2", "demo_a2_agents", log["calc_after"]["status"] == "Mapped")
+    finish("a2", "demo_a2", log["calc_after"]["status"] == "Mapped", "CB-2026-0104")
     if log["calc_after"]["status"] != "Mapped":
         log["problems"].append("AP Calculus AB did not become Mapped after the exam score")
 
@@ -157,7 +160,41 @@ def run_b() -> None:
         evaluate_phase(app_id)
         log["states_after_evaluation"] = snapshot_states(app_id)
         collect_activity(app_id)
-    finish("b", "demo_b_intake", log["recheck_really_fixed"])
+    finish("b", "demo_b_intake", log["recheck_really_fixed"], "CB-2026-0102")
+
+
+def run_d(plant: bool = False) -> None:
+    app_id, job = upload("transcript_d_demo2.pdf", "Rami Test-Student", "DVIS-SYN-0457", plant=plant, case_number="CB-2026-0105")
+    app = read_phase(app_id, job)
+    collect_activity(app_id)
+    log["synopsis"] = app["extraction"].get("synopsis")
+    intake = app["extraction"].get("intake") or {}
+    planted = (app["extraction"].get("planted_misread") or {}).get("applied") or []
+    log["planted_applied"] = planted
+    if plant:
+        changes = intake.get("changes") or []
+        fixed = bool(planted) and any(str(c_.get("row")) == str(planted[0]["subject"]) and c_.get("field") == planted[0]["field"] and c_.get("to") == planted[0]["from"] for c_ in changes)
+        log["repair_genuine"] = bool(fixed and intake.get("recovery_used", 0) >= 1)
+        if not log["repair_genuine"]:
+            log["problems"].append("no genuine repair of the planted value: not recorded")
+    evaluate_phase(app_id)
+    log["states_after_evaluation"] = snapshot_states(app_id)
+    rows = {r["title"]: r["id"] for r in c.get(f"/applications/{app_id}").json()["rows"]}
+    if "AP Calculus BC" in rows:
+        j = c.post(f"/applications/{app_id}/rows/{rows['AP Calculus BC']}/evidence", data={"facts": '{"exam_score": 5}'}, headers=H).json()
+        wait(j["job_id"])
+        log["calc_after"] = snapshot_states(app_id)["AP Calculus BC"]
+    log["confirm_mapped"] = c.post(f"/applications/{app_id}/confirm-mapped", headers=H).json()
+    chk = c.post(f"/applications/{app_id}/export-check", headers=H).json()
+    if chk.get("job_id"):
+        wait(chk["job_id"])
+    sh = c.get(f"/applications/{app_id}/sheet").json()
+    log["export_audit"] = {k: (sh["audit"] or {}).get(k) for k in ("clean", "summary", "warnings", "differences", "proposals", "flags")}
+    log["states_final"] = snapshot_states(app_id)
+    log["rows_final"] = [{k: r.get(k) for k in ("title", "grade", "mark", "credits", "term")} for r in c.get(f"/applications/{app_id}").json()["rows"]]
+    collect_activity(app_id)
+    ok = (not plant) or log.get("repair_genuine", False)
+    finish("d_planted" if plant else "d", ("demo_d_misread" if plant else "demo_d") if ok else None, ok, "CB-2026-0105")
 
 
 def run_c() -> None:
@@ -185,8 +222,8 @@ def run_c() -> None:
     log["auditor_proposal_fixes_it"] = bool((audit["audit"] or {}).get("passes_after")) and any(p["row_id"] == log["planted"]["planted"]["row_id"] and p["to"]["aud_code"] == log["planted"]["planted"]["from"] for p in proposals)
     if not log["auditor_proposal_fixes_it"]:
         log["problems"].append("the Auditor's proposal does not restore the original equivalent (or the corrected sheet does not pass)")
-    finish("c", "demo_c_copy_error", ok_detect and log["auditor_proposal_fixes_it"])
+    finish("c", "demo_c", ok_detect and log["auditor_proposal_fixes_it"], "CB-2026-0103")
 
 
 if __name__ == "__main__":
-    {"a2": run_a2, "b": run_b, "c": run_c}[sys.argv[1]]()
+    {"a2": run_a2, "b": run_b, "c": run_c, "d": run_d, "dp": lambda: run_d(True)}[sys.argv[1]]()

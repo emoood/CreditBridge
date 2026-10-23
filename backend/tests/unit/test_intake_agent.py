@@ -24,7 +24,7 @@ def make_ctx(tmp_path, script, plant=None, text=None, budget=2):
     img.save(path)
     spans = {f"p1b{i + 1}": (1, sp) for i, sp in enumerate(vr.split_blocks(img, 300))}
     assert len(spans) == 2
-    return IntakeContext(None, None, "intake", "", app_id="APP-T", provider=FakeLLMProvider(script), path=path, scale=gc.load_scale(), spans=spans, plant=plant, text=text, recovery_left=budget)
+    return IntakeContext(None, None, "intake", "", app_id="APP-T", provider=FakeLLMProvider(script), path=path, scale=gc.load_scale(), spans=spans, plant=plant, text=text, recovery_left=budget, lines={k: vr.count_text_lines(img, sp) for k, (_p, sp) in spans.items()})
 
 
 def read(rows, **tot):
@@ -136,3 +136,10 @@ async def test_in_the_pipeline_an_agent_that_cannot_finish_leaves_the_reading_to
         names = [e.name for e in db.scalars(select(TraceEvent).where(TraceEvent.app_id == up["id"]))]
         assert "intake_summary" in names
     assert "intake" in {s for s, _ in env.model.calls}
+
+
+async def test_an_empty_reading_of_a_block_with_only_a_few_lines_is_a_footer_not_a_failure(tmp_path):
+    ctx = make_ctx(tmp_path, [tc("read_block", targets=["p1b1", "p1b2"]), read(GOOD), read([]), FINISH])
+    ctx.lines["p1b2"] = 3                                    # three lines of print: a footer or a legend
+    await run_intake_agent(ctx)
+    assert not ctx.blocks["p1b2"].get("failed") and ctx.blocks["p1b2"]["rows"] == []
