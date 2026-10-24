@@ -5,7 +5,7 @@ import { Activity } from './Activity';
 import { Evidence } from './Evidence';
 import { ReviewBody, RowPanel } from './Review';
 import { ExtractionCheck } from './ExtractionCheck';
-import { appStatus, build, classLabel, curriculumOf, DOUBT_LABEL, isOpen, plainSummary, RESOLUTION_LABEL, toCsv, toTsv, type Item } from './model';
+import { appStatus, build, stopped, classLabel, curriculumOf, DOUBT_LABEL, isOpen, plainSummary, RESOLUTION_LABEL, toCsv, toTsv, type Item } from './model';
 import { AppPill, RowStatusText } from './ui';
 import { useApp, useInclude, useInstitution } from './useApp';
 import { useDemo } from './demo';
@@ -25,7 +25,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
   const [exported, setExported] = useState(false);
   const [adv, setAdv] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
-  const evaluating = !!data && (['CONFIRMED', 'EVALUATION_IN_PROGRESS'].includes(data.app.status) || data.evalJob?.status === 'RUNNING' || data.evalJob?.status === 'QUEUED');
+  const evaluating = !!data && ((['CONFIRMED', 'EVALUATION_IN_PROGRESS'].includes(data.app.status) && !stopped([data.readJob, data.evalJob])) || data.evalJob?.status === 'RUNNING' || data.evalJob?.status === 'QUEUED');
   const built = useMemo(() => data ? build(data.app, data.results, data.pending, include, evaluating, data.states, data.actions, data.placement) : null, [data, include, evaluating]);
   const jobs = data ? [data.readJob, data.evalJob] : [];
   const status = data && built ? appStatus(data.app, built, jobs) : null;
@@ -43,7 +43,7 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
 
   const { app, results, readJob, evalJob } = data;
   const c = built.counts;
-  const reading = app.status === 'READING';
+  const reading = app.status === 'READING' && !stopped([readJob, evalJob]);
   const gate = app.status === 'EXTRACTION_REVIEW_REQUIRED';
   const demoIdle = app.kind === 'demo' && results.length === 0 && !evaluating;
   const selected = built.items.find(i => i.key === evidenceKey) ?? null;

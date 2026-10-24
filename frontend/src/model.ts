@@ -96,8 +96,10 @@ export function build(app: AppInfo, results: CaseResult[], pending: { key: strin
 }
 
 const BUSY = ['READING', 'CONFIRMED', 'EVALUATION_IN_PROGRESS'];
+export const stopped = (jobs: (Job | null)[]) => jobs.some(j => j && (j.status === 'INTERRUPTED' || j.status === 'FAILED'));  // cancelled, interrupted or failed: nothing is running
 export function isBusy(app: AppInfo, jobs: (Job | null)[]): boolean {
-  return BUSY.includes(app.status) || jobs.some(j => j && (j.status === 'QUEUED' || j.status === 'RUNNING'));
+  if (jobs.some(j => j && (j.status === 'QUEUED' || j.status === 'RUNNING'))) return true;
+  return BUSY.includes(app.status) && !stopped(jobs);  // a cancelled job leaves the application status as it was; it is not processing
 }
 
 export function appStatus(app: AppInfo, b: Built, jobs: (Job | null)[]): AppStatus {

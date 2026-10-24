@@ -14,6 +14,7 @@ import {
   appStatus,
   build,
   curriculumOf,
+  stopped,
   type AppStatus,
   type Built,
 } from "./model";
@@ -70,7 +71,8 @@ export default function Worklist() {
         list.slice(0, 30).map(async (a) => {
           const d = await loadApp(a.id);
           const evaluating =
-            ["CONFIRMED", "EVALUATION_IN_PROGRESS"].includes(d.app.status) ||
+            (["CONFIRMED", "EVALUATION_IN_PROGRESS"].includes(d.app.status) &&
+              !stopped([d.readJob, d.evalJob])) ||
             d.evalJob?.status === "RUNNING" ||
             d.evalJob?.status === "QUEUED";
           const built = build(
