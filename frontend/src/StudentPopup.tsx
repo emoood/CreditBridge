@@ -95,14 +95,14 @@ export function StudentPopup({ appId, role, quals, qual, onClose, onChanged }: {
     {app.replay && <div className="replay-banner"><History size={15} /> <span><strong>{app.replay.label}</strong>. {app.replay.live.length ? `Nothing here was produced just now except ${app.replay.live.length} course(s) run live.` : 'Nothing here was produced just now: no model was called.'}</span></div>}
     {err && <div className="eval-error"><AlertCircle size={15} /> {err}</div>}
     {toast && <div className="toast-line" onClick={() => setToast(null)}><Check size={14} /> {toast}</div>}
-    {interrupted && <div className="eval-warn"><AlertCircle size={15} /> The {interrupted.phase === 'READING' ? 'reading' : 'evaluation'} was {interrupted.status.toLowerCase()}. Finished work is kept.
+    {interrupted && <div className="eval-warn"><AlertCircle size={15} /> The {interrupted.phase === 'READING' ? 'reading' : 'evaluation'} was {interrupted.flags?.includes('CANCELLED_BY_OFFICER') ? 'cancelled' : interrupted.status.toLowerCase()}. Finished work is kept.
       <button className="link-btn" onClick={() => run(() => api.resume(interrupted.id, role))}>Resume</button></div>}
 
     {demoMode.on && app.replay === undefined && <StageStrip app={app} evalStage={evalJob?.stage} evalStatus={evalJob?.status} audited={!!sheet?.audit} approved={approved} exported={exported} />}
-    {reading && <ReadingProgress done={(readJob?.units ?? []).filter(u => u.stage === 'read' && u.status === 'DONE').length} total={(readJob?.units ?? []).filter(u => u.stage === 'read').length} stage={readJob?.stage} />}
+    {reading && <ReadingProgress onCancel={readJob && role === 'admissions' ? () => { if (window.confirm('Cancel reading this transcript? Work already finished is kept, and you can resume it.')) void run(() => api.cancelJob(readJob.id, role)); } : undefined} done={(readJob?.units ?? []).filter(u => u.stage === 'read' && u.status === 'DONE').length} total={(readJob?.units ?? []).filter(u => u.stage === 'read').length} stage={readJob?.stage} />}
     {gate && <ExtractionCheck display={inst.display} app={app} quals={quals} qual={qual} role={role} onChanged={reload} />}
     {demoIdle && <div className="pad"><p className="muted">The demo fixtures have not been evaluated yet.</p><button className="primary-button" disabled={busy} onClick={() => run(() => api.evaluate(appId, role))}><Play size={16} /> Run AI evaluation</button></div>}
-    {evaluating && <p className="muted pad"><Loader2 size={14} className="spin" /> Working: {results.length} course{results.length === 1 ? '' : 's'} done so far. Results appear as they finish.</p>}
+    {evaluating && <p className="muted pad"><Loader2 size={14} className="spin" /> Working: {results.length} course{results.length === 1 ? '' : 's'} done so far. Results appear as they finish. {evalJob && role === 'admissions' && <button className="link-btn" onClick={() => { if (window.confirm('Cancel this evaluation? Work already finished is kept, and you can resume it.')) void run(() => api.cancelJob(evalJob.id, role)); }}>Cancel</button>}</p>}
 
     {!reading && !gate && !demoIdle && isUpload && <div className="pop-body"><ReviewBody built={built} summary={plainSummary(built, app.program, app.extraction?.case_summary?.text ?? '')} role={role} appId={appId} busy={busy} program={app.program} approved={approved} canApprove={canApprove}
       selectedKey={evidenceKey} onOpen={setEvidenceKey} onRun={run} onCopy={copySheet} onCsv={downloadCsv} onActivity={() => { setActivity(true); setEvidenceKey(null); }}>
@@ -227,9 +227,10 @@ function StageStrip({ app, evalStage, evalStatus, audited, approved, exported }:
   return <div className="stage-strip" aria-label="Stages">{Object.entries(rank).map(([k, v]) => <span key={k} className={v === 2 ? 'done' : v === 1 ? 'active' : ''}>{v === 2 ? '✓ ' : ''}{k}</span>)}</div>;
 }
 
-function ReadingProgress({ done, total, stage }: { done: number; total: number; stage?: string }) {
+function ReadingProgress({ done, total, stage, onCancel }: { done: number; total: number; stage?: string; onCancel?: () => void }) {
   return <div className="pad"><p><Loader2 size={15} className="spin" /> Reading the transcript{stage ? ` (${stage})` : ''}…</p>
-    <div className="bar"><div style={{ width: `${total ? Math.round((done / total) * 100) : 5}%` }} /></div><p className="muted">{done} of {total || '…'} page blocks read. Nothing is evaluated until you confirm the extraction.</p></div>;
+    <div className="bar"><div style={{ width: `${total ? Math.round((done / total) * 100) : 5}%` }} /></div><p className="muted">{done} of {total || '…'} page blocks read. Nothing is evaluated until you confirm the extraction.</p>
+    {onCancel && <button className="secondary-button" onClick={onCancel}>Cancel</button>}</div>;
 }
 
 function Shell({ children, onClose, side, wide }: { children: React.ReactNode; onClose: () => void; side?: React.ReactNode; wide?: boolean }) {

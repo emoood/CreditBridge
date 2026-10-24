@@ -28,7 +28,7 @@ from ..runtime import reset_runtime, rt
 from ..services import actions as ac
 from ..services import mapping as mp
 from ..workers import store
-from ..workers.queue import worker
+from ..workers.queue import mark_cancelled, worker
 from .common import DECIDER_ROLE, app_summary, get_app, job_dict, seed_demo
 
 router = APIRouter(prefix="/api/v1")
@@ -96,11 +96,29 @@ def resume(job_id: str, x_role: str | None = Header(default=None)):
             raise HTTPException(409, "Cannot resume reading after the officer has made corrections")
         job.status, job.finished_at = "QUEUED", None
         job.summary = {**job.summary, "resumed": True}
-        job.flags = [f for f in job.flags if f != "INTERRUPTED_BY_RESTART"]
+        job.flags = [f for f in job.flags if f not in ("INTERRUPTED_BY_RESTART", "CANCELLED_BY_OFFICER")]
         db.commit()
         store.audit(db, job.app_id, x_role or "unknown", "job_resumed", job.id, phase=job.phase)
     worker.enqueue(job_id)
     return {"job_id": job_id, "status": "QUEUED"}
+
+
+@router.post("/jobs/{job_id}/cancel")
+def cancel(job_id: str, x_role: str | None = Header(default=None), x_actor: str | None = Header(default=None)):
+    """Cancel a queued or running job. Finished work is kept and the job can be resumed. Admissions officers only."""
+    if x_role != "admissions":
+        raise HTTPException(403, "Only an admissions officer can cancel a job")
+    with app_session() as db:
+        job = db.get(Job, job_id)
+        if not job:
+            raise HTTPException(404, "Unknown job")
+        if job.status not in ("QUEUED", "RUNNING"):
+            raise HTTPException(409, "The job is not running")
+        was_running = job.status == "RUNNING"
+    if was_running and worker.cancel(job_id):
+        return {"job_id": job_id, "status": "CANCELLING"}
+    mark_cancelled(job_id, x_actor or "officer")  # queued (or not owned by this worker): skipped when its turn comes
+    return {"job_id": job_id, "status": "INTERRUPTED"}
 
 
 @router.get("/applications/{app_id}/results")

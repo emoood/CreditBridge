@@ -20,6 +20,8 @@ class JobWorker:
         self.queue: asyncio.Queue[str] = asyncio.Queue()
         self.task: asyncio.Task | None = None
         self.current: str | None = None
+        self.job_task: asyncio.Task | None = None
+        self.cancelling: str | None = None  # the job the officer asked to cancel; the worker itself keeps running
 
     def start(self) -> None:
         if self.task is None or self.task.done():
@@ -30,6 +32,15 @@ class JobWorker:
             self.task.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await self.task
+
+    def cancel(self, job_id: str) -> bool:
+        """Cancel one job. A running job's task is cancelled (an open model call is aborted); a queued job is skipped when its turn comes.
+        The job becomes INTERRUPTED with the flag CANCELLED_BY_OFFICER, so finished work is kept and Resume still works."""
+        if self.current == job_id and self.job_task and not self.job_task.done():
+            self.cancelling = job_id
+            self.job_task.cancel()
+            return True
+        return False
 
     def enqueue(self, job_id: str) -> None:
         self.queue.put_nowait(job_id)
@@ -42,10 +53,14 @@ class JobWorker:
         while True:
             job_id = await self.queue.get()
             self.current = job_id
+            self.job_task = asyncio.ensure_future(self.process(job_id))
             try:
-                await self.process(job_id)
+                await self.job_task
             except asyncio.CancelledError:
-                raise
+                if self.cancelling != job_id:  # the worker itself is being stopped
+                    raise
+                self.cancelling = None
+                mark_cancelled(job_id)
             except Exception as e:
                 logging.getLogger(__name__).exception("job %s crashed", job_id)
                 with app_session() as db:
@@ -62,7 +77,7 @@ class JobWorker:
     async def process(self, job_id: str) -> None:
         with app_session() as db:
             job = db.get(Job, job_id)
-            if job is None or job.status not in ("QUEUED", "INTERRUPTED"):
+            if job is None or job.status not in ("QUEUED", "INTERRUPTED") or "CANCELLED_BY_OFFICER" in job.flags:
                 return
             phase = job.phase
         with app_session() as db:
@@ -89,6 +104,21 @@ class JobWorker:
             await run_row(job_id, provider)
         else:
             await run_evaluation(job_id, provider)
+
+
+def mark_cancelled(job_id: str, actor: str = "officer") -> None:
+    """A cancelled job is INTERRUPTED with a flag; its running units are redone on Resume, and everything finished stays."""
+    with app_session() as db:
+        job = db.get(Job, job_id)
+        if job is None or job.status == "DONE":
+            return
+        job.status, job.finished_at = "INTERRUPTED", store.now()
+        if "CANCELLED_BY_OFFICER" not in job.flags:
+            job.flags = [*job.flags, "CANCELLED_BY_OFFICER"]
+        for u in db.scalars(select(JobUnit).where(JobUnit.job_id == job.id, JobUnit.status == "RUNNING")):
+            u.status, u.error_code = "FAILED_RETRYABLE", "cancelled"
+        db.commit()
+        store.audit(db, job.app_id, actor, "job_cancelled", job.id, phase=job.phase)
 
 
 def recover(worker: JobWorker) -> dict[str, int]:
